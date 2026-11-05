@@ -1,4 +1,5 @@
 import { serve } from '@hono/node-server';
+import { closeDb } from '@syndic/db';
 
 import { app } from './app';
 import { env } from './env';
@@ -9,7 +10,10 @@ const server = serve({ fetch: app.fetch, port: env.PORT, hostname: '0.0.0.0' }, 
 });
 
 const shutdown = () => {
-  server.close(() => process.exit(0));
+  server.close(() => {
+    // Ferme les connexions WebSocket vers Neon avant de quitter.
+    void closeDb().finally(() => process.exit(0));
+  });
 };
 process.on('SIGINT', shutdown);
 process.on('SIGTERM', shutdown);

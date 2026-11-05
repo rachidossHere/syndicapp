@@ -20,6 +20,11 @@ const envSchema = z.object({
   BETTER_AUTH_SECRET: z.string().min(32),
   /** URL publique de l'API (ex. http://localhost:3000) : base des routes /api/auth/*. */
   BETTER_AUTH_URL: z.url(),
+  /**
+   * En-tête rempli par le proxy de l'hébergeur avec l'IP du client (ex. `x-forwarded-for`).
+   * À ne définir que derrière un proxy de confiance ; sinon, l'IP de la connexion est utilisée.
+   */
+  CLIENT_IP_HEADER: optional(z.string().min(1).toLowerCase().optional()),
 });
 
 const parsed = envSchema.safeParse(process.env);
