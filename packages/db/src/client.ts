@@ -1,16 +1,22 @@
-import { neon } from '@neondatabase/serverless';
-import { drizzle, type NeonHttpDatabase } from 'drizzle-orm/neon-http';
+import { Pool } from '@neondatabase/serverless';
+import { drizzle, type NeonDatabase } from 'drizzle-orm/neon-serverless';
 
 import * as schema from './schema';
 
-export type Database = NeonHttpDatabase<typeof schema>;
+export type Database = NeonDatabase<typeof schema>;
 
+let pool: Pool | undefined;
 let instance: Database | undefined;
 
 /**
- * Renvoie le client Drizzle (pilote HTTP de Neon), créé à la première utilisation.
+ * Renvoie le client Drizzle, créé à la première utilisation.
+ *
+ * Pilote WebSocket de Neon (`Pool`) : il gère les **transactions** (`db.transaction`),
+ * exigées par AGENTS.md pour toute opération qui touche l'argent, contrairement au pilote HTTP.
+ * Node 22+ fournit `WebSocket` nativement : aucune bibliothèque `ws` n'est nécessaire.
+ *
  * `DATABASE_URL` n'est lue qu'à ce moment-là : importer ce module ne nécessite pas de base,
- * ce qui permet à `typecheck` et aux tests de tourner sans connexion.
+ * ce qui permet à `typecheck` et aux tests sans base de tourner sans connexion.
  */
 export function getDb(): Database {
   if (instance) return instance;
@@ -22,8 +28,17 @@ export function getDb(): Database {
     );
   }
 
-  instance = drizzle({ client: neon(url), schema });
+  pool = new Pool({ connectionString: url });
+  instance = drizzle({ client: pool, schema });
   return instance;
+}
+
+/** Ferme les connexions du pool (fin d'un script, d'un test ou arrêt du serveur). */
+export async function closeDb(): Promise<void> {
+  const current = pool;
+  pool = undefined;
+  instance = undefined;
+  await current?.end();
 }
 
 /**

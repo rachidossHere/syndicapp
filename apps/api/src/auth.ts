@@ -24,7 +24,8 @@ export const auth = betterAuth({
   database: drizzleAdapter(db, {
     provider: 'pg',
     schema,
-    // Pas de `transaction: true` : le pilote HTTP de Neon (neon-http) ne gère pas les transactions.
+    // Pilote WebSocket de Neon : les écritures liées (utilisateur + compte) sont atomiques.
+    transaction: true,
   }),
 
   emailAndPassword: {
