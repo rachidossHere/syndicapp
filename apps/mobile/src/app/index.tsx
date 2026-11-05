@@ -1,98 +1,97 @@
-import * as Device from 'expo-device';
-import { Platform, StyleSheet } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+// Écran temporaire (plan 02) : vitrine des composants de @syndic/ui en français et en arabe.
+// Les textes sont en dur à titre de test : les traductions arriveront avec les écrans métier.
+import { Avatar, Card, Screen, Text, useTheme } from '@syndic/ui';
+import { useRouter } from 'expo-router';
+import { useState } from 'react';
+import { View } from 'react-native';
 
-import { AnimatedIcon } from '@/components/animated-icon';
-import { HintRow } from '@/components/hint-row';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { WebBadge } from '@/components/web-badge';
-import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
+import { LanguageToggle } from '@/components/language-toggle';
 
-function getDevMenuHint() {
-  if (Platform.OS === 'web') {
-    return <ThemedText type="small">use browser devtools</ThemedText>;
-  }
-  if (Device.isDevice) {
-    return (
-      <ThemedText type="small">
-        shake device or press <ThemedText type="code">m</ThemedText> in terminal
-      </ThemedText>
-    );
-  }
-  const shortcut = Platform.OS === 'android' ? 'cmd+m (or ctrl+m)' : 'cmd+d';
-  return (
-    <ThemedText type="small">
-      press <ThemedText type="code">{shortcut}</ThemedText>
-    </ThemedText>
-  );
-}
+const copy = {
+  fr: {
+    title: 'Tableau de bord',
+    designSystem: 'Design system',
+    designSystemHint: 'Ouvre l’écran de démonstration (développement)',
+    apiTitle: 'API : ok',
+    apiBody: 'Coupure d’eau de 9 h à 13 h pour le nettoyage des réservoirs.',
+    apiNote: 'Exemple statique : la vraie vérification arrivera avec les écrans.',
+    person: 'Yassine Alaoui',
+    role: 'Trésorier',
+    pressTitle: 'Carte appuyable',
+    pressCount: (count: number) => `Appuyée ${count} fois`,
+  },
+  ar: {
+    title: 'لوحة القيادة',
+    designSystem: 'نظام التصميم',
+    designSystemHint: 'يفتح شاشة العرض (وضع التطوير)',
+    apiTitle: 'واجهة API: تعمل',
+    apiBody: 'انقطاع الماء من الساعة 9 إلى 13 لتنظيف الخزانات.',
+    apiNote: 'مثال ثابت: التحقق الفعلي سيأتي مع الشاشات.',
+    person: 'ياسين العلوي',
+    role: 'أمين المال',
+    pressTitle: 'بطاقة قابلة للضغط',
+    pressCount: (count: number) => `عدد الضغطات: ${count}`,
+  },
+} as const;
 
 export default function HomeScreen() {
+  const { language, spacing } = useTheme();
+  const t = copy[language];
+  const [pressCount, setPressCount] = useState(0);
+  const router = useRouter();
+
   return (
-    <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
-        <ThemedView style={styles.heroSection}>
-          <AnimatedIcon />
-          <ThemedText type="title" style={styles.title}>
-            Welcome to&nbsp;Syndicapp
-          </ThemedText>
-        </ThemedView>
+    <Screen scroll>
+      <Text variant="h2">{t.title}</Text>
 
-        <ThemedText type="code" style={styles.code}>
-          get started
-        </ThemedText>
+      <LanguageToggle />
 
-        <ThemedView type="backgroundElement" style={styles.stepContainer}>
-          <HintRow
-            title="Try editing"
-            hint={<ThemedText type="code">src/app/index.tsx</ThemedText>}
-          />
-          <HintRow title="Dev tools" hint={getDevMenuHint()} />
-          <HintRow
-            title="Fresh start"
-            hint={<ThemedText type="code">npm run reset-project</ThemedText>}
-          />
-        </ThemedView>
+      {__DEV__ && (
+        <Card
+          onPress={() => router.push('/dev/design-system')}
+          accessibilityLabel={t.designSystem}
+          accessibilityHint={t.designSystemHint}>
+          <Text variant="bodyStrong" tone="primary">
+            {t.designSystem}
+          </Text>
+          <Text variant="small" tone="muted">
+            {t.designSystemHint}
+          </Text>
+        </Card>
+      )}
 
-        {Platform.OS === 'web' && <WebBadge />}
-      </SafeAreaView>
-    </ThemedView>
+      <Card>
+        <Text variant="h3" tone="success">
+          {t.apiTitle}
+        </Text>
+        <Text>{t.apiBody}</Text>
+        <Text variant="small" tone="muted">
+          {t.apiNote}
+        </Text>
+      </Card>
+
+      <Card>
+        {/* flexDirection « row » s'inverse en arabe : l'avatar passe à droite. */}
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
+          <Avatar name={t.person} />
+          <View style={{ flex: 1 }}>
+            <Text variant="bodyStrong">{t.person}</Text>
+            <Text variant="small" tone="muted">
+              {t.role}
+            </Text>
+          </View>
+          <Avatar name="Rachid Tazi" />
+        </View>
+      </Card>
+
+      <Card
+        onPress={() => setPressCount((count) => count + 1)}
+        accessibilityLabel={`${t.pressTitle}, ${t.pressCount(pressCount)}`}>
+        <Text variant="bodyStrong">{t.pressTitle}</Text>
+        <Text variant="small" tone="muted">
+          {t.pressCount(pressCount)}
+        </Text>
+      </Card>
+    </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    flexDirection: 'row',
-  },
-  safeArea: {
-    flex: 1,
-    paddingHorizontal: Spacing.four,
-    alignItems: 'center',
-    gap: Spacing.three,
-    paddingBottom: BottomTabInset + Spacing.three,
-    maxWidth: MaxContentWidth,
-  },
-  heroSection: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    flex: 1,
-    paddingHorizontal: Spacing.four,
-    gap: Spacing.four,
-  },
-  title: {
-    textAlign: 'center',
-  },
-  code: {
-    textTransform: 'uppercase',
-  },
-  stepContainer: {
-    gap: Spacing.three,
-    alignSelf: 'stretch',
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.four,
-    borderRadius: Spacing.four,
-  },
-});

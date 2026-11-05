@@ -1,97 +1,106 @@
-# 03 · Authentification (Neon Auth)
+# 03 · Authentification (Better Auth dans l'API)
 
 Statut : brouillon
 
 ## Objectif
 
-Un utilisateur peut créer un compte avec son e-mail et un mot de passe, se connecter depuis l'appli mobile, rester connecté après avoir fermé l'appli, et se déconnecter. Les routes de l'API Hono refusent toute requête sans jeton Neon Auth valide.
+Un utilisateur peut créer un compte avec son e-mail et un mot de passe, se connecter depuis l'appli mobile, rester connecté après avoir fermé l'appli, et se déconnecter. Les routes de l'API Hono refusent toute requête sans session valide.
 
 ## Décisions
 
-- Fournisseur : **Neon Auth** (Better Auth géré par Neon), avec le SDK de Neon (`@neon/neon-js/auth` ou `@neon/auth`, selon ce qu'indique le skill). Pas de Better Auth auto-hébergé dans l'API.
-- Avant d'écrire du code, lire le skill neon-auth (https://neon.com/docs/ai/skills/neon-auth/SKILL.md) et le suivre. En cas de doute sur une commande ou une API, le skill et la documentation officielle de Neon l'emportent sur ce plan.
-- Le support de React Native / Expo n'est pas documenté par Neon : l'étape 1 est un **test de faisabilité** avec une décision « on continue / on arrête ». Aucune autre étape ne commence avant qu'il soit validé.
+- **Pourquoi ce choix** : le test de faisabilité de Neon Auth (version précédente de ce plan) a échoué. Neon Auth refuse les requêtes sans en-tête `Origin` (cas d'une appli React Native) et son SDK n'autorise ni le plugin Expo ni le stockage de la session dans SecureStore. On revient donc à **Better Auth hébergé dans l'API Hono**, avec le plugin officiel **`@better-auth/expo`**. Neon reste la base de données.
+- Avant d'écrire du code : lire le skill Better Auth s'il est installé, et la page « Expo Integration » de la documentation officielle de Better Auth. En cas de doute sur une API, la documentation officielle l'emporte sur ce plan.
 - Méthode de connexion du MVP : **e-mail + mot de passe uniquement**.
-- Hachage des mots de passe : géré par Neon. **bcrypt n'est plus utilisé** dans le projet.
-- Les utilisateurs et les sessions vivent dans le schéma `neon_auth` de la base. Ce schéma appartient à Neon : **aucune migration Drizzle ne le crée ni ne le modifie**. Nos tables y font référence par l'identifiant de l'utilisateur (`text`).
-- Plugins : la liste de Neon Auth est fixe et se configure via la console ou la CLI Neon, jamais dans le code du client.
-- Branches : tout le développement se fait sur une branche Neon **`dev`**. Chaque branche a sa propre URL d'auth et ses propres utilisateurs. La branche `production` n'est touchée qu'au déploiement.
-- API Hono : elle vérifie le **JWT** émis par Neon Auth avec la bibliothèque `jose`, contre les clés publiques de `NEON_AUTH_JWKS_URL`, et vérifie l'émetteur (dérivé de `NEON_AUTH_BASE_URL`). Le JWT expire après 15 minutes : l'appli récupère un jeton frais avant chaque appel, et l'API ne le met jamais en cache.
-- Mobile : la session est conservée de façon sécurisée (SecureStore si le SDK permet de choisir le stockage). Jamais d'AsyncStorage pour un jeton.
-- Navigation : Expo Router avec les groupes `(auth)` (connexion, inscription) et `(app)` (écrans protégés).
-- Vérification de l'e-mail et mot de passe oublié : Neon envoie les e-mails sans service à configurer en développement (SMTP partagé). Ils restent **hors périmètre** de ce plan, mais deviennent faciles à ajouter. La production demandera un SMTP personnalisé.
-- Messages d'erreur génériques côté client (« E-mail ou mot de passe incorrect »).
-- Interface construite uniquement avec `@syndic/ui` (plan 02), textes via les traductions FR et AR.
-- Secrets et URL (`NEON_AUTH_BASE_URL`, `NEON_AUTH_JWKS_URL`, `DATABASE_URL`…) uniquement dans les variables d'environnement, documentés dans `.env.example`. Ne jamais afficher de secret dans le terminal ni dans les logs.
+- Hachage des mots de passe : **bcryptjs**, coût **12**, via l'option `emailAndPassword.password` (`hash` / `verify`) de Better Auth. Jamais le module natif `bcrypt`.
+- Mot de passe : 8 caractères minimum, **72 octets maximum** (limite de bcrypt), validé par Zod.
+- Tables : `user`, `session`, `account`, `verification` dans le schéma `public`, **générées par la CLI de Better Auth au format Drizzle** dans `packages/db/src/schema/auth.ts`, puis migrées avec `drizzle-kit`. Le dépôt est propriétaire de ces tables.
+- Les tables `public.user`, `session`, `account`, `verification` déjà présentes sur Neon viennent d'un essai extérieur au dépôt et sont vides : elles sont supprimées **sur `dev` uniquement** (étape 1), puis recréées par notre migration. Celles de `production` seront traitées au plan 12.
+- Neon Auth, activé sur `dev` pendant le test, est **désactivé** et ses variables retirées.
+- API : Better Auth monté dans Hono sur **`/api/auth/*`**, avec le plugin serveur `expo()`. Un middleware `requireAuth` lit la session avec `auth.api.getSession({ headers })` et place `user` et `session` dans le contexte. Pas de JWT : l'API lit directement la session.
+- `trustedOrigins` : le schéma de l'appli `syndicapp://` toujours ; les origines `exp://` de développement (Expo Go) **uniquement quand `NODE_ENV === "development"`**.
+- Mobile : client `createAuthClient` de `better-auth/react` avec `expoClient` de `@better-auth/expo/client`, `scheme: "syndicapp"` et **`storage: SecureStore`**. Paquets client : `better-auth`, `@better-auth/expo`, `expo-secure-store`, `expo-network`.
+- Appels à notre API : le client HTTP ajoute l'en-tête `Cookie` obtenu avec `authClient.getCookie()`, avec `credentials: "omit"`.
+- Navigation : Expo Router avec les groupes `(auth)` (accueil, connexion, inscription) et `(app)` (écrans protégés).
+- **Design** : celui du canevas, artboards « Authentification (parcours) » et « Connexion en arabe (RTL) » : écran d'accueil, inscription, connexion, puis écran « Bonjour {prénom} » avec les deux choix « Créer ma résidence » et « J'ai un code d'invitation » (boutons sans action pour l'instant : plan 04). Uniquement les composants de `@syndic/ui`.
+- Vérification de l'e-mail et mot de passe oublié : désactivés (pas encore de service d'envoi d'e-mails).
+- Limitation des tentatives : rate limit intégré de Better Auth activé sur la connexion et l'inscription.
+- Messages d'erreur génériques (« E-mail ou mot de passe incorrect »), sans révéler si un e-mail existe.
+- Secrets : `BETTER_AUTH_SECRET` et `BETTER_AUTH_URL` uniquement dans `.env.local` et dans `.env.example` (sans valeur).
 
 ## Hors périmètre
 
-- Résidences, table `membership`, rôles et invitations : plan suivant (gérés dans nos propres tables, pas avec les organisations de Neon Auth, encore en bêta et sans rôles personnalisés).
-- Connexion sociale (Google, Apple), téléphone ou SMS.
+- Résidences, rôles, invitations (plan 04) : les deux boutons de l'écran « Bonjour » ne font rien.
+- Connexion sociale, téléphone, SMS, lien magique.
 - Vérification de l'e-mail, mot de passe oublié, double authentification.
 - Modification du profil.
-- Tableau de bord web.
+- Tables de `production` (plan 12).
 
 ## Étapes
 
-### 1. Test de faisabilité : Neon Auth dans Expo Go
+### 1. Nettoyage de l'essai Neon Auth sur `dev`
 
-Installe la CLI Neon (`npm install -g neon@latest`, ou `npx neon@latest` si l'installation échoue). Si une commande ouvre une connexion dans le navigateur, demande-moi de la terminer ; si elle échoue, demande-moi de lancer `neon login`, puis réessaie. Crée une branche **`dev`** sur le projet `wispy-silence-95275992`, lie le dépôt à cette branche avec `neon init` (services `postgres,auth`), puis active Neon Auth sur `dev` (`neon deploy` ou la commande indiquée par le skill). Les variables doivent arriver dans `.env.local` sans être affichées.
+Sur la branche Neon `dev` uniquement (projet `wispy-silence-95275992`) :
+1. supprime l'utilisateur de test `syndicapp-probe-…@example.com` créé pendant le diagnostic ;
+2. désactive Neon Auth avec la CLI Neon (ou indique-moi la manipulation à faire dans la console si la CLI ne le permet pas) ;
+3. retire `NEON_AUTH_BASE_URL`, `NEON_AUTH_JWKS_URL` du `.env.local` racine et `EXPO_PUBLIC_NEON_AUTH_URL` de `apps/mobile/.env.local` ;
+4. vérifie que les tables `public.user`, `session`, `account`, `verification` sont toujours vides, puis supprime-les sur `dev` (suppression autorisée ici, uniquement pour ces quatre tables vides et uniquement sur `dev`).
 
-Ensuite, dans `apps/mobile`, installe le SDK de Neon Auth et crée un écran temporaire `/dev/auth-test` qui :
-1. inscrit un utilisateur de test (e-mail jetable, mot de passe fort) ;
-2. lit l'utilisateur courant ;
-3. récupère un JWT ;
-4. survit à une fermeture complète de l'appli (l'utilisateur est toujours connecté à la réouverture) ;
-5. se déconnecte.
+Aucune commande sur `production`.
 
-Ajoute l'URL du serveur Expo et le schéma de l'appli aux domaines de confiance de Neon Auth si le skill l'exige.
+Terminé quand : Neon Auth n'est plus actif sur `dev`, le schéma `public` de `dev` ne contient plus ces quatre tables, les variables Neon Auth ont disparu, et `production` n'a pas été touchée.
 
-Terminé quand : les 5 points fonctionnent sur un vrai téléphone dans Expo Go, et tu m'as indiqué comment la session est stockée (cookie, jeton, quel stockage). **Si un point échoue**, arrête-toi et explique-moi précisément ce qui bloque, sans contourner le problème : je déciderai de revenir à Better Auth auto-hébergé.
+### 2. Better Auth côté serveur et schéma
 
-### 2. Client d'authentification de l'appli
+Dans `apps/api`, installe `better-auth`, `@better-auth/expo` et `bcryptjs` (avec ses types). Crée `apps/api/src/auth.ts` : adaptateur Drizzle (`provider: "pg"`) branché sur `@syndic/db`, `emailAndPassword` activé avec `hash` / `verify` basés sur bcryptjs (coût 12), plugin `expo()`, `trustedOrigins` comme décrit dans les Décisions, rate limit activé. Génère le schéma Drizzle des tables avec la CLI de Better Auth, place-le dans `packages/db/src/schema/auth.ts`, exporte-le, puis génère et applique la migration sur `dev`. Ajoute `BETTER_AUTH_SECRET` et `BETTER_AUTH_URL` à `.env.example` et, avec une valeur générée, à `.env.local`.
 
-Supprime l'écran de test. Crée `apps/mobile/src/lib/auth-client.ts` qui configure le client Neon Auth avec l'URL lue depuis une variable `EXPO_PUBLIC_NEON_AUTH_URL`, et le stockage sécurisé retenu à l'étape 1. Crée un fournisseur ou un hook `useSession` qui expose l'utilisateur, l'état de chargement, `signIn`, `signUp`, `signOut`, et une fonction `getToken()` qui renvoie un JWT valide. Crée `apps/mobile/src/lib/api.ts`, un client HTTP vers l'API Hono qui ajoute automatiquement `Authorization: Bearer <jeton>` à chaque requête.
+Terminé quand : les tables existent sur `dev` via notre migration, l'API démarre, et `pnpm typecheck` passe.
 
-Terminé quand : `pnpm typecheck` passe et l'appli peut s'inscrire, se connecter, récupérer un jeton et se déconnecter via ces fonctions.
+### 3. Brancher Better Auth dans Hono
 
-### 3. Vérification du jeton dans Hono
+Monte le handler de Better Auth sur `/api/auth/*`. Crée le middleware `requireAuth` (session lue avec `auth.api.getSession({ headers: c.req.raw.headers })`, `401` sans session, `user` et `session` typés dans le contexte Hono). Ajoute `GET /api/me` qui renvoie uniquement `id`, `name` et `email`. Vérifie que le logger maison n'écrit jamais les en-têtes `Cookie` et `Authorization`.
 
-Dans `apps/api`, installe `jose`. Crée un middleware `requireAuth` qui lit l'en-tête `Authorization`, vérifie le JWT avec `createRemoteJWKSet(NEON_AUTH_JWKS_URL)` (algorithme EdDSA, émetteur attendu, expiration), renvoie `401` si le jeton est absent, invalide ou expiré, et place `userId` (le `sub` du jeton) dans le contexte Hono, typé. Ajoute une route protégée `GET /api/me` qui lit le nom et l'e-mail de l'utilisateur dans le schéma `neon_auth` (vérifie le nom exact de la table avec le skill ou la base) et ne renvoie que `id`, `name` et `email`. Pour lire ce schéma avec Drizzle, déclare la table en lecture seule dans `packages/db/src/schema/neon-auth.ts`, exclue des migrations (`schemaFilter` ou `tablesFilter` de drizzle-kit). Ajoute les variables à `.env.example`.
-
-Terminé quand : `GET /api/me` renvoie l'utilisateur avec un jeton valide, et `401` sans jeton, avec un jeton modifié ou avec un jeton expiré. `drizzle-kit generate` ne produit aucune migration touchant `neon_auth`.
+Terminé quand : avec un client HTTP, l'inscription et la connexion fonctionnent, `GET /api/me` renvoie l'utilisateur avec le cookie de session et `401` sans.
 
 ### 4. Validation partagée
 
-Dans `packages/shared`, crée `src/auth.ts` avec `signUpSchema` (nom, e-mail, mot de passe, confirmation) et `signInSchema` (e-mail, mot de passe). Mot de passe : 8 caractères minimum (aligne la longueur maximale sur la règle de Neon Auth indiquée par le skill). Les messages d'erreur sont des clés de traduction.
+Dans `packages/shared`, crée `src/auth.ts` avec `signUpSchema` (nom, e-mail, mot de passe, confirmation) et `signInSchema`. Mot de passe : 8 caractères minimum, 72 octets maximum en UTF-8 (pas en caractères). Messages d'erreur = clés de traduction. L'API valide l'inscription avec `signUpSchema` avant Better Auth (hook `before` ou validation de route, selon la documentation). Tests unitaires, dont un mot de passe de 72 et de 73 octets avec des caractères arabes.
 
-Terminé quand : les formulaires refusent les entrées invalides avant tout appel à Neon.
+Terminé quand : un mot de passe trop court ou de plus de 72 octets est refusé par l'appli et par l'API.
 
-### 5. Écrans et navigation protégée
+### 5. Client d'authentification dans l'appli
 
-Avec Expo Router, crée le groupe `(auth)` avec `sign-in` et `sign-up`, et le groupe `(app)` avec un accueil provisoire qui affiche « Bonjour {nom} » (données de `/api/me` via `api.ts`) et un bouton de déconnexion. Le layout racine affiche un écran de chargement tant que la session est inconnue, puis redirige vers `(auth)` ou `(app)`. Formulaires avec React Hook Form et les schémas de `packages/shared`, uniquement avec les composants de `@syndic/ui`. Le bouton de validation affiche un état de chargement et empêche le double envoi. Les erreurs de Neon Auth s'affichent sous forme de message générique traduit.
+Dans `apps/mobile`, installe avec `npx expo install` : `better-auth`, `@better-auth/expo`, `expo-network` (et `expo-secure-store` est déjà là). Crée `src/lib/auth-client.ts` avec `createAuthClient` (`better-auth/react`), `baseURL` = URL de l'API + `/api/auth` lue depuis `EXPO_PUBLIC_API_URL`, et `expoClient({ scheme: "syndicapp", storage: SecureStore })`. Crée un hook `useSession` (utilisateur, chargement, `signIn`, `signUp`, `signOut`) et `src/lib/api.ts` qui ajoute l'en-tête `Cookie` de `authClient.getCookie()` à chaque appel, avec `credentials: "omit"`. Ne touche pas à la config Metro sauf si la documentation l'exige (ne jamais désactiver `unstable_enablePackageExports`).
 
-Terminé quand : un nouvel utilisateur s'inscrit et arrive sur l'accueil ; après fermeture et réouverture de l'appli, il est toujours connecté ; après déconnexion, il revient à la connexion et ne peut pas revenir à l'accueil.
+Terminé quand : depuis un écran de développement, l'appli peut s'inscrire, se connecter, appeler `/api/me` et se déconnecter dans Expo Go.
+
+### 6. Écrans et navigation protégée
+
+Reproduis le design du canevas avec `@syndic/ui` : groupe `(auth)` avec l'accueil, `sign-in` et `sign-up` ; groupe `(app)` avec l'écran « Bonjour {prénom} » (données de `/api/me`), les deux choix sans action et « Se déconnecter ». Le layout racine affiche un chargement tant que la session est inconnue, puis redirige. Formulaires avec React Hook Form et les schémas de `packages/shared`. Bouton de validation en chargement et sans double envoi. Afficher / masquer le mot de passe. Textes en FR et AR, e-mail toujours saisi de gauche à droite. Supprime l'écran temporaire de santé de l'API s'il ne sert plus (garde `/dev/design-system`).
+
+Terminé quand : un nouvel utilisateur s'inscrit et arrive sur « Bonjour » ; après fermeture complète de l'appli, il est toujours connecté ; après déconnexion, il revient à l'accueil et ne peut pas revenir en arrière.
 
 ## Vérification
 
-- `pnpm typecheck` et le linter passent sur tout le monorepo.
-- Le test de faisabilité de l'étape 1 a été validé sur un vrai téléphone, et son résultat est noté.
-- Tout le travail a été fait sur la branche Neon `dev` ; la branche `production` n'a pas été modifiée.
-- API : `GET /api/me` sans jeton → `401` ; jeton modifié → `401` ; jeton de plus de 15 minutes → `401` ; jeton valide → uniquement `id`, `name`, `email`.
-- Après 15 minutes d'inactivité dans l'appli, l'appel à `/api/me` fonctionne toujours (jeton renouvelé automatiquement).
-- Mauvais mot de passe et e-mail inconnu affichent le même message générique.
-- Aucune migration Drizzle ne touche le schéma `neon_auth`.
-- Aucun jeton dans AsyncStorage ; aucun secret ni jeton dans les logs ou dans le dépôt.
-- Les écrans s'affichent correctement en français et en arabe (RTL).
-- De bout en bout : inscription → accueil avec le nom → fermeture complète de l'appli → réouverture toujours connecté → attente de plus de 15 minutes → accueil toujours chargé → déconnexion → connexion avec le même compte → accueil.
+- `pnpm typecheck`, `pnpm test` et `pnpm lint` passent.
+- En base (`dev`) : le mot de passe dans `account` commence par `$2a$12$` ou `$2b$12$`. Aucun mot de passe en clair, ni en base ni dans les logs.
+- `GET /api/me` sans session → `401` ; avec session → uniquement `id`, `name`, `email`.
+- Mauvais mot de passe et e-mail inconnu → même message générique.
+- Plusieurs échecs de connexion d'affilée → `429`.
+- Mots de passe de 7 caractères, 72 octets et 73 octets : seuls les cas valides sont acceptés.
+- La session est dans SecureStore, jamais dans AsyncStorage ; aucun cookie ni jeton dans les logs.
+- Les origines `exp://` ne sont acceptées qu'en développement.
+- Écrans corrects en français et en arabe, conformes au canevas.
+- `production` n'a pas été modifiée.
+- De bout en bout dans Expo Go : inscription → « Bonjour » → fermeture complète → réouverture toujours connecté → déconnexion → connexion avec le même compte → « Bonjour ».
 
 ## Mises à jour d'[AGENTS.md](../AGENTS.md)
 
-- **Section 4 · Stack technique** : la ligne « Authentification : Better Auth avec hachage bcryptjs » est remplacée par « Authentification : Neon Auth (Better Auth géré par Neon), SDK de Neon côté mobile, vérification des JWT avec `jose` côté API ». Retirer bcryptjs de la stack.
-- **Section 5 · Structure du dépôt** : ajouter `packages/db/src/schema/neon-auth.ts → tables du schéma neon_auth, en lecture seule, exclues des migrations`.
-- **Section 6 · Règles de code, partie Base de données** : ajouter « Le schéma `neon_auth` appartient à Neon : ne jamais le modifier ni le migrer. Nos tables référencent l'utilisateur par son identifiant (`text`). »
-- **Section 6 · Règles de code, partie API** : ajouter « Toute route métier passe par `requireAuth`, qui vérifie le JWT Neon Auth via JWKS ; seule la route de santé est publique. »
-- **Section 6 · Règles de code** : ajouter « Développement uniquement sur la branche Neon `dev` ; ne jamais lancer de commande Neon sur `production` sans validation. »
-- **Section 7 · Sécurité, partie Mots de passe** : les règles sur bcryptjs (coût 12, limite de 72 octets, hachage côté serveur) sont remplacées par « Les mots de passe sont gérés uniquement par Neon Auth : jamais stockés, hachés ni journalisés par notre code. »
-- **Section 9 · Ce que l'agent ne doit jamais faire** : ajouter « Modifier le schéma `neon_auth` » et « Mettre en cache un JWT côté API ou le stocker dans AsyncStorage ».
+- **Section 4 · Stack technique** : « Authentification : Better Auth hébergé dans l'API Hono (adaptateur Drizzle, plugin `@better-auth/expo`), bcryptjs coût 12, session dans SecureStore côté mobile ». Retirer `jose`. Dans « Explicitement écartés », remplacer la ligne « Better Auth auto-hébergé et bcrypt » par « Neon Auth : refuse les requêtes sans `Origin` et n'autorise ni le plugin Expo ni SecureStore (test du 5 novembre 2026) ».
+- **Section 5 · Skills** : retirer `neon-auth` et `neon-postgres-branches` (disparu) ; remplacer `native-data-fetching` par `expo-data-fetching` ; ajouter le skill Better Auth s'il est installé.
+- **Section 6 · Structure** : remplacer la ligne `neon-auth.ts` par `src/schema/auth.ts → tables Better Auth, générées par sa CLI, ne pas modifier à la main` ; ajouter `apps/api/src/auth.ts → configuration Better Auth (seul endroit)`.
+- **Section 7 · Base de données** : remplacer la règle sur `neon_auth` par « Les tables d'authentification sont générées par la CLI de Better Auth ; nos tables référencent `user.id` ».
+- **Section 7 · API** : `requireAuth` lit la session Better Auth (`auth.api.getSession`) ; seules `/health` et `/api/auth/*` sont publiques ; retirer la règle sur le cache des JWT.
+- **Section 7 · Mobile** : « La session est gérée uniquement par le client Better Auth avec `expoClient` et SecureStore ; les appels à l'API passent par `src/lib/api.ts`. »
+- **Section 8 · Authentification** : « Mots de passe hachés par bcryptjs (coût 12) uniquement dans l'API ; 72 octets maximum ; jamais journalisés. »
+- **Section 9 · Limites** : retirer la ligne Neon Auth.
+- **Section 10** : remplacer « Modifier le schéma `neon_auth` » par « Modifier à la main les tables générées par Better Auth » ; ajouter « Accepter les origines `exp://` hors développement ».
