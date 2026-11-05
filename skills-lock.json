@@ -1,0 +1,131 @@
+{
+  "version": 1,
+  "skills": {
+    "eas-app-stores": {
+      "source": "expo/skills",
+      "sourceType": "github",
+      "skillPath": "plugins/expo/skills/eas-app-stores/SKILL.md",
+      "computedHash": "414548d8c0dafc2e468d4785cef4528477e8078315acd5ecd36a4bbe7b058311",
+      "installMode": "copy"
+    },
+    "eas-update": {
+      "source": "expo/skills",
+      "sourceType": "github",
+      "skillPath": "plugins/expo/skills/eas-update/SKILL.md",
+      "computedHash": "9854dc72af451fffa36dcd5948398850a2747f60f8f9c6043a9f56eb0114462a",
+      "installMode": "copy"
+    },
+    "eas-workflows": {
+      "source": "expo/skills",
+      "sourceType": "github",
+      "skillPath": "plugins/expo/skills/eas-workflows/SKILL.md",
+      "computedHash": "f45831433a602e4f2dcaa35c326bc12bc1997da8dd6865bb6525fb79253b0042",
+      "installMode": "copy"
+    },
+    "expo-animation": {
+      "source": "expo/skills",
+      "sourceType": "github",
+      "skillPath": "plugins/expo/skills/expo-animation/SKILL.md",
+      "computedHash": "b2d30c14da8348ab13f7323b9969fb283f0a5d372133f512390f35a517ecd073",
+      "installMode": "copy"
+    },
+    "expo-data-fetching": {
+      "source": "expo/skills",
+      "sourceType": "github",
+      "skillPath": "plugins/expo/skills/expo-data-fetching/SKILL.md",
+      "computedHash": "f15d3a166f39cad970f57fd51e2126a084190dc76e3326bf171b153024facddf",
+      "installMode": "copy"
+    },
+    "expo-design-system": {
+      "source": "expo/skills",
+      "sourceType": "github",
+      "skillPath": "plugins/expo/skills/expo-design-system/SKILL.md",
+      "computedHash": "c6d7e9d13b5239ed3d46054c42d771e032bef857dddfee88690a1ce2fbd46dc6",
+      "installMode": "copy"
+    },
+    "expo-dev-client": {
+      "source": "expo/skills",
+      "sourceType": "github",
+      "skillPath": "plugins/expo/skills/expo-dev-client/SKILL.md",
+      "computedHash": "08bf029b2c8b22a49742d3801b7e382f7666c47aa9635470eadd26391f2bcee5",
+      "installMode": "copy"
+    },
+    "expo-native-ui": {
+      "source": "expo/skills",
+      "sourceType": "github",
+      "skillPath": "plugins/expo/skills/expo-native-ui/SKILL.md",
+      "computedHash": "3e66ba8d791219f78c8adcb0cdce84f49a61e9869983762598d7e4122a4e43ae",
+      "installMode": "copy"
+    },
+    "expo-project-structure": {
+      "source": "expo/skills",
+      "sourceType": "github",
+      "skillPath": "plugins/expo/skills/expo-project-structure/SKILL.md",
+      "computedHash": "a9a94e702229aa28ec2e80b17ed7b847454c83d330ebad4dd210d48f7b41cd34",
+      "installMode": "copy"
+    },
+    "expo-router": {
+      "source": "expo/skills",
+      "sourceType": "github",
+      "skillPath": "plugins/expo/skills/expo-router/SKILL.md",
+      "computedHash": "586318180c0d846948d3189250dd7cb5c225d4fa48eee5b57dc964aa5cade10e",
+      "installMode": "copy"
+    },
+    "expo-upgrade": {
+      "source": "expo/skills",
+      "sourceType": "github",
+      "skillPath": "plugins/expo/skills/expo-upgrade/SKILL.md",
+      "computedHash": "c6f268da02e53f9b220e00ef90b6fc85aea7d42aed4e875255db73713091594c",
+      "installMode": "copy"
+    },
+    "neon": {
+      "source": "neondatabase/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/neon/SKILL.md",
+      "computedHash": "482856e03b620f02e05d5ff7f570ba28af30f6a4e45cf2ee7fe58d3a5cc9582c",
+      "installMode": "copy"
+    },
+    "neon-ai-gateway": {
+      "source": "neondatabase/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/neon-ai-gateway/SKILL.md",
+      "computedHash": "bd14a16a5ee0bc80ac99f2be2e73f2556de9d872c470e69dfe04f1922a71c308",
+      "installMode": "copy"
+    },
+    "neon-auth": {
+      "source": "neondatabase/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/neon-auth/SKILL.md",
+      "computedHash": "5ed2b0093123353fcdf11734713b08d2708e80f5855421328412033d1b23de33",
+      "installMode": "copy"
+    },
+    "neon-functions": {
+      "source": "neondatabase/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/neon-functions/SKILL.md",
+      "computedHash": "db347dee118112fa4fec39912c8a6130738db5f4fcd5c48c94de71bde74c7af8",
+      "installMode": "copy"
+    },
+    "neon-object-storage": {
+      "source": "neondatabase/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/neon-object-storage/SKILL.md",
+      "computedHash": "b6e81be031233b9aee9f584413b15899d458af12fdda6a8a15cbc6c8cb14e0cb",
+      "installMode": "copy"
+    },
+    "neon-postgres": {
+      "source": "neondatabase/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/neon-postgres/SKILL.md",
+      "computedHash": "95ab236567797e05aae5364879a76e17380470cb4fd00b06a50b746671599a89",
+      "installMode": "copy"
+    },
+    "neon-realtime": {
+      "source": "neondatabase/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/neon-realtime/SKILL.md",
+      "computedHash": "98c8b701e8a1c3b4b767ecee784a3b26469c64a212baf927f1f57e195de2d6b0",
+      "installMode": "copy"
+    }
+  }
+}
