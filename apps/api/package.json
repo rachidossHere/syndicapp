@@ -7,18 +7,24 @@
     "dev": "tsx watch src/index.ts",
     "build": "node scripts/build.mjs",
     "start": "node dist/index.js",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "auth:generate": "auth generate --config src/auth.ts --output ../../packages/db/src/schema/auth.ts --yes"
   },
   "devDependencies": {
     "@types/node": "^24.19.2",
+    "auth": "1.7.17",
     "esbuild": "^0.28.2",
     "tsx": "^4.23.15"
   },
   "dependencies": {
+    "@better-auth/expo": "1.7.17",
     "@hono/node-server": "^2.1.6",
     "@syndic/db": "workspace:*",
     "@syndic/shared": "workspace:*",
+    "bcryptjs": "3.0.3",
+    "better-auth": "1.7.17",
     "dotenv": "^18.0.9",
+    "drizzle-orm": "0.45.4",
     "hono": "^4.13.16",
     "zod": "^4.6.7"
   }
