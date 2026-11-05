@@ -2,9 +2,12 @@ import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { HTTPException } from 'hono/http-exception';
 
+import { auth } from './auth';
+import { withClientIp } from './client-ip';
 import { isProduction } from './env';
 import { requestLogger } from './middleware/request-logger';
 import { health } from './routes/health';
+import { me } from './routes/me';
 
 export const app = new Hono();
 
@@ -15,7 +18,12 @@ if (!isProduction) {
   app.use(cors());
 }
 
+// Routes publiques : santé et authentification (Better Auth gère /api/auth/*).
 app.route('/health', health);
+app.on(['GET', 'POST'], '/api/auth/*', (c) => auth.handler(withClientIp(c)));
+
+// Routes protégées : requireAuth est appliqué route par route.
+app.route('/api/me', me);
 
 app.notFound((c) => c.json({ error: 'not_found' }, 404));
 

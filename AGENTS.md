@@ -113,14 +113,14 @@ Avant de coder, lire le skill correspondant à l'outil concerné et le suivre. E
 | Animations, gestes | `expo-animation` |
 | Requêtes, TanStack Query, cache | `expo-data-fetching` |
 | Base Neon, Drizzle, branches `dev` / `production` | `neon-postgres` |
-| Authentification | aucun skill installé : documentation officielle de Better Auth (page « Expo Integration ») |
+| Authentification, Better Auth | `better-auth-best-practices`, `better-auth-security-best-practices`, `email-and-password-best-practices`, `create-auth` ; pour l'appli : documentation officielle (page « Expo Integration ») |
 | Build de développement | `expo-dev-client` |
 | Build et publication sur les stores | `eas-app-stores` |
 | Mises à jour EAS Update | `eas-update` |
 | Pipelines EAS (CI/CD) | `eas-workflows` |
 | Montée de version du SDK Expo | `expo-upgrade` |
 
-À ignorer pour ce projet : `expo-tailwind-setup`, `expo-api-routes`, `use-dom`. Ne jamais installer un nouveau skill sans validation.
+À ignorer pour ce projet : `expo-tailwind-setup`, `expo-api-routes`, `use-dom`, `neon-auth` (Neon Auth écarté), `organization-best-practices` et `two-factor-authentication-best-practices` (hors périmètre du MVP). Ne jamais installer un nouveau skill sans validation.
 
 ---
 
