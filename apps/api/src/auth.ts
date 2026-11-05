@@ -7,6 +7,7 @@ import bcrypt from 'bcryptjs';
 import { betterAuth } from 'better-auth';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 
+import { validateSignUp } from './auth-validation';
 import { CLIENT_IP_HEADER } from './client-ip';
 import { env } from './env';
 
@@ -35,13 +36,17 @@ export const auth = betterAuth({
     requireEmailVerification: false,
     autoSignIn: true,
     minPasswordLength: 8,
-    // Plafond en caractères ; la limite de 72 octets de bcrypt est vérifiée par Zod (plan 03, étape 4).
+    // Seconde barrière, en caractères. La règle principale (72 octets UTF-8, limite de bcrypt)
+    // est appliquée par le hook validateSignUp avec le schéma partagé.
     maxPasswordLength: 72,
     password: {
       hash: (password) => bcrypt.hash(password, BCRYPT_COST),
       verify: ({ hash, password }) => bcrypt.compare(password, hash),
     },
   },
+
+  // Validation de l'inscription avec le schéma partagé (@syndic/shared), avant Better Auth.
+  hooks: { before: validateSignUp },
 
   trustedOrigins: [APP_ORIGIN, ...(env.NODE_ENV === 'development' ? EXPO_GO_DEV_ORIGINS : [])],
 
