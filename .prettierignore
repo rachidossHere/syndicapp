@@ -1,0 +1,9 @@
+node_modules
+.expo
+dist
+web-build
+pnpm-lock.yaml
+.agents
+.claude
+apps/mobile/ios
+apps/mobile/android
