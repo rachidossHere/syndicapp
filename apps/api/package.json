@@ -1,0 +1,25 @@
+{
+  "name": "@syndic/api",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "node scripts/build.mjs",
+    "start": "node dist/index.js",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^24.19.2",
+    "esbuild": "^0.28.2",
+    "tsx": "^4.23.15"
+  },
+  "dependencies": {
+    "@hono/node-server": "^2.1.6",
+    "@syndic/db": "workspace:*",
+    "@syndic/shared": "workspace:*",
+    "dotenv": "^18.0.9",
+    "hono": "^4.13.16",
+    "zod": "^4.6.7"
+  }
+}
