@@ -7,9 +7,10 @@
     "pnpm": ">=10"
   },
   "scripts": {
-    "dev": "pnpm --recursive --parallel --if-present dev",
+    "dev": "pnpm --filter @syndic/api dev",
     "typecheck": "pnpm --recursive --if-present typecheck",
     "lint": "pnpm --recursive --if-present lint",
+    "test": "pnpm --recursive --if-present test",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },
