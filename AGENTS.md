@@ -165,6 +165,7 @@ syndicapp/
 - Noms de variables, fonctions et tables **en anglais**. Textes affichés **en français et en arabe** via les fichiers de traduction, jamais en dur dans les composants.
 - Montants stockés en **centimes (entier)**, devise MAD. Jamais de nombre à virgule pour l'argent. Affichage `18 420 MAD` via `formatMad` et le composant `Amount`.
 - Dates stockées en UTC, affichées dans le fuseau `Africa/Casablanca`.
+- Chaque étape se fait sur sa propre branche `plan-NN/etape-X-titre`, créée depuis `master` ; tout est commité avec des messages clairs en français ; jamais de fusion dans `master` ni de push sans validation.
 
 ### Base de données (Drizzle + Neon)
 - Chaque table métier a une colonne `residence_id`.
@@ -207,6 +208,7 @@ syndicapp/
 - Mots de passe hachés par bcryptjs (coût 12) uniquement dans l'API ; 72 octets maximum ; jamais journalisés.
 - Messages d'erreur génériques qui ne révèlent pas si un e-mail existe.
 - Les codes d'invitation ont une durée de vie limitée, sont à usage unique, et leurs tentatives sont limitées.
+- Risque connu : l'inscription révèle qu'un e-mail est déjà utilisé, tant que la vérification d'e-mail n'existe pas. Atténué par la limite de tentatives et un message neutre dans l'appli. À corriger quand l'envoi d'e-mails sera en place.
 
 **Secrets**
 - Aucun secret dans le code ni dans le dépôt : uniquement dans les variables d'environnement (`.env.local` en local, hébergeur en production).
@@ -268,3 +270,4 @@ Le projet démarre sur des offres gratuites, dont les conditions changent : les 
 - [ ] Une migration Drizzle accompagne tout changement de schéma, testée sur `dev`.
 - [ ] Le critère « Terminé quand » de l'étape est démontré.
 - [ ] Les modifications d'`AGENTS.md` demandées par le plan sont proposées (pas appliquées sans validation).
+- [ ] Les comptes et données de test créés pendant une étape sont supprimés à la fin de l'étape.
