@@ -106,7 +106,8 @@ Avant de coder, lire le skill correspondant à l'outil concerné et le suivre. E
 
 | Sujet | Skill |
 | --- | --- |
-| Écrans, navigation, Expo Router | `building-native-ui` |
+| Écrans, navigation, Expo Router | `expo-native-ui` |
+| Jetons et composants du design system | `expo-design-system` |
 | Requêtes, TanStack Query, cache | `native-data-fetching` |
 | Base Neon, Drizzle | `neon-postgres` |
 | Branches `dev` / `production` | `neon-postgres-branches` |
