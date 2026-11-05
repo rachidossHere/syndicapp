@@ -7,6 +7,7 @@ import bcrypt from 'bcryptjs';
 import { betterAuth } from 'better-auth';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 
+import { CLIENT_IP_HEADER } from './client-ip';
 import { env } from './env';
 
 /** Coût bcrypt (plan 03) : 2^12 itérations. */
@@ -53,6 +54,11 @@ export const auth = betterAuth({
       '/sign-in/email': { window: 60, max: 5 },
       '/sign-up/email': { window: 60, max: 3 },
     },
+  },
+
+  // IP du client posée par l'API (voir client-ip.ts) : un compteur de tentatives par client.
+  advanced: {
+    ipAddress: { ipAddressHeaders: [CLIENT_IP_HEADER] },
   },
 
   // Aucune donnée envoyée à un service tiers (AGENTS.md, section 8).
