@@ -69,6 +69,7 @@ Le MVP est découpé en plans dans `.prompt/` (voir `00-feuille-de-route.md`), r
 | Couche | Choix |
 | --- | --- |
 | Langage | **TypeScript strict** partout |
+| Runtime | **Node 22 minimum** (`^22.13.0` ou `>=24.3.0`, exigé par Expo SDK 58), version fixée dans `.nvmrc` |
 | Monorepo | **pnpm workspaces**, préfixe `@syndic/` |
 | Mobile | **React Native avec Expo** + **Expo Router** |
 | Données côté appli | **TanStack Query** |
@@ -77,7 +78,7 @@ Le MVP est découpé en plans dans `.prompt/` (voir `00-feuille-de-route.md`), r
 | API | **Hono** sur Node (`@hono/node-server`) |
 | ORM | **Drizzle ORM** + `drizzle-kit` |
 | Base de données | **Neon** (PostgreSQL), pilote `@neondatabase/serverless` |
-| Authentification | **Neon Auth** (Better Auth géré par Neon), SDK de Neon côté mobile, vérification des JWT avec **jose** côté API |
+| Authentification | **Better Auth** hébergé dans l'API Hono (adaptateur Drizzle, plugin `@better-auth/expo`), **bcryptjs** coût 12, session dans **SecureStore** côté mobile |
 | Fichiers | **Cloudflare R2** (client S3, URL signées) |
 | Reçus PDF | **pdf-lib**, générés côté API |
 | Notifications | **Expo Push Notifications** (`expo-notifications`, `expo-server-sdk`) |
@@ -89,8 +90,8 @@ Le MVP est découpé en plans dans `.prompt/` (voir `00-feuille-de-route.md`), r
 | Hébergement API | **Render** (ou Railway) |
 
 **Explicitement écartés :**
-- **Clerk** : ferait doublon avec Neon Auth et stockerait les utilisateurs hors de notre base.
-- **Better Auth auto-hébergé et bcrypt** : remplacés par Neon Auth ; notre code ne hache ni ne stocke jamais de mot de passe.
+- **Clerk** : ferait doublon avec Better Auth et stockerait les utilisateurs hors de notre base.
+- **Neon Auth** : refuse les requêtes sans `Origin` et n'autorise ni le plugin Expo ni SecureStore (test du 5 novembre 2026).
 - **NativeWind / Tailwind** et bibliothèques de composants tierces : le style passe par les jetons de `@syndic/ui`.
 - **Expo API Routes** : l'API est dans Hono.
 - **Sanity** : pas de contenu éditorial dans le MVP.
@@ -106,15 +107,18 @@ Avant de coder, lire le skill correspondant à l'outil concerné et le suivre. E
 
 | Sujet | Skill |
 | --- | --- |
-| Écrans, navigation, Expo Router | `expo-native-ui` |
+| Écrans, styles natifs | `expo-native-ui` |
+| Navigation, Expo Router | `expo-router` |
 | Jetons et composants du design system | `expo-design-system` |
-| Requêtes, TanStack Query, cache | `native-data-fetching` |
-| Base Neon, Drizzle | `neon-postgres` |
-| Branches `dev` / `production` | `neon-postgres-branches` |
-| Authentification | `neon-auth` |
+| Animations, gestes | `expo-animation` |
+| Requêtes, TanStack Query, cache | `expo-data-fetching` |
+| Base Neon, Drizzle, branches `dev` / `production` | `neon-postgres` |
+| Authentification | aucun skill installé : documentation officielle de Better Auth (page « Expo Integration ») |
 | Build de développement | `expo-dev-client` |
-| Build, publication, pipelines EAS | `expo-deployment`, `expo-cicd-workflows` |
-| Montée de version du SDK Expo | `upgrading-expo` |
+| Build et publication sur les stores | `eas-app-stores` |
+| Mises à jour EAS Update | `eas-update` |
+| Pipelines EAS (CI/CD) | `eas-workflows` |
+| Montée de version du SDK Expo | `expo-upgrade` |
 
 À ignorer pour ce projet : `expo-tailwind-setup`, `expo-api-routes`, `use-dom`. Ne jamais installer un nouveau skill sans validation.
 
@@ -127,15 +131,16 @@ syndicapp/
   apps/
     mobile/                       → Expo (React Native), Expo Router
     api/                          → Hono
+      src/auth.ts                 → configuration Better Auth (seul endroit)
   packages/
     db/                           → client Neon, schéma Drizzle, migrations (@syndic/db)
-      src/schema/neon-auth.ts     → tables du schéma neon_auth, lecture seule, exclues des migrations
+      src/schema/auth.ts          → tables Better Auth, générées par sa CLI, ne pas modifier à la main
     shared/                       → schémas Zod, types, rôles, permissions, constantes, événements analytics (@syndic/shared)
       src/roles.ts                → rôles et permissions (source unique)
       src/analytics.ts            → liste fermée des événements PostHog
     ui/                           → design system : jetons, thème, composants (@syndic/ui)
   .prompt/                        → plans de réalisation (00 à 12)
-  docs/                           → déploiement, pilote
+  docs/                           → références visuelles (design-system.png, auth.png), déploiement, pilote
   AGENTS.md
   .env.example
   pnpm-workspace.yaml
@@ -146,8 +151,8 @@ syndicapp/
 - L'appli mobile **n'accède jamais directement** à la base de données : tout passe par l'API.
 
 **Commandes :**
-- `pnpm dev` : lance l'API et Expo.
-- `pnpm typecheck`, `pnpm lint`, `pnpm format`.
+- `pnpm dev` : lance l'API (Expo se lance à part, voir plus bas).
+- `pnpm typecheck`, `pnpm test`, `pnpm lint`, `pnpm format`.
 - `pnpm --filter db db:generate` puis `pnpm --filter db db:migrate` : migrations (branche `dev`).
 - `cd apps/mobile && npx expo start` : appli seule.
 
@@ -164,9 +169,9 @@ syndicapp/
 ### Base de données (Drizzle + Neon)
 - Chaque table métier a une colonne `residence_id`.
 - **Chaque requête métier filtre sur `residence_id`** et vérifie le rôle de l'utilisateur dans cette résidence. Aucune exception.
-- Le schéma `neon_auth` appartient à Neon : ne jamais le modifier ni le migrer. Nos tables référencent l'utilisateur par son identifiant Neon Auth (`text`), sans clé étrangère vers `neon_auth`.
+- Les tables d'authentification sont générées par la CLI de Better Auth ; nos tables référencent `user.id`.
 - Toute modification de schéma passe par une migration Drizzle versionnée (`drizzle-kit generate`).
-- Les opérations qui touchent l'argent se font dans une **transaction**, et tout statut calculé (dû `paye`, `partiel`, `impaye`) est mis à jour dans la même transaction.
+- Les opérations qui touchent l'argent se font dans une **transaction**, et tout statut calculé (dû `paid`, `partial`, `unpaid`) est mis à jour dans la même transaction.
 - Le **solde de la caisse est toujours calculé**, jamais stocké.
 - Pas de suppression physique des paiements et des dépenses : annulation tracée (qui, quand, motif obligatoire).
 - Les données appartiennent à la résidence, jamais à une personne.
@@ -175,8 +180,7 @@ syndicapp/
 
 ### API (Hono)
 - Chaque route valide son entrée avec un schéma Zod de `packages/shared`.
-- Toute route métier passe par `requireAuth` (vérification du JWT Neon Auth via JWKS), puis `requireMembership` (résidence active envoyée dans l'en-tête `X-Residence-Id`), puis `requirePermission`. Seule la route `GET /health` est publique.
-- Ne jamais mettre en cache un JWT côté API.
+- Toute route métier passe par `requireAuth` (session Better Auth lue avec `auth.api.getSession`), puis `requireMembership` (résidence active envoyée dans l'en-tête `X-Residence-Id`), puis `requirePermission`. Seules `GET /health` et `/api/auth/*` sont publiques.
 - Les réponses sont adaptées au rôle : un champ réservé (nom d'un auteur, montant d'un autre lot) n'est jamais envoyé puis masqué par l'appli.
 - Les erreurs renvoyées ne contiennent jamais de détails internes (requête SQL, stack trace).
 - Toute création possible hors ligne (paiement, dépense) accepte un `client_id` et est **idempotente**.
@@ -186,8 +190,11 @@ syndicapp/
 - **Aucune couleur, taille de police, espacement ou rayon codé en dur** dans `apps/mobile` : utiliser les jetons et composants de `@syndic/ui`. Un besoin non couvert se traite en ajoutant un jeton ou un composant au package.
 - Les statuts métier s'affichent toujours avec `StatusBadge`, les montants toujours avec `Amount`.
 - Zones tactiles d'au moins **44 px**, contraste du texte d'au moins **4,5:1**, espacements en `start`/`end` (jamais `left`/`right`), états jamais signalés par la couleur seule.
+- Les références visuelles sont dans `docs/` : `design-system.png` pour les composants, `auth.png` pour l'authentification. Les écrans doivent leur correspondre ; les valeurs exactes viennent des jetons de `@syndic/ui`.
+- Icônes lucide importées une par une (`lucide-react-native/icons/<nom>`), jamais depuis l'index du paquet (tout le paquet serait chargé).
 - Les écrans affichés dépendent du rôle dans la résidence active.
-- La session est lue uniquement via le client Neon Auth et `useSession`. Jamais de jeton stocké à la main ni dans AsyncStorage.
+- La session est gérée uniquement par le client Better Auth avec `expoClient` et SecureStore ; les appels à l'API passent par `src/lib/api.ts`. Jamais de jeton stocké à la main ni dans AsyncStorage.
+- Préférences locales non sensibles (langue…) dans `expo-secure-store` ou le `localStorage` d'`expo-sqlite`, jamais dans AsyncStorage.
 - Toute image est compressée avant envoi (1600 px de large, JPEG 0,7). Les fichiers partent directement vers R2 avec une URL signée.
 - Encaissements et dépenses passent par la file d'attente hors ligne ; le cache persisté ne contient jamais de jeton.
 - Les événements PostHog passent uniquement par le helper `track`.
@@ -197,7 +204,7 @@ syndicapp/
 ## 8. Sécurité et données personnelles
 
 **Authentification**
-- Les mots de passe sont gérés uniquement par Neon Auth : jamais stockés, hachés ni journalisés par notre code.
+- Mots de passe hachés par bcryptjs (coût 12) uniquement dans l'API ; 72 octets maximum ; jamais journalisés.
 - Messages d'erreur génériques qui ne révèlent pas si un e-mail existe.
 - Les codes d'invitation ont une durée de vie limitée, sont à usage unique, et leurs tentatives sont limitées.
 
@@ -221,8 +228,7 @@ syndicapp/
 
 Le projet démarre sur des offres gratuites, dont les conditions changent : les vérifier avant tout déploiement.
 
-- **Neon** : mise en veille possible avec un délai au réveil, stockage et calcul limités. Chaque branche a sa propre base et ses propres utilisateurs Neon Auth.
-- **Neon Auth** : liste de plugins fixe ; JWT de 15 minutes ; e-mails par SMTP partagé en développement seulement (SMTP personnalisé requis en production).
+- **Neon** : mise en veille possible avec un délai au réveil, stockage et calcul limités. Chaque branche a sa propre base.
 - **Cloudflare R2** : quota gratuit de stockage et d'opérations ; d'où la compression des images.
 - **Render / Railway** : mise en veille et ressources limitées.
 - **PostHog** : quota mensuel d'événements ; n'envoyer que les événements utiles.
@@ -235,9 +241,10 @@ Le projet démarre sur des offres gratuites, dont les conditions changent : les 
 ## 10. Ce que l'agent ne doit jamais faire
 
 - Écrire une requête métier sans filtre `residence_id` ni vérification du rôle.
-- Stocker, hacher ou journaliser un mot de passe, ou stocker un jeton dans AsyncStorage.
+- Stocker un mot de passe en clair, le hacher ailleurs que dans l'API (bcryptjs), le journaliser, ou stocker un jeton dans AsyncStorage.
 - Mettre une clé, un mot de passe ou un jeton dans le code, un commit ou un log.
-- Modifier le schéma `neon_auth`.
+- Modifier à la main les tables générées par Better Auth.
+- Accepter les origines `exp://` hors développement.
 - Lancer une migration destructive (suppression de table ou de colonne) sans validation explicite.
 - Supprimer définitivement un paiement ou une dépense.
 - Envoyer des données personnelles ou financières à PostHog, Sentry ou tout service tiers.

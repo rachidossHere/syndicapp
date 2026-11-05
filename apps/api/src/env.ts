@@ -12,8 +12,14 @@ const optional = <T extends z.ZodType>(schema: T) =>
   z.preprocess((value) => (value === '' ? undefined : value), schema);
 
 const envSchema = z.object({
-  NODE_ENV: optional(z.enum(['development', 'test', 'production']).default('development')),
+  // Sans NODE_ENV, l'API se considère en production : les réglages de développement
+  // (CORS ouvert, origines exp:// d'Expo Go) ne s'activent que sur demande explicite.
+  NODE_ENV: optional(z.enum(['development', 'test', 'production']).default('production')),
   PORT: optional(z.coerce.number().int().min(1).max(65535).default(3000)),
+  /** Secret de signature des sessions Better Auth (32 caractères minimum). */
+  BETTER_AUTH_SECRET: z.string().min(32),
+  /** URL publique de l'API (ex. http://localhost:3000) : base des routes /api/auth/*. */
+  BETTER_AUTH_URL: z.url(),
 });
 
 const parsed = envSchema.safeParse(process.env);

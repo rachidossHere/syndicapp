@@ -15,6 +15,13 @@
       "when": 1793895310920,
       "tag": "0001_healthcheck_drop",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1793912197927,
+      "tag": "0002_auth_tables",
+      "breakpoints": true
     }
   ]
 }

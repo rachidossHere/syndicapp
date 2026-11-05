@@ -1,3 +1,4 @@
-// Schéma Drizzle de l'application. Aucune table pour l'instant.
-// Les tables du schéma neon_auth (plan 03) appartiennent à Neon et ne sont jamais migrées.
-export {};
+// Schéma Drizzle de l'application.
+// auth.ts est généré par la CLI de Better Auth (`pnpm --filter @syndic/api auth:generate`) :
+// ne pas le modifier à la main.
+export * from './auth';

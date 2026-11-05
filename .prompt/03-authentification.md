@@ -21,7 +21,7 @@ Un utilisateur peut créer un compte avec son e-mail et un mot de passe, se conn
 - Mobile : client `createAuthClient` de `better-auth/react` avec `expoClient` de `@better-auth/expo/client`, `scheme: "syndicapp"` et **`storage: SecureStore`**. Paquets client : `better-auth`, `@better-auth/expo`, `expo-secure-store`, `expo-network`.
 - Appels à notre API : le client HTTP ajoute l'en-tête `Cookie` obtenu avec `authClient.getCookie()`, avec `credentials: "omit"`.
 - Navigation : Expo Router avec les groupes `(auth)` (accueil, connexion, inscription) et `(app)` (écrans protégés).
-- **Design** : celui du canevas, artboards « Authentification (parcours) » et « Connexion en arabe (RTL) » : écran d'accueil, inscription, connexion, puis écran « Bonjour {prénom} » avec les deux choix « Créer ma résidence » et « J'ai un code d'invitation » (boutons sans action pour l'instant : plan 04). Uniquement les composants de `@syndic/ui`.
+- **Design** : celui de `docs/auth.png` : écran d'accueil, inscription, connexion, puis écran « Bonjour {prénom} » avec les deux choix « Créer ma résidence » et « J'ai un code d'invitation » (boutons sans action pour l'instant : plan 04). Uniquement les composants de `@syndic/ui`.
 - Vérification de l'e-mail et mot de passe oublié : désactivés (pas encore de service d'envoi d'e-mails).
 - Limitation des tentatives : rate limit intégré de Better Auth activé sur la connexion et l'inscription.
 - Messages d'erreur génériques (« E-mail ou mot de passe incorrect »), sans révéler si un e-mail existe.
@@ -75,7 +75,7 @@ Terminé quand : depuis un écran de développement, l'appli peut s'inscrire, se
 
 ### 6. Écrans et navigation protégée
 
-Reproduis le design du canevas avec `@syndic/ui` : groupe `(auth)` avec l'accueil, `sign-in` et `sign-up` ; groupe `(app)` avec l'écran « Bonjour {prénom} » (données de `/api/me`), les deux choix sans action et « Se déconnecter ». Le layout racine affiche un chargement tant que la session est inconnue, puis redirige. Formulaires avec React Hook Form et les schémas de `packages/shared`. Bouton de validation en chargement et sans double envoi. Afficher / masquer le mot de passe. Textes en FR et AR, e-mail toujours saisi de gauche à droite. Supprime l'écran temporaire de santé de l'API s'il ne sert plus (garde `/dev/design-system`).
+Reproduis le design de `docs/auth.png` avec `@syndic/ui` : groupe `(auth)` avec l'accueil, `sign-in` et `sign-up` ; groupe `(app)` avec l'écran « Bonjour {prénom} » (données de `/api/me`), les deux choix sans action et « Se déconnecter ». Le layout racine affiche un chargement tant que la session est inconnue, puis redirige. Formulaires avec React Hook Form et les schémas de `packages/shared`. Bouton de validation en chargement et sans double envoi. Afficher / masquer le mot de passe. Textes en FR et AR, e-mail toujours saisi de gauche à droite. Supprime l'écran temporaire de santé de l'API s'il ne sert plus (garde `/dev/design-system`).
 
 Terminé quand : un nouvel utilisateur s'inscrit et arrive sur « Bonjour » ; après fermeture complète de l'appli, il est toujours connecté ; après déconnexion, il revient à l'accueil et ne peut pas revenir en arrière.
 
@@ -89,7 +89,7 @@ Terminé quand : un nouvel utilisateur s'inscrit et arrive sur « Bonjour » ; a
 - Mots de passe de 7 caractères, 72 octets et 73 octets : seuls les cas valides sont acceptés.
 - La session est dans SecureStore, jamais dans AsyncStorage ; aucun cookie ni jeton dans les logs.
 - Les origines `exp://` ne sont acceptées qu'en développement.
-- Écrans corrects en français et en arabe, conformes au canevas.
+- Écrans corrects en français et en arabe, conformes à `docs/auth.png`.
 - `production` n'a pas été modifiée.
 - De bout en bout dans Expo Go : inscription → « Bonjour » → fermeture complète → réouverture toujours connecté → déconnexion → connexion avec le même compte → « Bonjour ».
 
