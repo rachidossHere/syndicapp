@@ -11,6 +11,7 @@ import { isProduction } from './env';
 import { describeError, formatErrorSummary } from './error-log';
 import { loggablePath, requestLogger } from './middleware/request-logger';
 import { health } from './routes/health';
+import { invitations } from './routes/invitations';
 import { lots } from './routes/lots';
 import { me } from './routes/me';
 import { residences } from './routes/residences';
@@ -37,6 +38,7 @@ app.on(['GET', 'POST'], '/api/auth/*', (c) =>
 app.route('/api/me', me);
 app.route('/api/residences', residences);
 app.route('/api/lots', lots);
+app.route('/api/invitations', invitations);
 
 app.notFound((c) => c.json({ error: 'not_found' }, 404));
 
