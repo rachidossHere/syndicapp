@@ -1,6 +1,8 @@
 import { getDb, sql } from '@syndic/db';
 import { Hono } from 'hono';
 
+import { describeError, formatErrorSummary } from '../error-log';
+
 /** Au-delà, la base est considérée comme indisponible (laisse le temps au réveil de Neon). */
 const DB_TIMEOUT_MS = 5000;
 
@@ -12,7 +14,8 @@ health.get('/', async (c) => {
     await withTimeout(getDb().execute(sql`select 1`), DB_TIMEOUT_MS);
     return c.json({ status: 'ok' }, 200);
   } catch (error) {
-    console.error('[health] base de données indisponible :', error);
+    // Nom et code seulement : jamais la requête SQL ni ses paramètres.
+    console.error(`[health] base de données indisponible : ${formatErrorSummary(describeError(error))}`);
     return c.json({ status: 'error' }, 503);
   }
 });

@@ -27,12 +27,27 @@ const envSchema = z.object({
   CLIENT_IP_HEADER: optional(z.string().min(1).toLowerCase().optional()),
 });
 
-const parsed = envSchema.safeParse(process.env);
-if (!parsed.success) {
-  // Seuls les noms de variables sont affichés, jamais leurs valeurs.
-  const names = parsed.error.issues.map((issue) => issue.path.join('.')).join(', ');
-  throw new Error(`Variables d'environnement invalides : ${names}`);
+export type Env = z.infer<typeof envSchema>;
+
+/**
+ * Lit et vérifie les variables d'environnement. L'API refuse de démarrer si l'une est invalide.
+ * Les messages ne contiennent que des noms de variables, jamais leurs valeurs.
+ */
+export function parseEnv(source: Record<string, string | undefined>): Env {
+  const parsed = envSchema.safeParse(source);
+  if (!parsed.success) {
+    const names = parsed.error.issues.map((issue) => issue.path.join('.')).join(', ');
+    throw new Error(`Variables d'environnement invalides : ${names}`);
+  }
+  // En production, les cookies de session ne sont marqués Secure qu'avec une URL en HTTPS.
+  if (parsed.data.NODE_ENV === 'production' && !parsed.data.BETTER_AUTH_URL.startsWith('https://')) {
+    throw new Error(
+      'BETTER_AUTH_URL doit commencer par https:// en production (cookies de session sécurisés). ' +
+        "Corrigez la variable chez l'hébergeur ; http:// n'est accepté qu'en développement et en test.",
+    );
+  }
+  return parsed.data;
 }
 
-export const env = parsed.data;
+export const env = parseEnv(process.env);
 export const isProduction = env.NODE_ENV === 'production';

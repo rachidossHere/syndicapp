@@ -7,6 +7,7 @@ import bcrypt from 'bcryptjs';
 import { betterAuth } from 'better-auth';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 
+import { DISABLED_AUTH_PATHS } from './auth-routes';
 import { validateSignUp } from './auth-validation';
 import { CLIENT_IP_HEADER } from './client-ip';
 import { env } from './env';
@@ -48,6 +49,9 @@ export const auth = betterAuth({
   // Validation de l'inscription avec le schéma partagé (@syndic/shared), avant Better Auth.
   hooks: { before: validateSignUp },
 
+  // Seules les routes du MVP restent ouvertes (voir auth-routes.ts) : les autres répondent 404.
+  disabledPaths: [...DISABLED_AUTH_PATHS],
+
   trustedOrigins: [APP_ORIGIN, ...(env.NODE_ENV === 'development' ? EXPO_GO_DEV_ORIGINS : [])],
 
   // Activé aussi en développement (désactivé par défaut hors production).
@@ -64,6 +68,15 @@ export const auth = betterAuth({
   // IP du client posée par l'API (voir client-ip.ts) : un compteur de tentatives par client.
   advanced: {
     ipAddress: { ipAddressHeaders: [CLIENT_IP_HEADER] },
+  },
+
+  // Journal interne de Better Auth : le message seul, jamais ses arguments (objets d'erreur pouvant
+  // contenir une requête SQL et ses paramètres, donc des données personnelles).
+  logger: {
+    log: (level, message) => {
+      const write = level === 'error' ? console.error : level === 'warn' ? console.warn : console.log;
+      write(`[auth] ${level} : ${message}`);
+    },
   },
 
   // Aucune donnée envoyée à un service tiers (AGENTS.md, section 8).
