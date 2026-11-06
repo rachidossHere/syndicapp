@@ -100,6 +100,7 @@ function RootStack() {
         (connexion, déconnexion).
       */}
       <Stack.Screen name="index" options={{ headerShown: false, animation: 'none' }} />
+      <Stack.Screen name="invite/[code]" options={{ headerShown: false, animation: "none" }} />
       <Stack.Protected guard={signedIn}>
         <Stack.Screen name="(app)" options={{ headerShown: false }} />
       </Stack.Protected>
