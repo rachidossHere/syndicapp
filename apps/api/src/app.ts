@@ -3,6 +3,7 @@ import { cors } from 'hono/cors';
 import { HTTPException } from 'hono/http-exception';
 
 import { auth } from './auth';
+import { OPEN_AUTH_PATHS } from './auth-routes';
 import { withClientIp } from './client-ip';
 import { isProduction } from './env';
 import { requestLogger } from './middleware/request-logger';
@@ -20,7 +21,12 @@ if (!isProduction) {
 
 // Routes publiques : santé et authentification (Better Auth gère /api/auth/*).
 app.route('/health', health);
-app.on(['GET', 'POST'], '/api/auth/*', (c) => auth.handler(withClientIp(c)));
+// Seuls les chemins ouverts du MVP sont transmis à Better Auth ; tout autre chemin répond 404
+// (y compris ceux à paramètre, comme /reset-password/:token, que disabledPaths ne bloque pas).
+const OPEN_AUTH_ROUTES = new Set<string>(OPEN_AUTH_PATHS.map((path) => `/api/auth${path}`));
+app.on(['GET', 'POST'], '/api/auth/*', (c) =>
+  OPEN_AUTH_ROUTES.has(c.req.path) ? auth.handler(withClientIp(c)) : c.json({ error: 'not_found' }, 404),
+);
 
 // Routes protégées : requireAuth est appliqué route par route.
 app.route('/api/me', me);
