@@ -1,5 +1,7 @@
 import type { AuthErrorKey } from '@syndic/shared';
 
+import { frResidenceTexts } from './fr-residences';
+
 /** Erreurs d'authentification (clés de @syndic/shared) : le typage exige une traduction pour chacune. */
 const authErrors: Record<AuthErrorKey, string> = {
   'auth.errors.nameRequired': 'Indiquez votre nom.',
@@ -23,6 +25,7 @@ const authErrors: Record<AuthErrorKey, string> = {
 /** Textes de l'appli en français (langue de référence : ses clés définissent TranslationKey). */
 export const fr = {
   ...authErrors,
+  ...frResidenceTexts,
 
   'common.back': 'Retour',
   'common.loading': 'Chargement…',
