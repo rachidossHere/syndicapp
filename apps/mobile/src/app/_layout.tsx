@@ -88,6 +88,12 @@ function RootStack() {
         contentStyle: { backgroundColor: colors.bg },
       }}>
       {/* Les écrans gèrent eux-mêmes leur zone sûre (composant Screen) : pas d'en-tête. */}
+      {/*
+        Racine « / » : toujours accessible, elle redirige vers /home ou /welcome. Déclarée en premier,
+        c'est aussi l'écran vers lequel Expo Router revient quand un groupe protégé disparaît
+        (connexion, déconnexion).
+      */}
+      <Stack.Screen name="index" options={{ headerShown: false, animation: 'none' }} />
       <Stack.Protected guard={signedIn}>
         <Stack.Screen name="(app)" options={{ headerShown: false }} />
       </Stack.Protected>
