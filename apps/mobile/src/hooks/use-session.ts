@@ -9,6 +9,7 @@ import { useQueryClient } from '@tanstack/react-query';
 
 import { authClient } from '@/lib/auth-client';
 import { toAuthResult, type AuthResult } from '@/lib/auth-errors';
+import { markJustSignedUp } from '@/lib/welcome-flag';
 
 import { ME_QUERY_KEY } from './use-me';
 
@@ -27,7 +28,11 @@ export function useSession() {
 
     const { name, email, password } = parsed.data;
     const { error } = await authClient.signUp.email({ name, email, password });
-    if (!error) await queryClient.invalidateQueries({ queryKey: ME_QUERY_KEY });
+    if (!error) {
+      // Avant la redirection vers « Bonjour » : le toast de bienvenue s'affichera une fois.
+      markJustSignedUp();
+      await queryClient.invalidateQueries({ queryKey: ME_QUERY_KEY });
+    }
     return toAuthResult(error, 'signUp');
   };
 
