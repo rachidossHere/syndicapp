@@ -16,6 +16,17 @@ export const AUTH_ERROR_KEYS = {
   passwordMismatch: 'auth.errors.passwordMismatch',
   /** Requête mal formée (corps absent, champ inattendu) : erreur générique. */
   invalidInput: 'auth.errors.invalidInput',
+  // Erreurs renvoyées par l'API, converties par l'appli (jamais affichées en texte brut).
+  /** Connexion refusée : même message pour un e-mail inconnu et un mauvais mot de passe. */
+  invalidCredentials: 'auth.errors.invalidCredentials',
+  /** Inscription refusée (dont e-mail déjà utilisé) : message neutre, voir AGENTS.md section 8. */
+  signUpFailed: 'auth.errors.signUpFailed',
+  /** Trop de tentatives (429). */
+  tooManyAttempts: 'auth.errors.tooManyAttempts',
+  /** API injoignable (pas de réseau, serveur arrêté). */
+  network: 'auth.errors.network',
+  /** Toute autre erreur. */
+  unknown: 'auth.errors.unknown',
 } as const;
 
 export type AuthErrorKey = (typeof AUTH_ERROR_KEYS)[keyof typeof AUTH_ERROR_KEYS];

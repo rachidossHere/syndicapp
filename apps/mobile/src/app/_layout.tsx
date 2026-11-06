@@ -1,4 +1,5 @@
 import { useTheme } from '@syndic/ui';
+import { QueryClientProvider } from '@tanstack/react-query';
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router/stack';
 import * as SplashScreen from 'expo-splash-screen';
@@ -6,6 +7,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 
 import { fontSources } from '@/lib/fonts';
+import { queryClient } from '@/lib/query-client';
 import { LanguageProvider } from '@/providers/language-provider';
 
 SplashScreen.preventAutoHideAsync();
@@ -33,11 +35,13 @@ export default function RootLayout() {
   }
 
   return (
-    <LanguageProvider>
-      {/* Thème clair uniquement (MVP) : texte sombre dans la barre d'état. */}
-      <StatusBar style="dark" />
-      <RootStack />
-    </LanguageProvider>
+    <QueryClientProvider client={queryClient}>
+      <LanguageProvider>
+        {/* Thème clair uniquement (MVP) : texte sombre dans la barre d'état. */}
+        <StatusBar style="dark" />
+        <RootStack />
+      </LanguageProvider>
+    </QueryClientProvider>
   );
 }
 
@@ -64,6 +68,7 @@ function RootStack() {
       {/* Inaccessible hors du mode développement, y compris par lien profond. */}
       <Stack.Protected guard={__DEV__}>
         <Stack.Screen name="dev/design-system" options={{ title: 'Design system' }} />
+        <Stack.Screen name="dev/auth-test" options={{ title: 'Test d’authentification' }} />
       </Stack.Protected>
     </Stack>
   );

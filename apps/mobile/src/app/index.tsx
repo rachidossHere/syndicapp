@@ -12,6 +12,8 @@ const copy = {
     title: 'Tableau de bord',
     designSystem: 'Design system',
     designSystemHint: 'Ouvre l’écran de démonstration (développement)',
+    authTest: 'Test d’authentification',
+    authTestHint: 'Inscription, connexion et /api/me (développement)',
     apiTitle: 'API : ok',
     apiBody: 'Coupure d’eau de 9 h à 13 h pour le nettoyage des réservoirs.',
     apiNote: 'Exemple statique : la vraie vérification arrivera avec les écrans.',
@@ -24,6 +26,8 @@ const copy = {
     title: 'لوحة القيادة',
     designSystem: 'نظام التصميم',
     designSystemHint: 'يفتح شاشة العرض (وضع التطوير)',
+    authTest: 'اختبار المصادقة',
+    authTestHint: 'التسجيل والدخول و /api/me (وضع التطوير)',
     apiTitle: 'واجهة API: تعمل',
     apiBody: 'انقطاع الماء من الساعة 9 إلى 13 لتنظيف الخزانات.',
     apiNote: 'مثال ثابت: التحقق الفعلي سيأتي مع الشاشات.',
@@ -56,6 +60,20 @@ export default function HomeScreen() {
           </Text>
           <Text variant="small" tone="muted">
             {t.designSystemHint}
+          </Text>
+        </Card>
+      )}
+
+      {__DEV__ && (
+        <Card
+          onPress={() => router.push('/dev/auth-test')}
+          accessibilityLabel={t.authTest}
+          accessibilityHint={t.authTestHint}>
+          <Text variant="bodyStrong" tone="primary">
+            {t.authTest}
+          </Text>
+          <Text variant="small" tone="muted">
+            {t.authTestHint}
           </Text>
         </Card>
       )}
