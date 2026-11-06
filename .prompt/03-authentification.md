@@ -1,6 +1,6 @@
 # 03 · Authentification (Better Auth dans l'API)
 
-Statut : brouillon
+Statut : terminé
 
 ## Objectif
 
