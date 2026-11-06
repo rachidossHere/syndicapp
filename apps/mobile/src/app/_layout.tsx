@@ -7,6 +7,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
 
 import { LoadingScreen } from '@/features/auth/loading-screen';
+import { StartupErrorScreen } from '@/features/auth/startup-error-screen';
 import { useSession } from '@/hooks/use-session';
 import { useT } from '@/i18n/use-t';
 import { fontSources } from '@/lib/fonts';
@@ -57,17 +58,22 @@ export default function RootLayout() {
  */
 function RootStack() {
   const { colors, typography, fontFamily } = useTheme();
-  const { user, isLoading } = useSession();
+  const { user, isLoading, isRefetching, hasNetworkError, refetch } = useSession();
   const t = useT();
   const [sessionKnown, setSessionKnown] = useState(false);
 
   // Une fois la session connue, on ne revient plus à l'écran de chargement : une simple
   // actualisation de la session ne doit pas démonter les formulaires en cours.
+  // Au premier lancement, une erreur réseau (sans session en cache) n'est pas une réponse :
+  // l'écran d'erreur s'affiche, et la session ne sera « connue » qu'après une lecture réussie.
   useEffect(() => {
-    if (!isLoading) setSessionKnown(true);
-  }, [isLoading]);
+    if (!isLoading && !(hasNetworkError && user === null)) setSessionKnown(true);
+  }, [isLoading, hasNetworkError, user]);
 
   if (!sessionKnown) {
+    if (!isLoading && hasNetworkError) {
+      return <StartupErrorScreen onRetry={() => void refetch()} retrying={isRefetching} />;
+    }
     return <LoadingScreen />;
   }
 

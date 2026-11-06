@@ -23,8 +23,10 @@ export const AUTH_ERROR_KEYS = {
   signUpFailed: 'auth.errors.signUpFailed',
   /** Trop de tentatives (429). */
   tooManyAttempts: 'auth.errors.tooManyAttempts',
-  /** API injoignable (pas de réseau, serveur arrêté). */
+  /** Serveur injoignable alors que le téléphone a du réseau (API arrêtée, mauvaise adresse). */
   network: 'auth.errors.network',
+  /** Le téléphone n'a pas de connexion (ni Wi-Fi ni données mobiles). */
+  offline: 'auth.errors.offline',
   /** Toute autre erreur. */
   unknown: 'auth.errors.unknown',
 } as const;

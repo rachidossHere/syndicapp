@@ -12,8 +12,19 @@ import { API_URL } from './config';
  * (découpées en `<clé>.0`, `<clé>.1`… si la valeur est longue).
  * Le plugin envoie l'origine de l'appli (`expo-origin`), acceptée par `trustedOrigins` côté API.
  */
+/**
+ * Option de better-fetch transmise telle quelle par Better Auth (config.catchAllError) :
+ * une requête sans réponse (pas de réseau, API arrêtée, mauvaise adresse) devient une erreur
+ * renvoyée ({ status: 500, statusText: "Fetch Error" }) au lieu d'une promesse rejetée et non gérée.
+ * Elle n'est pas déclarée dans le type ClientFetchOption de Better Auth 1.7.17 : d'où la conversion
+ * explicite (le comportement est vérifié par l'appli, voir lib/network-errors.ts).
+ */
+type AuthFetchOptions = NonNullable<NonNullable<Parameters<typeof createAuthClient>[0]>['fetchOptions']>;
+const fetchOptions = { catchAllError: true } as unknown as AuthFetchOptions;
+
 export const authClient = createAuthClient({
   baseURL: `${API_URL}/api/auth`,
+  fetchOptions,
   plugins: [
     expoClient({
       scheme: 'syndicapp',

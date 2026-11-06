@@ -1,13 +1,17 @@
 // Écran 4 de docs/auth.png : « Bonjour {prénom} » après connexion ou inscription.
+import { AUTH_ERROR_KEYS, type AuthErrorKey } from '@syndic/shared';
 import { Banner, Button, Card, Icon, Screen, Text, Toast, useTheme } from '@syndic/ui';
 import KeyRound from 'lucide-react-native/icons/key-round';
 import Plus from 'lucide-react-native/icons/plus';
 import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 
+import { ErrorNotice } from '@/components/network-error';
 import { useMe } from '@/hooks/use-me';
 import { useSession } from '@/hooks/use-session';
 import { useT } from '@/i18n/use-t';
+import { ApiError } from '@/lib/api';
+import { currentNetworkErrorKey } from '@/lib/network';
 import { consumeJustSignedUp } from '@/lib/welcome-flag';
 
 /** Durée d'affichage du toast de bienvenue, en millisecondes. */
@@ -22,6 +26,8 @@ export function HomeScreen() {
   const me = useMe(true);
   const [showWelcome, setShowWelcome] = useState(consumeJustSignedUp);
   const [signingOut, setSigningOut] = useState(false);
+  const [signOutError, setSignOutError] = useState<string | undefined>();
+  const [meErrorKey, setMeErrorKey] = useState<AuthErrorKey>(AUTH_ERROR_KEYS.network);
 
   useEffect(() => {
     if (!showWelcome) return;
@@ -29,11 +35,30 @@ export function HomeScreen() {
     return () => clearTimeout(timer);
   }, [showWelcome]);
 
+  // Erreur réseau sur /api/me : « pas de connexion » ou « serveur injoignable » (expo-network).
+  const meNetworkFailure = me.error instanceof ApiError && me.error.status === 0;
+  useEffect(() => {
+    if (!meNetworkFailure) return;
+    let active = true;
+    void currentNetworkErrorKey().then((key) => {
+      if (active) setMeErrorKey(key);
+    });
+    return () => {
+      active = false;
+    };
+  }, [meNetworkFailure, me.errorUpdatedAt]);
+
   const onSignOut = async () => {
     if (signingOut) return;
     setSigningOut(true);
-    // La navigation protégée renvoie à l'accueil et retire « Bonjour » de l'historique.
-    await signOut();
+    setSignOutError(undefined);
+    // En cas de succès, la navigation protégée renvoie à l'accueil et retire « Bonjour » de
+    // l'historique. Sans réseau, la session reste ouverte et l'erreur est affichée.
+    const result = await signOut();
+    if (!result.ok) {
+      setSignOutError(result.formError);
+      setSigningOut(false);
+    }
   };
 
   const choices = [
@@ -59,7 +84,10 @@ export function HomeScreen() {
     <Screen
       scroll
       footer={
-        <Button variant="ghost" label={t('home.signOut')} loading={signingOut} onPress={onSignOut} />
+        <>
+          {signOutError !== undefined && <ErrorNotice errorKey={signOutError} />}
+          <Button variant="ghost" label={t('home.signOut')} loading={signingOut} onPress={() => void onSignOut()} />
+        </>
       }>
       {showWelcome && <Toast message={t('home.welcomeToast')} />}
 
@@ -68,10 +96,12 @@ export function HomeScreen() {
           <Text variant="h2">{t('home.greeting', { name: firstName(me.data.name) })}</Text>
           <Text tone="muted">{t('home.noResidence')}</Text>
         </View>
+      ) : me.error && meNetworkFailure ? (
+        <ErrorNotice errorKey={meErrorKey} onRetry={() => void me.refetch()} retrying={me.isFetching} />
       ) : me.error ? (
         <View style={{ gap: spacing.md }}>
           <Banner message={t('home.loadError')} />
-          <Button variant="secondary" label={t('common.retry')} onPress={() => void me.refetch()} />
+          <Button variant="secondary" label={t('common.retry')} loading={me.isFetching} onPress={() => void me.refetch()} />
         </View>
       ) : (
         <Text tone="muted">{t('common.loading')}</Text>

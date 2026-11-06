@@ -1,11 +1,12 @@
 // Écrans 3 et 5 de docs/auth.png : connexion, avec bandeau d'erreur générique.
 import { signInSchema, type SignInInput } from '@syndic/shared';
-import { Banner, Button, Screen, Text, TextField, useTheme } from '@syndic/ui';
+import { Button, Screen, Text, TextField, useTheme } from '@syndic/ui';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { View } from 'react-native';
 
+import { ErrorNotice } from '@/components/network-error';
 import { useSession } from '@/hooks/use-session';
 import { useErrorText } from '@/i18n/use-error-text';
 import { useT } from '@/i18n/use-t';
@@ -67,7 +68,7 @@ export function SignInScreen() {
         <Text tone="muted">{t('signIn.subtitle')}</Text>
       </View>
 
-      {formError !== undefined && <Banner message={errorText(formError) ?? ''} />}
+      {formError !== undefined && <ErrorNotice errorKey={formError} />}
 
       <View style={{ gap: spacing.md }}>
         <Controller
