@@ -9,7 +9,7 @@ import {
   normalizeInviteCode,
 } from './invitations';
 
-describe('codes d\'invitation', () => {
+describe("codes d'invitation", () => {
   it('exclut les caractères ambigus', () => {
     for (const char of '01OIL') expect(INVITE_CODE_ALPHABET).not.toContain(char);
     expect(new Set(INVITE_CODE_ALPHABET).size).toBe(INVITE_CODE_ALPHABET.length);
