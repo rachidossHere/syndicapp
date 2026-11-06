@@ -12,6 +12,8 @@ const fr = {
   'status.report.in_progress': 'En cours',
   'status.report.resolved': 'Résolu',
   'common.loading': 'Chargement…',
+  'field.showPassword': 'Afficher le mot de passe',
+  'field.hidePassword': 'Masquer le mot de passe',
 } as const;
 
 export type UiMessageKey = keyof typeof fr;
@@ -23,6 +25,8 @@ const ar: Record<UiMessageKey, string> = {
   'status.report.in_progress': 'قيد المعالجة',
   'status.report.resolved': 'تم الحل',
   'common.loading': 'جارٍ التحميل…',
+  'field.showPassword': 'إظهار كلمة المرور',
+  'field.hidePassword': 'إخفاء كلمة المرور',
 };
 
 export const uiMessages: Record<Language, Record<UiMessageKey, string>> = { fr, ar };

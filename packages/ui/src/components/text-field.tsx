@@ -1,5 +1,8 @@
+import Eye from 'lucide-react-native/icons/eye';
+import EyeOff from 'lucide-react-native/icons/eye-off';
 import { useState, type ComponentRef, type Ref } from 'react';
 import {
+  Pressable,
   TextInput,
   View,
   type StyleProp,
@@ -8,11 +11,12 @@ import {
 } from 'react-native';
 
 import { useTheme } from '../theme/theme-provider';
+import { Icon } from './icon';
 import { Text } from './text';
 
 export type TextFieldProps = Omit<
   TextInputProps,
-  'style' | 'placeholderTextColor' | 'accessibilityLabel' | 'ref'
+  'style' | 'placeholderTextColor' | 'accessibilityLabel' | 'ref' | 'secureTextEntry'
 > & {
   /** Libellé affiché au-dessus du champ et annoncé par les lecteurs d'écran (obligatoire). */
   label: string;
@@ -20,6 +24,14 @@ export type TextFieldProps = Omit<
   helper?: string;
   /** Message d'erreur (remplace l'aide), affiché en `dangerFg` et annoncé. */
   error?: string;
+  /**
+   * Champ de mot de passe : saisie masquée, avec un bouton (œil) pour l'afficher ou la masquer.
+   */
+  password?: boolean;
+  /**
+   * Saisie toujours de gauche à droite, même en arabe (e-mail, code, URL).
+   */
+  ltr?: boolean;
   /**
    * Référence vers le TextInput : compatible React Hook Form (`field.ref`).
    * Avec React 19, `ref` est une prop ordinaire : `forwardRef` n'est plus nécessaire.
@@ -29,11 +41,16 @@ export type TextFieldProps = Omit<
   containerStyle?: StyleProp<ViewStyle>;
 };
 
-/** Champ de saisie : libellé, aide et erreur ; bordure `primary` au focus, `dangerFg` en erreur. */
+/**
+ * Champ de saisie : libellé, aide et erreur ; bordure `primary` au focus, `dangerFg` en erreur.
+ * En option : mot de passe masquable (`password`) et saisie de gauche à droite (`ltr`).
+ */
 export function TextField({
   label,
   helper,
   error,
+  password = false,
+  ltr = false,
   ref,
   containerStyle,
   onFocus,
@@ -41,8 +58,9 @@ export function TextField({
   editable = true,
   ...inputProps
 }: TextFieldProps) {
-  const { colors, typography, radius, spacing, sizes, borderWidth, fontFamily } = useTheme();
+  const { colors, typography, radius, spacing, sizes, borderWidth, fontFamily, t } = useTheme();
   const [focused, setFocused] = useState(false);
+  const [hidden, setHidden] = useState(true);
   const hasError = error !== undefined && error.length > 0;
   const message = hasError ? error : helper;
 
@@ -55,36 +73,63 @@ export function TextField({
         {label}
       </Text>
 
-      <TextInput
-        ref={ref}
-        accessibilityLabel={label}
-        accessibilityHint={message}
-        accessibilityState={{ disabled: !editable }}
-        editable={editable}
-        placeholderTextColor={colors.textMuted}
-        onFocus={(event) => {
-          setFocused(true);
-          onFocus?.(event);
-        }}
-        onBlur={(event) => {
-          setFocused(false);
-          onBlur?.(event);
-        }}
+      <View
         style={{
           minHeight: sizes.input,
-          paddingHorizontal: spacing.md,
-          paddingVertical: spacing.sm,
+          flexDirection: 'row',
+          alignItems: 'center',
           borderWidth: borderWidth.thin,
           borderColor,
           borderRadius: radius.md,
           borderCurve: 'continuous',
           backgroundColor: focused ? colors.surface : colors.surfaceMuted,
-          color: colors.text,
-          fontSize: typography.body.fontSize,
-          fontFamily: fontFamily(typography.body.fontWeight),
-        }}
-        {...inputProps}
-      />
+        }}>
+        <TextInput
+          ref={ref}
+          accessibilityLabel={label}
+          accessibilityHint={message}
+          accessibilityState={{ disabled: !editable }}
+          editable={editable}
+          secureTextEntry={password && hidden}
+          placeholderTextColor={colors.textMuted}
+          onFocus={(event) => {
+            setFocused(true);
+            onFocus?.(event);
+          }}
+          onBlur={(event) => {
+            setFocused(false);
+            onBlur?.(event);
+          }}
+          style={[
+            {
+              flex: 1,
+              alignSelf: 'stretch',
+              paddingHorizontal: spacing.md,
+              paddingVertical: spacing.sm,
+              color: colors.text,
+              fontSize: typography.body.fontSize,
+              fontFamily: fontFamily(typography.body.fontWeight),
+            },
+            // E-mail, code : l'ordre des caractères reste de gauche à droite, même en arabe.
+            ltr && { writingDirection: 'ltr' },
+          ]}
+          {...inputProps}
+        />
+        {password && (
+          <Pressable
+            onPress={() => setHidden((value) => !value)}
+            accessibilityRole="button"
+            accessibilityLabel={hidden ? t('field.showPassword') : t('field.hidePassword')}
+            style={{
+              width: sizes.touchTarget,
+              height: sizes.touchTarget,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}>
+            <Icon icon={hidden ? Eye : EyeOff} color={colors.textMuted} />
+          </Pressable>
+        )}
+      </View>
 
       {message !== undefined && message.length > 0 && (
         <Text
