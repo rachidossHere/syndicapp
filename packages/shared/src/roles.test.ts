@@ -11,6 +11,10 @@ describe('table des permissions', () => {
     expect(can('caretaker', 'issues.manage')).toBe(true);
   });
 
+  it('caretaker peut créer un signalement', () => {
+    expect(can('caretaker', 'issues.write')).toBe(true);
+  });
+
   it("owner n'a pas members.invite", () => {
     expect(can('owner', 'members.invite')).toBe(false);
   });

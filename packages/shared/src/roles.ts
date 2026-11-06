@@ -36,7 +36,7 @@ export const ROLE_PERMISSIONS = {
   deputy: ['accounts.read', 'announcements.write', 'issues.write', 'issues.manage'],
   owner: ['accounts.read', 'issues.write'],
   tenant: ['issues.write'],
-  caretaker: ['issues.manage'],
+  caretaker: ['issues.write', 'issues.manage'],
 } as const satisfies Record<Role, readonly Permission[]>;
 
 /** Indique si un rôle possède une permission. */
