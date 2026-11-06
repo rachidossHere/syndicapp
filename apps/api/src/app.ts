@@ -11,7 +11,9 @@ import { isProduction } from './env';
 import { describeError, formatErrorSummary } from './error-log';
 import { loggablePath, requestLogger } from './middleware/request-logger';
 import { health } from './routes/health';
+import { lots } from './routes/lots';
 import { me } from './routes/me';
+import { residences } from './routes/residences';
 
 export const app = new Hono();
 
@@ -33,6 +35,8 @@ app.on(['GET', 'POST'], '/api/auth/*', (c) =>
 
 // Routes protégées : requireAuth est appliqué route par route.
 app.route('/api/me', me);
+app.route('/api/residences', residences);
+app.route('/api/lots', lots);
 
 app.notFound((c) => c.json({ error: 'not_found' }, 404));
 
