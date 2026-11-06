@@ -9,7 +9,7 @@ import {
   type InvitationErrorKey,
   type PendingInvitation,
 } from '@syndic/shared';
-import { and, desc, eq, gt, isNull } from 'drizzle-orm';
+import { and, desc, eq, gt, isNull, sql } from 'drizzle-orm';
 import { Hono } from 'hono';
 import { HTTPException } from 'hono/http-exception';
 import { z } from 'zod';
@@ -20,6 +20,7 @@ import {
   requirePermission,
   type MembershipEnv,
 } from '../middleware/require-membership';
+import { limitInviteAttempts } from '../rate-limit';
 import { generateInviteCode, inviteExpiry } from '../services/invitations';
 import { parseJson } from '../validate';
 
@@ -204,7 +205,7 @@ function stateError(row: { revokedAt: Date | null; usedAt: Date | null; expiresA
 }
 
 /** Aperçu d'un code (sans X-Residence-Id) : résidence, lot et rôle, aucune donnée personnelle. */
-invitations.get('/preview/:code', requireAuth, async (c) => {
+invitations.get('/preview/:code', requireAuth, limitInviteAttempts, async (c) => {
   const row = await findByCode(c.req.param('code'));
   if (!row) return refusal(INVITATION_ERRORS.notFound);
   const error = stateError(row);
@@ -215,4 +216,114 @@ invitations.get('/preview/:code', requireAuth, async (c) => {
     role: row.role,
     expiresAt: row.expiresAt.toISOString(),
   });
+});
+
+/** Refus levé dans la transaction d'acceptation : annule tout, puis devient une réponse `refusal`. */
+class AcceptRefusal extends Error {
+  constructor(readonly key: InvitationErrorKey) {
+    super(key);
+  }
+}
+
+/**
+ * Accepte un code (sans X-Residence-Id) : crée le membership et marque l'invitation utilisée, dans
+ * une seule transaction. La ligne de la résidence est verrouillée (`for update`) : les acceptations
+ * d'une même résidence passent l'une après l'autre, donc les contrôles « déjà membre » et « lot déjà
+ * loué » ne peuvent pas être contournés par deux requêtes simultanées. Le marquage « utilisée » est
+ * une mise à jour conditionnelle (`where used_at is null`) : un code ne sert qu'une fois.
+ */
+invitations.post('/accept/:code', requireAuth, limitInviteAttempts, async (c) => {
+  const found = await findByCode(c.req.param('code'));
+  if (!found) return refusal(INVITATION_ERRORS.notFound);
+  const userId = c.get('user').id;
+
+  try {
+    const membership = await db.transaction(async (tx) => {
+      await tx.execute(
+        sql`select 1 from ${schema.residence} where ${schema.residence.id} = ${found.residenceId} for update`,
+      );
+
+      // 1. Marquage conditionnel : seul le premier arrivé obtient la ligne.
+      const [claimed] = await tx
+        .update(schema.invitation)
+        .set({ usedAt: new Date(), usedBy: userId })
+        .where(
+          and(
+            eq(schema.invitation.id, found.id),
+            isNull(schema.invitation.usedAt),
+            isNull(schema.invitation.revokedAt),
+            gt(schema.invitation.expiresAt, new Date()),
+          ),
+        )
+        .returning({ id: schema.invitation.id });
+      if (!claimed) {
+        // Perdu (ou invitation devenue inutilisable) : on relit l'état pour donner la bonne clé.
+        const [current] = await tx
+          .select({
+            usedAt: schema.invitation.usedAt,
+            revokedAt: schema.invitation.revokedAt,
+            expiresAt: schema.invitation.expiresAt,
+          })
+          .from(schema.invitation)
+          .where(eq(schema.invitation.id, found.id))
+          .limit(1);
+        throw new AcceptRefusal((current && stateError(current)) ?? INVITATION_ERRORS.notFound);
+      }
+
+      // 2. Déjà membre actif de cette résidence ?
+      const [already] = await tx
+        .select({ id: schema.membership.id })
+        .from(schema.membership)
+        .where(
+          and(
+            eq(schema.membership.residenceId, found.residenceId),
+            eq(schema.membership.userId, userId),
+            eq(schema.membership.active, true),
+          ),
+        )
+        .limit(1);
+      if (already) throw new AcceptRefusal(INVITATION_ERRORS.alreadyMember);
+
+      // 3. Un seul locataire actif par lot (plusieurs copropriétaires sont permis).
+      if (found.role === 'tenant' && found.lotId) {
+        const [tenant] = await tx
+          .select({ id: schema.membership.id })
+          .from(schema.membership)
+          .where(
+            and(
+              eq(schema.membership.residenceId, found.residenceId),
+              eq(schema.membership.lotId, found.lotId),
+              eq(schema.membership.role, 'tenant'),
+              eq(schema.membership.active, true),
+            ),
+          )
+          .limit(1);
+        if (tenant) throw new AcceptRefusal(INVITATION_ERRORS.lotHasTenant);
+      }
+
+      const [created] = await tx
+        .insert(schema.membership)
+        .values({
+          residenceId: found.residenceId,
+          userId,
+          role: found.role,
+          lotId: found.lotId,
+        })
+        .returning({ id: schema.membership.id });
+      return created!;
+    });
+
+    return c.json(
+      {
+        membershipId: membership.id,
+        residenceId: found.residenceId,
+        role: found.role,
+        lotId: found.lotId,
+      },
+      201,
+    );
+  } catch (error) {
+    if (error instanceof AcceptRefusal) return refusal(error.key);
+    throw error;
+  }
 });

@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { generateInviteCode, inviteExpiry } from './invitations';
 
 describe('generateInviteCode', () => {
-  it('produit des codes de 6 caractères de l\'alphabet, variés', () => {
+  it("produit des codes de 6 caractères de l'alphabet, variés", () => {
     const codes = new Set<string>();
     for (let i = 0; i < 2000; i++) {
       const code = generateInviteCode();
