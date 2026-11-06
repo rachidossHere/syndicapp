@@ -1,3 +1,5 @@
+import { randomUUID } from 'node:crypto';
+
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { HTTPException } from 'hono/http-exception';
@@ -6,7 +8,8 @@ import { auth } from './auth';
 import { OPEN_AUTH_PATHS } from './auth-routes';
 import { withClientIp } from './client-ip';
 import { isProduction } from './env';
-import { requestLogger } from './middleware/request-logger';
+import { describeError, formatErrorSummary } from './error-log';
+import { loggablePath, requestLogger } from './middleware/request-logger';
 import { health } from './routes/health';
 import { me } from './routes/me';
 
@@ -47,7 +50,11 @@ app.onError((error, c) => {
   if (error instanceof HTTPException && error.status < 500) {
     return c.json({ error: CLIENT_ERROR_CODES[error.status] ?? 'request_error' }, error.status);
   }
-  // Le détail (message SQL, stack trace) ne va que dans les logs du serveur.
-  console.error(`[api] erreur non gérée sur ${c.req.method} ${c.req.path} :`, error);
-  return c.json({ error: 'internal_error' }, 500);
+  // Journal : nom, code et identifiant de corrélation seulement (jamais de SQL, de paramètres
+  // ni de corps de requête). L'identifiant, renvoyé au client, permet de retrouver la ligne.
+  const id = randomUUID();
+  console.error(
+    `[api] erreur ${id} sur ${c.req.method} ${loggablePath(c.req.path)} : ${formatErrorSummary(describeError(error))}`,
+  );
+  return c.json({ error: 'internal_error', id }, 500);
 });

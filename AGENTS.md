@@ -77,7 +77,7 @@ Le MVP est découpé en plans dans `.prompt/` (voir `00-feuille-de-route.md`), r
 | Design system | `@syndic/ui` : jetons + `StyleSheet`, polices **Plus Jakarta Sans** et **IBM Plex Sans Arabic** (`expo-font`), icônes **lucide-react-native** |
 | API | **Hono** sur Node (`@hono/node-server`) |
 | ORM | **Drizzle ORM** + `drizzle-kit` |
-| Base de données | **Neon** (PostgreSQL), pilote `@neondatabase/serverless` |
+| Base de données | **Neon** (PostgreSQL), pilote WebSocket (`Pool` de `@neondatabase/serverless` et `drizzle-orm/neon-serverless`), pour les transactions |
 | Authentification | **Better Auth** hébergé dans l'API Hono (adaptateur Drizzle, plugin `@better-auth/expo`), **bcryptjs** coût 12, session dans **SecureStore** côté mobile |
 | Fichiers | **Cloudflare R2** (client S3, URL signées) |
 | Reçus PDF | **pdf-lib**, générés côté API |
@@ -130,17 +130,27 @@ Avant de coder, lire le skill correspondant à l'outil concerné et le suivre. E
 syndicapp/
   apps/
     mobile/                       → Expo (React Native), Expo Router
+      src/app/                    → routes uniquement (groupes (auth) et (app), dev/)
+      src/features/               → écrans, par domaine
+      src/i18n/                   → traductions : fr.ts (référence), ar.ts (typé), useT()
+      src/lib/auth-client.ts      → client Better Auth (expoClient, SecureStore)
+      src/lib/api.ts              → appels à l'API (cookie de session, credentials: "omit")
     api/                          → Hono
       src/auth.ts                 → configuration Better Auth (seul endroit)
+      src/auth-routes.ts          → routes Better Auth ouvertes et désactivées
+      src/client-ip.ts            → IP du client pour la limitation des tentatives
+      src/error-log.ts            → journal des erreurs (nom, code, identifiant)
   packages/
     db/                           → client Neon, schéma Drizzle, migrations (@syndic/db)
       src/schema/auth.ts          → tables Better Auth, générées par sa CLI, ne pas modifier à la main
     shared/                       → schémas Zod, types, rôles, permissions, constantes, événements analytics (@syndic/shared)
+      src/auth.ts                 → schémas d'inscription et de connexion, clés d'erreur auth.errors.*
       src/roles.ts                → rôles et permissions (source unique)
       src/analytics.ts            → liste fermée des événements PostHog
     ui/                           → design system : jetons, thème, composants (@syndic/ui)
   .prompt/                        → plans de réalisation (00 à 12)
   docs/                           → références visuelles (design-system.png, auth.png), déploiement, pilote
+  scripts/local-ip.mjs            → IP locale du PC et URL de l'API pour apps/mobile/.env.local (pnpm ip)
   AGENTS.md
   .env.example
   pnpm-workspace.yaml
@@ -154,7 +164,9 @@ syndicapp/
 - `pnpm dev` : lance l'API (Expo se lance à part, voir plus bas).
 - `pnpm typecheck`, `pnpm test`, `pnpm lint`, `pnpm format`.
 - `pnpm --filter db db:generate` puis `pnpm --filter db db:migrate` : migrations (branche `dev`).
+- `pnpm --filter @syndic/api auth:generate` : regénère `packages/db/src/schema/auth.ts` avec la CLI de Better Auth.
 - `cd apps/mobile && npx expo start` : appli seule.
+- `pnpm ip` : adresse IP locale du PC et ligne `EXPO_PUBLIC_API_URL` à mettre dans `apps/mobile/.env.local`.
 
 ---
 
@@ -163,6 +175,7 @@ syndicapp/
 ### Général
 - TypeScript `strict`, pas de `any` sauf justification en commentaire.
 - Noms de variables, fonctions et tables **en anglais**. Textes affichés **en français et en arabe** via les fichiers de traduction, jamais en dur dans les composants.
+- Dans l'appli, les textes passent par `useT()` et `src/i18n` : `fr.ts` est la référence, `ar.ts` est typé, et une clé manquante dans une langue ne compile pas.
 - Montants stockés en **centimes (entier)**, devise MAD. Jamais de nombre à virgule pour l'argent. Affichage `18 420 MAD` via `formatMad` et le composant `Amount`.
 - Dates stockées en UTC, affichées dans le fuseau `Africa/Casablanca`.
 - Chaque étape se fait sur sa propre branche `plan-NN/etape-X-titre`, créée depuis `master` ; tout est commité avec des messages clairs en français ; jamais de fusion dans `master` ni de push sans validation.
@@ -184,6 +197,10 @@ syndicapp/
 - Toute route métier passe par `requireAuth` (session Better Auth lue avec `auth.api.getSession`), puis `requireMembership` (résidence active envoyée dans l'en-tête `X-Residence-Id`), puis `requirePermission`. Seules `GET /health` et `/api/auth/*` sont publiques.
 - Les réponses sont adaptées au rôle : un champ réservé (nom d'un auteur, montant d'un autre lot) n'est jamais envoyé puis masqué par l'appli.
 - Les erreurs renvoyées ne contiennent jamais de détails internes (requête SQL, stack trace).
+- Le journal des erreurs n'écrit que le nom de l'erreur, son code et un identifiant de corrélation (renvoyé dans la réponse 500 `{ error: "internal_error", id }`) : jamais la requête SQL, ses paramètres ni le corps de la requête (`src/error-log.ts`).
+- Routes de Better Auth : seules `/sign-up/email`, `/sign-in/email`, `/sign-out`, `/get-session`, `/ok` et `/error` sont ouvertes. Les autres sont désactivées (`disabledPaths`), et Hono ne transmet à Better Auth que les chemins ouverts (`src/auth-routes.ts`).
+- Toute route de Better Auth ouverte doit passer par nos validations Zod ; une nouvelle route ne s'ouvre qu'avec l'accord de Rachid.
+- L'IP du client est fixée par l'API (`src/client-ip.ts`) pour la limitation des tentatives : adresse de la connexion par défaut ; `CLIENT_IP_HEADER` uniquement derrière un proxy de confiance, dont on prend la dernière adresse.
 - Toute création possible hors ligne (paiement, dépense) accepte un `client_id` et est **idempotente**.
 - Toute notification passe par le module `notify`.
 
@@ -207,6 +224,8 @@ syndicapp/
 **Authentification**
 - Mots de passe hachés par bcryptjs (coût 12) uniquement dans l'API ; 72 octets maximum ; jamais journalisés.
 - Messages d'erreur génériques qui ne révèlent pas si un e-mail existe.
+- Limitation des tentatives : 5 connexions et 5 inscriptions par minute et par client.
+- En production, `BETTER_AUTH_URL` doit être en `https://` : sinon l'API refuse de démarrer.
 - Les codes d'invitation ont une durée de vie limitée, sont à usage unique, et leurs tentatives sont limitées.
 - Risque connu : l'inscription révèle qu'un e-mail est déjà utilisé, tant que la vérification d'e-mail n'existe pas. Atténué par la limite de tentatives et un message neutre dans l'appli. À corriger quand l'envoi d'e-mails sera en place.
 
@@ -231,6 +250,7 @@ syndicapp/
 Le projet démarre sur des offres gratuites, dont les conditions changent : les vérifier avant tout déploiement.
 
 - **Neon** : mise en veille possible avec un délai au réveil, stockage et calcul limités. Chaque branche a sa propre base.
+- La limitation des tentatives est en mémoire : elle repart à zéro au redémarrage et ne vaut que pour une instance. À passer en base ou dans Redis au plan 12.
 - **Cloudflare R2** : quota gratuit de stockage et d'opérations ; d'où la compression des images.
 - **Render / Railway** : mise en veille et ressources limitées.
 - **PostHog** : quota mensuel d'événements ; n'envoyer que les événements utiles.

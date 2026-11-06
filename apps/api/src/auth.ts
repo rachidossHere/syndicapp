@@ -70,6 +70,15 @@ export const auth = betterAuth({
     ipAddress: { ipAddressHeaders: [CLIENT_IP_HEADER] },
   },
 
+  // Journal interne de Better Auth : le message seul, jamais ses arguments (objets d'erreur pouvant
+  // contenir une requête SQL et ses paramètres, donc des données personnelles).
+  logger: {
+    log: (level, message) => {
+      const write = level === 'error' ? console.error : level === 'warn' ? console.warn : console.log;
+      write(`[auth] ${level} : ${message}`);
+    },
+  },
+
   // Aucune donnée envoyée à un service tiers (AGENTS.md, section 8).
   telemetry: { enabled: false },
 
