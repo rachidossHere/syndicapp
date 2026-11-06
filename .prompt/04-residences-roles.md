@@ -42,7 +42,7 @@ Terminé quand : un utilisateur qui n'est pas membre reçoit `403` sur une rési
 
 ### 3. Invitations
 
-Ajoute `POST /invitations` (syndic uniquement), `GET /invitations` (en attente), `DELETE /invitations/:id` (annulation), `GET /invitations/:code` (aperçu : nom de la résidence, lot, rôle, sans données personnelles) et `POST /invitations/:code/accept` (crée le `membership` dans une transaction et marque l'invitation utilisée). Limite les tentatives sur les codes pour empêcher de les deviner.
+Ajoute `POST /invitations` (syndic uniquement), `GET /invitations` (en attente), `DELETE /invitations/:id` (annulation), `GET /api/invitations/preview/:code` (aperçu : nom de la résidence, lot, rôle, sans données personnelles) et `POST /api/invitations/accept/:code` (crée le `membership` dans une transaction et marque l'invitation utilisée). Limite les tentatives sur les codes pour empêcher de les deviner.
 
 Terminé quand : un code expiré, utilisé ou annulé est refusé, et deux acceptations simultanées du même code ne créent qu'un seul membre.
 
