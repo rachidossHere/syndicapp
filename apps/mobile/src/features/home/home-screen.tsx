@@ -4,7 +4,7 @@
 import { AUTH_ERROR_KEYS, can, type AuthErrorKey } from '@syndic/shared';
 import { Banner, Button, Card, Chip, Icon, ListItem, Screen, Text, Toast, useTheme } from '@syndic/ui';
 import { useRouter } from 'expo-router';
-import Building2 from 'lucide-react-native/icons/building-2';
+import Building from 'lucide-react-native/icons/building';
 import KeyRound from 'lucide-react-native/icons/key-round';
 import Plus from 'lucide-react-native/icons/plus';
 import { useEffect, useState } from 'react';
@@ -148,7 +148,7 @@ export function HomeScreen() {
                   alignItems: 'center',
                   justifyContent: 'center',
                 }}>
-                <Icon icon={Building2} color={colors.primary} />
+                <Icon icon={Building} color={colors.primary} />
               </View>
             }
             onPress={() => router.push('/lots')}

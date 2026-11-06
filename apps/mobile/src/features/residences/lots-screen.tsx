@@ -13,7 +13,7 @@ import {
   useTheme,
 } from '@syndic/ui';
 import { Redirect, useRouter } from 'expo-router';
-import Building2 from 'lucide-react-native/icons/building-2';
+import Building from 'lucide-react-native/icons/building';
 import Plus from 'lucide-react-native/icons/plus';
 import { useMemo, useState } from 'react';
 import { View } from 'react-native';
@@ -180,7 +180,7 @@ export function LotsScreen() {
   } else if (lots.data.length === 0) {
     body = (
       <EmptyState
-        icon={Building2}
+        icon={Building}
         title={t('lots.empty.title')}
         description={t('lots.empty.body')}
         action={<Button label={t('lots.add')} icon={Plus} onPress={() => router.push('/add-lots')} />}
