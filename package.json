@@ -12,7 +12,8 @@
     "lint": "pnpm --recursive --if-present lint",
     "test": "pnpm --recursive --if-present test",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "ip": "node scripts/local-ip.mjs"
   },
   "devDependencies": {
     "eslint": "^9.39.5",
