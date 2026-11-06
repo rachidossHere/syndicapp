@@ -97,12 +97,12 @@ lots.get('/', requireAuth, requireMembership, async (c) => {
       ...lotColumns,
       hasMember: sql<boolean>`exists (
         select 1 from ${schema.membership}
-        where ${schema.membership.lotId} = ${schema.lot.id}
+        where ${schema.membership.lotId} = "lot"."id"
           and ${schema.membership.residenceId} = ${residenceId}
           and ${schema.membership.active})`,
       hasInvitation: sql<boolean>`exists (
         select 1 from ${schema.invitation}
-        where ${schema.invitation.lotId} = ${schema.lot.id}
+        where ${schema.invitation.lotId} = "lot"."id"
           and ${schema.invitation.residenceId} = ${residenceId}
           and ${schema.invitation.usedAt} is null
           and ${schema.invitation.revokedAt} is null
