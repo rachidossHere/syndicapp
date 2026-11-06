@@ -8,6 +8,7 @@ import { useEffect, useState } from 'react';
 
 import { LoadingScreen } from '@/features/auth/loading-screen';
 import { useSession } from '@/hooks/use-session';
+import { useT } from '@/i18n/use-t';
 import { fontSources } from '@/lib/fonts';
 import { queryClient } from '@/lib/query-client';
 import { LanguageProvider } from '@/providers/language-provider';
@@ -57,6 +58,7 @@ export default function RootLayout() {
 function RootStack() {
   const { colors, typography, fontFamily } = useTheme();
   const { user, isLoading } = useSession();
+  const t = useT();
   const [sessionKnown, setSessionKnown] = useState(false);
 
   // Une fois la session connue, on ne revient plus à l'écran de chargement : une simple
@@ -94,7 +96,7 @@ function RootStack() {
       </Stack.Protected>
       {/* Inaccessible hors du mode développement, y compris par lien profond. */}
       <Stack.Protected guard={__DEV__}>
-        <Stack.Screen name="dev/design-system" options={{ title: 'Design system' }} />
+        <Stack.Screen name="dev/design-system" options={{ title: t('dev.designSystem') }} />
       </Stack.Protected>
     </Stack>
   );
