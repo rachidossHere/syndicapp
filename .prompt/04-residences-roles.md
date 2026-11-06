@@ -9,14 +9,15 @@ Un utilisateur connecté peut créer sa résidence et ses lots, devenir son synd
 ## Décisions
 
 - Tables : `residence`, `lot` (appartement, local), `membership` (utilisateur, résidence, rôle, lot éventuel), `invitation`.
-- `membership.user_id` est l'identifiant Neon Auth (`text`). Pas de clé étrangère vers le schéma `neon_auth`.
-- Rôles : `syndic`, `tresorier`, `adjoint`, `coproprietaire`, `locataire`, `gardien`, définis une seule fois dans `packages/shared`, avec une table des permissions (qui peut faire quoi).
-- Une résidence a **exactement un** `syndic` actif à tout moment.
+- `membership.user_id` référence `user.id` de nos tables Better Auth (`text`), avec une vraie clé étrangère (`on delete restrict`).
+- Rôles (codes en anglais) : `manager` (syndic), `treasurer`, `deputy`, `owner`, `tenant`, `caretaker`, définis une seule fois dans `packages/shared`, avec une table des permissions (qui peut faire quoi). Les libellés affichés restent traduits (syndic, trésorier, adjoint, copropriétaire, locataire, gardien).
+- Une résidence a **exactement un** `manager` actif à tout moment.
 - Une personne peut avoir un rôle différent dans chaque résidence. Un lot peut avoir plusieurs copropriétaires et un locataire.
 - Invitation : le syndic choisit le lot et le rôle, l'API génère un **code à 6 caractères** et un lien profond `syndicapp://invite/<code>`. Validité 7 jours, usage unique, annulable.
 - Résidence active : choisie dans l'appli, mémorisée localement, envoyée à l'API dans l'en-tête `X-Residence-Id`.
 - Middleware `requireMembership` : vérifie que l'utilisateur est membre de la résidence de l'en-tête, place `residenceId` et `role` dans le contexte. Helper `requirePermission("charges.write")` pour chaque route.
 - Création des lots : saisie un par un, ou génération rapide (« bâtiment A, étages 1 à 4, 3 appartements par étage »).
+- Design : la référence visuelle est `docs/residences.png` (créer la résidence, ajouter les appartements, liste, inviter, rejoindre, rejoindre en arabe). Les valeurs exactes viennent des jetons de `@syndic/ui`. Sur l'image, les polices sont des remplacements (Inter, DejaVu Sans).
 
 ## Hors périmètre
 
@@ -31,11 +32,11 @@ Un utilisateur connecté peut créer sa résidence et ses lots, devenir son synd
 
 Dans `packages/db/src/schema/`, crée `residence` (nom, ville, adresse, date de création), `lot` (`residence_id`, référence comme « B12 », bâtiment, étage, type), `membership` (`residence_id`, `user_id`, `role`, `lot_id` facultatif, `active`, dates) et `invitation` (`residence_id`, `lot_id`, `role`, `code` unique, `expires_at`, `used_at`, `used_by`, `revoked_at`, `created_by`). Ajoute les index et la contrainte « un seul syndic actif par résidence ». Dans `packages/shared`, crée `roles.ts` avec les rôles et la table des permissions. Génère et applique la migration sur `dev`.
 
-Terminé quand : la migration passe, et un test unitaire vérifie la table des permissions (par exemple : `locataire` n'a pas `accounts.read`).
+Terminé quand : la migration passe, et un test unitaire vérifie la table des permissions (par exemple : `tenant` n'a pas `accounts.read`).
 
 ### 2. Middlewares et API des résidences
 
-Crée `requireMembership` et `requirePermission`. Ajoute les routes : `POST /residences` (crée la résidence et le `membership` syndic de l'utilisateur, dans une transaction), `GET /residences` (mes résidences et mon rôle dans chacune), `GET /residences/current`, `POST /lots`, `POST /lots/bulk` (génération rapide), `GET /lots`. Toute requête métier filtre sur `residence_id`.
+Crée `requireMembership` et `requirePermission`. Ajoute les routes : `POST /residences` (crée la résidence et le `membership` `manager` de l'utilisateur, dans une transaction), `GET /residences` (mes résidences et mon rôle dans chacune), `GET /residences/current`, `POST /lots`, `POST /lots/bulk` (génération rapide), `GET /lots`. Toute requête métier filtre sur `residence_id`.
 
 Terminé quand : un utilisateur qui n'est pas membre reçoit `403` sur une résidence existante, et `404` n'est jamais renvoyé à sa place pour révéler qu'elle existe ou non (choisir un comportement et le documenter).
 
@@ -55,7 +56,7 @@ Terminé quand : le parcours complet fonctionne sur deux téléphones (ou deux c
 
 - `pnpm typecheck` et `pnpm lint` passent.
 - Test d'isolation : avec deux résidences et deux syndics, aucun appel ne permet à l'un de lire ou modifier les lots, membres ou invitations de l'autre (tester chaque route en changeant `X-Residence-Id`).
-- Un `locataire` ne peut ni créer de lot ni inviter.
+- Un `tenant` (locataire) ne peut ni créer de lot ni inviter.
 - Impossible d'avoir deux syndics actifs dans la même résidence.
 - Invitation : code expiré, utilisé, annulé, inconnu → refus clair et traduit.
 - De bout en bout : création de la résidence avec 12 lots en génération rapide → invitation pour B12 → partage du lien → acceptation par un second compte → ce compte voit « Résidence … · Apt B12 » et uniquement les onglets de son rôle.

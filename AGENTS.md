@@ -33,12 +33,12 @@ Les rôles sont **toujours liés à une résidence**, via la table `membership`.
 
 | Rôle | Droits principaux |
 | --- | --- |
-| `syndic` | Tout gérer : charges, encaissements, dépenses, annonces, signalements, membres, invitations, passation |
-| `tresorier` | Encaissements et dépenses, lecture de tout |
-| `adjoint` | Annonces et signalements, lecture des comptes |
-| `coproprietaire` | Voir ses charges et reçus, consulter les comptes, signaler, lire les annonces |
-| `locataire` | Signaler et lire les annonces uniquement, aucun accès aux comptes |
-| `gardien` | Recevoir et traiter les signalements, lire les annonces |
+| `manager` (syndic) | Tout gérer : charges, encaissements, dépenses, annonces, signalements, membres, invitations, passation |
+| `treasurer` (trésorier) | Encaissements et dépenses, lecture de tout |
+| `deputy` (adjoint) | Annonces et signalements, lecture des comptes |
+| `owner` (copropriétaire) | Voir ses charges et reçus, consulter les comptes, signaler, lire les annonces |
+| `tenant` (locataire) | Signaler et lire les annonces uniquement, aucun accès aux comptes |
+| `caretaker` (gardien) | Recevoir et traiter les signalements, lire les annonces |
 
 - Une résidence a **exactement un** syndic actif.
 - L'accès à une résidence se fait **uniquement sur invitation** (code ou lien envoyé par le syndic).
@@ -208,7 +208,7 @@ syndicapp/
 - **Aucune couleur, taille de police, espacement ou rayon codé en dur** dans `apps/mobile` : utiliser les jetons et composants de `@syndic/ui`. Un besoin non couvert se traite en ajoutant un jeton ou un composant au package.
 - Les statuts métier s'affichent toujours avec `StatusBadge`, les montants toujours avec `Amount`.
 - Zones tactiles d'au moins **44 px**, contraste du texte d'au moins **4,5:1**, espacements en `start`/`end` (jamais `left`/`right`), états jamais signalés par la couleur seule.
-- Les références visuelles sont dans `docs/` : `design-system.png` pour les composants, `auth.png` pour l'authentification. Les écrans doivent leur correspondre ; les valeurs exactes viennent des jetons de `@syndic/ui`.
+- Les références visuelles sont dans `docs/` : `design-system.png` pour les composants, `auth.png` pour l'authentification, `residences.png` pour les résidences, lots et invitations. Les écrans doivent leur correspondre ; les valeurs exactes viennent des jetons de `@syndic/ui`.
 - Icônes lucide importées une par une (`lucide-react-native/icons/<nom>`), jamais depuis l'index du paquet (tout le paquet serait chargé).
 - Les écrans affichés dépendent du rôle dans la résidence active.
 - La session est gérée uniquement par le client Better Auth avec `expoClient` et SecureStore ; les appels à l'API passent par `src/lib/api.ts`. Jamais de jeton stocké à la main ni dans AsyncStorage.
