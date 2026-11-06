@@ -1,5 +1,7 @@
 import { AUTH_ERROR_KEY_LIST, AUTH_ERROR_KEYS, type AuthErrorKey } from '@syndic/shared';
 
+import { isFetchFailure } from './network-errors';
+
 /** Résultat d'une action d'authentification : jamais de texte brut, seulement des clés de traduction. */
 export type AuthResult =
   | { ok: true }
@@ -8,6 +10,7 @@ export type AuthResult =
 /** Forme des erreurs renvoyées par le client Better Auth (corps JSON de l'API + statut HTTP). */
 type ClientError = {
   status?: number;
+  statusText?: string;
   code?: string;
   error?: string;
   fields?: Record<string, unknown>;
@@ -26,6 +29,8 @@ const isAuthErrorKey = (value: unknown): value is AuthErrorKey =>
  */
 export function toAuthResult(error: ClientError | null | undefined, action: 'signIn' | 'signUp'): AuthResult {
   if (!error) return { ok: true };
+  // Avant tout statut : une requête sans réponse (catchAllError renvoie un faux statut 500).
+  if (isFetchFailure(error)) return { ok: false, formError: AUTH_ERROR_KEYS.network };
 
   const status = error.status ?? 0;
 
@@ -37,7 +42,6 @@ export function toAuthResult(error: ClientError | null | undefined, action: 'sig
     return { ok: false, fields };
   }
   if (status === 429) return { ok: false, formError: AUTH_ERROR_KEYS.tooManyAttempts };
-  if (status === 0) return { ok: false, formError: AUTH_ERROR_KEYS.network };
   if (action === 'signIn' && (status === 401 || status === 403)) {
     return { ok: false, formError: AUTH_ERROR_KEYS.invalidCredentials };
   }

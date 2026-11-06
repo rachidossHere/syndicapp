@@ -15,7 +15,8 @@ export const ar: Record<TranslationKey, string> = {
   'auth.errors.invalidCredentials': 'البريد الإلكتروني أو كلمة المرور غير صحيحة.',
   'auth.errors.signUpFailed': 'تعذّر إنشاء هذا الحساب. إذا كان لديك حساب بالفعل، سجّل الدخول.',
   'auth.errors.tooManyAttempts': 'محاولات كثيرة. أعد المحاولة بعد دقيقة.',
-  'auth.errors.network': 'تعذّر الاتصال. تحقّق من الشبكة وأعد المحاولة.',
+  'auth.errors.network': 'تعذّر الوصول إلى الخادم. تحقّق من اتصالك وأعد المحاولة.',
+  'auth.errors.offline': 'لا يوجد اتصال بالإنترنت. فعّل الويفي أو بيانات الهاتف، ثم أعد المحاولة.',
   'auth.errors.unknown': 'حدث خطأ. أعد المحاولة.',
 
   'common.back': 'رجوع',
@@ -62,4 +63,5 @@ export const ar: Record<TranslationKey, string> = {
   'home.loadError': 'تعذّر تحميل ملفك الشخصي.',
 
   'dev.designSystem': 'نظام التصميم (وضع التطوير)',
+  'dev.apiUrl': 'عنوان واجهة API: {url}',
 };

@@ -15,7 +15,8 @@ const authErrors: Record<AuthErrorKey, string> = {
   'auth.errors.invalidCredentials': 'E-mail ou mot de passe incorrect.',
   'auth.errors.signUpFailed': 'Impossible de créer ce compte. Si vous en avez déjà un, connectez-vous.',
   'auth.errors.tooManyAttempts': 'Trop de tentatives. Réessayez dans une minute.',
-  'auth.errors.network': 'Connexion impossible. Vérifiez votre réseau et réessayez.',
+  'auth.errors.network': 'Impossible de joindre le serveur. Vérifiez votre connexion et réessayez.',
+  'auth.errors.offline': 'Pas de connexion Internet. Activez le Wi-Fi ou les données mobiles, puis réessayez.',
   'auth.errors.unknown': 'Une erreur est survenue. Réessayez.',
 };
 
@@ -67,6 +68,7 @@ export const fr = {
   'home.loadError': 'Impossible de charger votre profil.',
 
   'dev.designSystem': 'Design system (développement)',
+  'dev.apiUrl': 'Adresse de l’API : {url}',
 };
 
 /** Toutes les clés de traduction de l'appli. */
