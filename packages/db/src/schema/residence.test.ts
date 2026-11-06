@@ -99,7 +99,9 @@ describe.skipIf(!hasDatabase)('schéma résidences (contraintes en base)', () =>
   it('accepte des managers actifs dans deux résidences différentes', async () => {
     const a = await createResidence();
     const b = await createResidence();
-    await getDb().insert(membership).values({ residenceId: a, userId: userIds[0]!, role: 'manager' });
+    await getDb()
+      .insert(membership)
+      .values({ residenceId: a, userId: userIds[0]!, role: 'manager' });
     await expect(
       getDb().insert(membership).values({ residenceId: b, userId: userIds[0]!, role: 'manager' }),
     ).resolves.toBeDefined();
@@ -119,7 +121,9 @@ describe.skipIf(!hasDatabase)('schéma résidences (contraintes en base)', () =>
     const a = await createResidence();
     const b = await createResidence();
     await getDb().insert(lot).values({ residenceId: a, reference: 'B12' });
-    await expect(getDb().insert(lot).values({ residenceId: b, reference: 'B12' })).resolves.toBeDefined();
+    await expect(
+      getDb().insert(lot).values({ residenceId: b, reference: 'B12' }),
+    ).resolves.toBeDefined();
   });
 
   it("refuse un membre rattaché au lot d'une autre résidence", async () => {
@@ -141,7 +145,9 @@ describe.skipIf(!hasDatabase)('schéma résidences (contraintes en base)', () =>
   it('refuse un membership vers un utilisateur inexistant', async () => {
     const residenceId = await createResidence();
     await expectPgError(
-      getDb().insert(membership).values({ residenceId, userId: `${tag}-absent`, role: 'owner' }),
+      getDb()
+        .insert(membership)
+        .values({ residenceId, userId: `${tag}-absent`, role: 'owner' }),
       FOREIGN_KEY_VIOLATION,
     );
   });
