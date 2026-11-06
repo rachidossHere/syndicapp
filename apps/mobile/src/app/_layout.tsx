@@ -4,8 +4,10 @@ import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router/stack';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
+import { LoadingScreen } from '@/features/auth/loading-screen';
+import { useSession } from '@/hooks/use-session';
 import { fontSources } from '@/lib/fonts';
 import { queryClient } from '@/lib/query-client';
 import { LanguageProvider } from '@/providers/language-provider';
@@ -45,9 +47,29 @@ export default function RootLayout() {
   );
 }
 
-/** Pile racine : l'accueil, et par-dessus les écrans réservés au développement. */
+/**
+ * Pile racine et navigation protégée :
+ * - tant que la session est inconnue (premier chargement), écran de chargement ;
+ * - avec une session, seul le groupe (app) est accessible ; sans session, seul (auth).
+ * Quand la session change (connexion, déconnexion), Expo Router bascule vers le groupe accessible
+ * et retire l'autre de l'historique : impossible de revenir à « Bonjour » après la déconnexion.
+ */
 function RootStack() {
   const { colors, typography, fontFamily } = useTheme();
+  const { user, isLoading } = useSession();
+  const [sessionKnown, setSessionKnown] = useState(false);
+
+  // Une fois la session connue, on ne revient plus à l'écran de chargement : une simple
+  // actualisation de la session ne doit pas démonter les formulaires en cours.
+  useEffect(() => {
+    if (!isLoading) setSessionKnown(true);
+  }, [isLoading]);
+
+  if (!sessionKnown) {
+    return <LoadingScreen />;
+  }
+
+  const signedIn = user !== null;
 
   return (
     <Stack
@@ -63,12 +85,16 @@ function RootStack() {
         headerBackButtonDisplayMode: 'minimal',
         contentStyle: { backgroundColor: colors.bg },
       }}>
-      {/* L'écran gère lui-même sa zone sûre (composant Screen) : pas d'en-tête. */}
-      <Stack.Screen name="index" options={{ headerShown: false }} />
+      {/* Les écrans gèrent eux-mêmes leur zone sûre (composant Screen) : pas d'en-tête. */}
+      <Stack.Protected guard={signedIn}>
+        <Stack.Screen name="(app)" options={{ headerShown: false }} />
+      </Stack.Protected>
+      <Stack.Protected guard={!signedIn}>
+        <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+      </Stack.Protected>
       {/* Inaccessible hors du mode développement, y compris par lien profond. */}
       <Stack.Protected guard={__DEV__}>
         <Stack.Screen name="dev/design-system" options={{ title: 'Design system' }} />
-        <Stack.Screen name="dev/auth-test" options={{ title: 'Test d’authentification' }} />
       </Stack.Protected>
     </Stack>
   );

@@ -15,6 +15,10 @@ export const sizes = {
   iconStroke: 2,
   /** Carré coloré qui contient l'icône d'une tuile d'action. */
   iconBox: 40,
+  /** Petit carré d'icône (liste d'avantages, puces). */
+  iconBoxSm: 32,
+  /** Logo de l'appli sur l'écran d'accueil. */
+  logo: 64,
   /** Hauteur minimale d'une tuile d'action de l'accueil syndic. */
   actionTileMinHeight: 112,
 } as const;
