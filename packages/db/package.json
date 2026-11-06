@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.2.0",
+    "@syndic/shared": "workspace:*",
     "drizzle-orm": "^0.45.4"
   },
   "devDependencies": {
