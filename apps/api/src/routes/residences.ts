@@ -1,10 +1,22 @@
 import { db, schema } from '@syndic/db';
-import { createResidenceSchema } from '@syndic/shared';
-import { and, eq } from 'drizzle-orm';
+import {
+  CHARGE_ERRORS,
+  CHARGE_PERIODS,
+  createResidenceSchema,
+  periodLabelOf,
+  todayInCasablanca,
+  updateResidenceSettingsSchema,
+} from '@syndic/shared';
+import { and, eq, inArray } from 'drizzle-orm';
 import { Hono } from 'hono';
 
+import { ChargeRefusal, withRefusals } from '../charge-errors';
 import { requireAuth } from '../middleware/require-auth';
-import { requireMembership, type MembershipEnv } from '../middleware/require-membership';
+import {
+  requireMembership,
+  requirePermission,
+  type MembershipEnv,
+} from '../middleware/require-membership';
 import { createResidenceWithManager } from '../services/residences';
 import { parseJson } from '../validate';
 
@@ -42,9 +54,59 @@ residences.get('/current', requireAuth, requireMembership, async (c) => {
       name: schema.residence.name,
       city: schema.residence.city,
       address: schema.residence.address,
+      chargePeriod: schema.residence.chargePeriod,
     })
     .from(schema.residence)
     .where(eq(schema.residence.id, c.get('residenceId')));
   if (!row) return c.json({ error: 'forbidden' }, 403);
   return c.json({ ...row, role: c.get('role') });
 });
+
+/**
+ * Syndic (residence.manage) : réglage de la périodicité des charges. Refusé (409) si un appel de
+ * charges existe déjà pour la période en cours (trimestre ou mois d'aujourd'hui, à Casablanca).
+ * La ligne de la résidence est verrouillée, comme à la création d'un appel.
+ */
+residences.patch(
+  '/current',
+  requireAuth,
+  requireMembership,
+  requirePermission('residence.manage'),
+  async (c) => {
+    const input = await parseJson(c, updateResidenceSettingsSchema);
+    const residenceId = c.get('residenceId');
+    const today = todayInCasablanca();
+    const currentLabels = CHARGE_PERIODS.map((period) => periodLabelOf(period, today));
+
+    return withRefusals(async () => {
+      const chargePeriod = await db.transaction(async (tx) => {
+        const [current] = await tx
+          .select({ chargePeriod: schema.residence.chargePeriod })
+          .from(schema.residence)
+          .where(eq(schema.residence.id, residenceId))
+          .for('update');
+        if (!current) throw new ChargeRefusal(CHARGE_ERRORS.notFound);
+        if (current.chargePeriod === input.chargePeriod) return current.chargePeriod;
+
+        const [existing] = await tx
+          .select({ id: schema.chargeCall.id })
+          .from(schema.chargeCall)
+          .where(
+            and(
+              eq(schema.chargeCall.residenceId, residenceId),
+              inArray(schema.chargeCall.periodLabel, currentLabels),
+            ),
+          )
+          .limit(1);
+        if (existing) throw new ChargeRefusal(CHARGE_ERRORS.periodLocked);
+
+        await tx
+          .update(schema.residence)
+          .set({ chargePeriod: input.chargePeriod })
+          .where(eq(schema.residence.id, residenceId));
+        return input.chargePeriod;
+      });
+      return c.json({ id: residenceId, chargePeriod });
+    });
+  },
+);
