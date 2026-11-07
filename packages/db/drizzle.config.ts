@@ -11,7 +11,7 @@ if (existsSync(envFile)) {
 
 export default defineConfig({
   dialect: 'postgresql',
-  schema: './src/schema',
+  schema: './src/schema/index.ts', // index seul : les *.test.ts du dossier ne doivent pas être lus par drizzle-kit
   out: './drizzle',
   // Seul le schéma public est géré par nos migrations ; neon_auth appartient à Neon.
   schemaFilter: ['public'],

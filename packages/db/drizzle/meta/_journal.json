@@ -29,6 +29,20 @@
       "when": 1793971822284,
       "tag": "0003_residences_roles",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1794065255100,
+      "tag": "0004_charge_period",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1794065330976,
+      "tag": "0005_charges_payments_receipts",
+      "breakpoints": true
     }
   ]
 }
