@@ -6,6 +6,7 @@ export { Badge, StatusBadge, type BadgeProps, type StatusBadgeProps } from './ba
 export { Banner, type BannerProps, type BannerTone } from './banner';
 export { Button, type ButtonProps, type ButtonSize, type ButtonVariant } from './button';
 export { Card, type CardProps } from './card';
+export { Chip, type ChipProps } from './chip';
 export { EmptyState, type EmptyStateProps } from './empty-state';
 export { Icon, type IconComponent, type IconProps } from './icon';
 export { IconButton, type IconButtonProps } from './icon-button';
@@ -18,6 +19,12 @@ export {
   type TabBarItem,
   type TabBarProps,
 } from './tab-bar';
+export {
+  SegmentedControl,
+  type SegmentedControlOption,
+  type SegmentedControlProps,
+} from './segmented-control';
+export { Stepper, type StepperProps } from './stepper';
 export { Text, type TextProps, type TextTone, type TextVariant } from './text';
 export { TextField, type TextFieldProps } from './text-field';
 export { Toast, type ToastProps } from './toast';

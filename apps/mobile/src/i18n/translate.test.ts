@@ -6,6 +6,7 @@ import { fr } from './fr';
 import { translate } from './translate';
 
 const ARABIC_LETTER = /[؀-ۿ]/;
+const NO_WORDS = ['welcome.appName', 'home.residenceLine', 'lots.single.referencePlaceholder'];
 const placeholders = (text: string) => (text.match(/\{\w+\}/g) ?? []).sort();
 
 describe('traductions', () => {
@@ -22,7 +23,8 @@ describe('traductions', () => {
 
   it('écrit chaque texte arabe en arabe (sauf le nom de l’appli)', () => {
     for (const [key, text] of Object.entries(ar)) {
-      if (key === 'welcome.appName') continue;
+      // Valeurs sans mot : nom de l'appli, ligne « nom · rôle » (deux paramètres), exemple de référence.
+      if (NO_WORDS.includes(key)) continue;
       expect(text, key).toMatch(ARABIC_LETTER);
     }
   });

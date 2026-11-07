@@ -8,6 +8,7 @@ import {
 } from '@syndic/shared';
 import { useQueryClient } from '@tanstack/react-query';
 
+import { setActiveResidenceId } from '@/lib/active-residence';
 import { authClient } from '@/lib/auth-client';
 import { toAuthResult, type AuthResult } from '@/lib/auth-errors';
 import { currentNetworkErrorKey } from '@/lib/network';
@@ -73,7 +74,9 @@ export function useSession() {
   const signOut = async (): Promise<AuthResult> => {
     const { error } = await callClient(() => authClient.signOut());
     if (!error) {
-      queryClient.removeQueries({ queryKey: ME_QUERY_KEY });
+      // Rien de l'utilisateur précédent ne doit rester : résidences, appartements, invitations.
+      queryClient.clear();
+      setActiveResidenceId(null);
       return { ok: true };
     }
     return refineNetworkError(
