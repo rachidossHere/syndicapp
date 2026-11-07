@@ -1,6 +1,6 @@
 // Résidences, lots, membres et invitations (plan 04).
 // Les rôles et types de lot viennent de @syndic/shared (source unique).
-import { LOT_TYPES, ROLES } from '@syndic/shared';
+import { CHARGE_PERIODS, DEFAULT_CHARGE_PERIOD, LOT_TYPES, ROLES } from '@syndic/shared';
 import { sql } from 'drizzle-orm';
 import {
   boolean,
@@ -21,6 +21,7 @@ import { user } from './auth';
 
 export const memberRole = pgEnum('member_role', ROLES);
 export const lotType = pgEnum('lot_type', LOT_TYPES);
+export const chargePeriod = pgEnum('charge_period', CHARGE_PERIODS);
 
 /** Dates stockées en UTC (AGENTS.md), avec fuseau explicite. */
 const createdAt = () => timestamp('created_at', { withTimezone: true }).defaultNow().notNull();
@@ -30,6 +31,8 @@ export const residence = pgTable('residence', {
   name: text('name').notNull(),
   city: text('city').notNull(),
   address: text('address'),
+  // Périodicité des appels de charges (plan 05), réglable plus tard.
+  chargePeriod: chargePeriod('charge_period').notNull().default(DEFAULT_CHARGE_PERIOD),
   createdAt: createdAt(),
 });
 
