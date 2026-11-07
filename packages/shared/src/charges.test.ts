@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  CHARGE_ERRORS,
   CHARGE_PERIODS,
   DUE_STATUSES,
   DUE_STATUS_LABEL_KEYS,
@@ -10,6 +11,10 @@ import {
   computeDueStatus,
   createChargeCallSchema,
   createPaymentSchema,
+  isPeriodLabelFor,
+  periodLabelOf,
+  todayInCasablanca,
+  updateResidenceSettingsSchema,
 } from './charges';
 
 const uuid = '0b8f3a52-6c1e-4f0e-9d3a-7a6c2f1b9e10';
@@ -31,7 +36,7 @@ describe('createChargeCallSchema', () => {
 
   it('accepte un appel valide', () => {
     expect(createChargeCallSchema.safeParse(valid).success).toBe(true);
-    expect(createChargeCallSchema.safeParse({ ...valid, periodLabel: '2026-M11' }).success).toBe(true);
+    expect(createChargeCallSchema.safeParse({ ...valid, periodLabel: '2026-11' }).success).toBe(true);
   });
 
   it('refuse un montant nul, négatif ou à virgule', () => {
@@ -41,7 +46,7 @@ describe('createChargeCallSchema', () => {
   });
 
   it('refuse une période ou une date invalide', () => {
-    for (const periodLabel of ['2026-Q5', '2026-M13', '2026', 'T4 2026']) {
+    for (const periodLabel of ['2026-Q5', '2026-13', '2026-00', '2026-M11', '2026', 'T4 2026']) {
       expect(createChargeCallSchema.safeParse({ ...valid, periodLabel }).success).toBe(false);
     }
     for (const dueDate of ['2026-02-31', '15/12/2026', '2026-12-15T00:00:00Z']) {
@@ -70,6 +75,42 @@ describe('cancelPaymentSchema', () => {
     expect(cancelPaymentSchema.safeParse({ reason: 'Erreur de lot' }).success).toBe(true);
     expect(cancelPaymentSchema.safeParse({ reason: '   ' }).success).toBe(false);
     expect(cancelPaymentSchema.safeParse({}).success).toBe(false);
+  });
+});
+
+describe('périodes', () => {
+  it('le libellé doit correspondre à la périodicité de la résidence', () => {
+    expect(isPeriodLabelFor('quarterly', '2026-Q4')).toBe(true);
+    expect(isPeriodLabelFor('quarterly', '2026-11')).toBe(false);
+    expect(isPeriodLabelFor('monthly', '2026-11')).toBe(true);
+    expect(isPeriodLabelFor('monthly', '2026-Q4')).toBe(false);
+  });
+
+  it('période en cours à partir d\'une date', () => {
+    expect(periodLabelOf('quarterly', '2026-11-07')).toBe('2026-Q4');
+    expect(periodLabelOf('quarterly', '2026-01-01')).toBe('2026-Q1');
+    expect(periodLabelOf('quarterly', '2026-06-30')).toBe('2026-Q2');
+    expect(periodLabelOf('monthly', '2026-03-31')).toBe('2026-03');
+  });
+
+  it('date du jour dans le fuseau Africa/Casablanca', () => {
+    // 31 décembre 2026 à 23 h 30 UTC : déjà le 1er janvier 2027 à Casablanca (UTC+1).
+    expect(todayInCasablanca(new Date('2026-12-31T23:30:00Z'))).toBe('2027-01-01');
+    expect(todayInCasablanca(new Date('2026-11-07T10:00:00Z'))).toBe('2026-11-07');
+  });
+});
+
+describe('updateResidenceSettingsSchema', () => {
+  it('accepte monthly et quarterly, refuse le reste', () => {
+    expect(updateResidenceSettingsSchema.safeParse({ chargePeriod: 'monthly' }).success).toBe(true);
+    expect(updateResidenceSettingsSchema.safeParse({ chargePeriod: 'yearly' }).success).toBe(false);
+    expect(updateResidenceSettingsSchema.safeParse({}).success).toBe(false);
+  });
+});
+
+describe('clés d\'erreur', () => {
+  it('toutes sous charges.errors.*', () => {
+    for (const key of Object.values(CHARGE_ERRORS)) expect(key).toMatch(/^charges\.errors\.\w+$/);
   });
 });
 
