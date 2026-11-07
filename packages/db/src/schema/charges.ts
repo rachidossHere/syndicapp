@@ -36,7 +36,7 @@ export const chargeCall = pgTable(
   {
     id: uuid('id').primaryKey().defaultRandom(),
     residenceId: residenceId(),
-    // « 2026-Q4 » ou « 2026-M11 ».
+    // « 2026-Q4 » (trimestre) ou « 2026-11 » (mois), selon residence.charge_period.
     periodLabel: text('period_label').notNull(),
     amountPerLot: integer('amount_per_lot').notNull(),
     dueDate: date('due_date', { mode: 'string' }).notNull(),

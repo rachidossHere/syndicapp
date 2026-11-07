@@ -3,6 +3,8 @@
 // ne contient que les clés de traduction, ajoutées à fr.ts et ar.ts avec les écrans (étape 4).
 import { z } from 'zod';
 
+import { TIMEZONE } from './constants';
+
 /** Périodicité des appels de charges, choisie à la création de la résidence. */
 export const CHARGE_PERIODS = ['monthly', 'quarterly'] as const;
 export type ChargePeriod = (typeof CHARGE_PERIODS)[number];
@@ -48,8 +50,47 @@ const isoDateSchema = z
     return !Number.isNaN(date.getTime()) && date.toISOString().startsWith(value);
   });
 
-/** Libellé de période : « 2026-Q4 » (trimestre) ou « 2026-M11 » (mois). */
-export const periodLabelSchema = z.string().regex(/^\d{4}-(Q[1-4]|M(0[1-9]|1[0-2]))$/);
+const QUARTER_LABEL = /^\d{4}-Q[1-4]$/;
+const MONTH_LABEL = /^\d{4}-(0[1-9]|1[0-2])$/;
+
+/** Libellé de période : « 2026-Q4 » (trimestre) ou « 2026-11 » (mois). */
+export const periodLabelSchema = z
+  .string()
+  .refine((value) => QUARTER_LABEL.test(value) || MONTH_LABEL.test(value));
+
+/** Le libellé correspond-il à la périodicité de la résidence ? */
+export function isPeriodLabelFor(period: ChargePeriod, label: string): boolean {
+  return (period === 'quarterly' ? QUARTER_LABEL : MONTH_LABEL).test(label);
+}
+
+/** Date du jour (AAAA-MM-JJ) dans le fuseau Africa/Casablanca. */
+export function todayInCasablanca(now: Date = new Date()): string {
+  // en-CA formate en AAAA-MM-JJ.
+  return new Intl.DateTimeFormat('en-CA', { timeZone: TIMEZONE }).format(now);
+}
+
+/** Libellé de la période qui contient `date` (AAAA-MM-JJ) : « 2026-Q4 » ou « 2026-11 ». */
+export function periodLabelOf(period: ChargePeriod, date: string): string {
+  const year = date.slice(0, 4);
+  const month = Number(date.slice(5, 7));
+  return period === 'quarterly'
+    ? `${year}-Q${Math.ceil(month / 3)}`
+    : `${year}-${String(month).padStart(2, '0')}`;
+}
+
+/** Clés de traduction des refus de l'API des charges (réponse `{ error: <clé> }`). */
+export const CHARGE_ERRORS = {
+  notFound: 'charges.errors.notFound',
+  periodExists: 'charges.errors.periodExists',
+  periodMismatch: 'charges.errors.periodMismatch',
+  noLots: 'charges.errors.noLots',
+  amountExceedsRemaining: 'charges.errors.amountExceedsRemaining',
+  paymentDateInvalid: 'charges.errors.paymentDateInvalid',
+  alreadyCancelled: 'charges.errors.alreadyCancelled',
+  cancelReasonRequired: 'charges.errors.cancelReasonRequired',
+  periodLocked: 'charges.errors.periodLocked',
+} as const;
+export type ChargeErrorKey = (typeof CHARGE_ERRORS)[keyof typeof CHARGE_ERRORS];
 
 /** Création d'un appel de charges (permission `charges.write`). */
 export const createChargeCallSchema = z
@@ -67,9 +108,18 @@ export const createPaymentSchema = z
     chargeDueId: z.uuid(),
     amount: centimesSchema,
     method: z.enum(PAYMENT_METHODS),
+    // Date du paiement (AAAA-MM-JJ, fuseau Africa/Casablanca) ; aujourd'hui par défaut.
+    // Une date future est refusée par l'API.
+    paidOn: isoDateSchema.optional(),
   })
   .strict();
 export type CreatePaymentInput = z.infer<typeof createPaymentSchema>;
+
+/** Réglage de la résidence (permission `residence.manage`). */
+export const updateResidenceSettingsSchema = z
+  .object({ chargePeriod: z.enum(CHARGE_PERIODS) })
+  .strict();
+export type UpdateResidenceSettingsInput = z.infer<typeof updateResidenceSettingsSchema>;
 
 /** Annulation d'un paiement : motif obligatoire. */
 export const cancelPaymentSchema = z
