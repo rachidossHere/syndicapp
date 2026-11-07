@@ -12,8 +12,9 @@ Le syndic lance un appel de charges pour une période, encaisse les paiements re
 - Montant **égal pour tous les lots** dans le MVP, saisi par le syndic. Montants en centimes.
 - Périodes : mensuelle ou trimestrielle, choisie à la création de la résidence (réglable plus tard).
 - Créer un appel de charges génère une ligne `charge_due` par lot actif, dans une transaction.
-- Encaissement : lot + mode (`especes`, `virement`) + montant (pré-rempli avec le dû). Paiement partiel autorisé ; le statut du dû devient `paye`, `partiel` ou `impaye`.
-- Qui encaisse : `syndic` et `tresorier`.
+- Encaissement : lot + mode (`cash`, `transfer`) + montant (pré-rempli avec le dû). Paiement partiel autorisé ; le statut du dû devient `paid`, `partial` ou `unpaid`. Valeurs en anglais dans le code et la base ; les libellés affichés restent traduits (payé, partiel, impayé ; espèces, virement).
+- Qui encaisse : permission `payments.write` (`manager` et `treasurer`). Qui lance un appel de charges : `charges.write` (`manager`).
+- Design : la référence visuelle est `docs/charges.png` (appels de charges, nouvel appel, détail d'un appel, encaisser, mes charges, reçu PDF, mes charges en arabe). Les valeurs exactes viennent des jetons de `@syndic/ui`. Sur l'image, les polices sont des remplacements (Inter, DejaVu Sans).
 - **Pas de suppression** d'un paiement : annulation tracée (qui, quand, motif obligatoire), qui recalcule le statut du dû.
 - Reçu : PDF généré **côté API** avec `pdf-lib`, numéroté par résidence (`2026-0001`), stocké dans Cloudflare R2, accessible par URL signée de courte durée. Le reçu d'un paiement annulé est marqué « Annulé ».
 - Le copropriétaire voit uniquement les dus et reçus de son lot. Le locataire ne voit rien de tout ça.
