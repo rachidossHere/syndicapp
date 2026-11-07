@@ -1,5 +1,5 @@
 // Numérotation des reçus : « 2026-0042 », continue et unique par résidence et par année.
-// Prévu au plan 05 (étape 1), pas encore utilisé : l'étape 3 l'appellera à chaque encaissement.
+// Appelé par POST /api/payments (plan 05, étape 2), dans la transaction de chaque encaissement.
 import { sql } from 'drizzle-orm';
 
 import type { Database } from './client';
@@ -19,7 +19,8 @@ export function formatReceiptNumber(year: number, sequence: number): string {
  * À appeler **dans la transaction** qui crée le paiement et son reçu : l'UPSERT pose un verrou
  * sur la ligne du compteur jusqu'à la fin de la transaction, donc deux encaissements simultanés
  * sont sérialisés. Si la transaction échoue, le numéro n'est pas consommé (pas de trou).
- * `year` est l'année du paiement dans le fuseau Africa/Casablanca (à calculer par l'appelant).
+ * `year` est l'année de la date du paiement (fuseau Africa/Casablanca), calculée par l'appelant.
+ * Les reçus de paiements annulés sont conservés : leur numéro n'est jamais réutilisé.
  */
 export async function nextReceiptNumber(
   tx: Executor,
