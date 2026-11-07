@@ -15,6 +15,7 @@ import { health } from './routes/health';
 import { invitations } from './routes/invitations';
 import { lots } from './routes/lots';
 import { me } from './routes/me';
+import { payments } from './routes/payments';
 import { residences } from './routes/residences';
 
 export const app = new Hono();
@@ -41,6 +42,7 @@ app.route('/api/residences', residences);
 app.route('/api/lots', lots);
 app.route('/api/invitations', invitations);
 app.route('/api/charge-calls', chargeCalls);
+app.route('/api/payments', payments);
 
 app.notFound((c) => c.json({ error: 'not_found' }, 404));
 
