@@ -13,6 +13,7 @@ export type DuePayment = {
   paidAt: string;
   cancelledAt: string | null;
   cancelReason: string | null;
+  receiptId: string | null;
   receiptNumber: string | null;
 };
 
@@ -32,6 +33,7 @@ export async function paymentsByDue(
       paidAt: schema.payment.paidAt,
       cancelledAt: schema.payment.cancelledAt,
       cancelReason: schema.payment.cancelReason,
+      receiptId: schema.receipt.id,
       receiptNumber: schema.receipt.number,
     })
     .from(schema.payment)

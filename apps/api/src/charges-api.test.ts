@@ -160,6 +160,13 @@ describe.skipIf(!hasDatabase)('API charges et encaissements', { timeout: 60_000 
 
   beforeAll(async () => {
     ({ app } = await import('./app'));
+    // Stockage simulé : ces tests ne visent pas R2 (voir receipts-api.test.ts).
+    const { setStorageForTests } = await import('./storage/r2');
+    setStorageForTests({
+      putObject: async () => undefined,
+      getSignedReadUrl: async () => 'https://stockage.invalid/objet',
+      deleteObject: async () => undefined,
+    });
     await getDb()
       .insert(schema.user)
       .values(users.map((id) => ({ id, name: id, email: `${id}@test.invalid` })));
