@@ -25,7 +25,22 @@ const envSchema = z.object({
    * À ne définir que derrière un proxy de confiance ; sinon, l'IP de la connexion est utilisée.
    */
   CLIENT_IP_HEADER: optional(z.string().min(1).toLowerCase().optional()),
+  /** Cloudflare R2 (reçus, factures, photos) : identifiant du compte (32 caractères hexadécimaux). */
+  R2_ACCOUNT_ID: optional(z.string().regex(/^[0-9a-f]{32}$/).optional()),
+  /** Clé d'API R2 limitée au bucket (jamais affichée ni journalisée). */
+  R2_ACCESS_KEY_ID: optional(z.string().min(16).optional()),
+  R2_SECRET_ACCESS_KEY: optional(z.string().min(32).optional()),
+  /** Bucket privé (ex. syndicapp-dev en développement). */
+  R2_BUCKET: optional(z.string().regex(/^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$/).optional()),
 });
+
+/** Variables de Cloudflare R2 : toutes renseignées, ou aucune (hors production). */
+export const R2_VARIABLES = [
+  'R2_ACCOUNT_ID',
+  'R2_ACCESS_KEY_ID',
+  'R2_SECRET_ACCESS_KEY',
+  'R2_BUCKET',
+] as const;
 
 export type Env = z.infer<typeof envSchema>;
 
@@ -45,6 +60,14 @@ export function parseEnv(source: Record<string, string | undefined>): Env {
       'BETTER_AUTH_URL doit commencer par https:// en production (cookies de session sécurisés). ' +
         "Corrigez la variable chez l'hébergeur ; http:// n'est accepté qu'en développement et en test.",
     );
+  }
+  // R2 : obligatoire en production ; ailleurs, tout ou rien (une configuration partielle est une erreur).
+  const missing = R2_VARIABLES.filter((name) => parsed.data[name] === undefined);
+  if (
+    missing.length > 0 &&
+    (parsed.data.NODE_ENV === 'production' || missing.length < R2_VARIABLES.length)
+  ) {
+    throw new Error(`Variables d'environnement invalides : ${missing.join(', ')}`);
   }
   return parsed.data;
 }

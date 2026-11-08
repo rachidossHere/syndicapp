@@ -17,6 +17,7 @@ import {
   requirePermission,
   type MembershipEnv,
 } from '../middleware/require-membership';
+import { storeReceiptPdfSafely } from '../receipts/store';
 import { parseJson } from '../validate';
 
 export const payments = new Hono<MembershipEnv>();
@@ -129,6 +130,9 @@ payments.post('/', requireAuth, requireMembership, requirePermission('payments.w
         },
       };
     });
+    // Transaction terminée : l'encaissement est acquis. Le PDF est généré et stocké ensuite ;
+    // en cas d'échec, il le sera à la première demande.
+    await storeReceiptPdfSafely(residenceId, result.receipt.id);
     return c.json(result, 201);
   });
 });
@@ -178,13 +182,27 @@ payments.post(
           .returning({ id: schema.payment.id, cancelledAt: schema.payment.cancelledAt });
         if (!cancelled) throw new ChargeRefusal(CHARGE_ERRORS.alreadyCancelled);
 
+        // Le PDF stocké montre encore « Payé » : sa clé est effacée dans la même transaction,
+        // pour qu'il soit régénéré (avec « ANNULÉ ») même si l'envoi ci-dessous échoue.
+        const [receipt] = await tx
+          .update(schema.receipt)
+          .set({ storageKey: null })
+          .where(
+            and(eq(schema.receipt.paymentId, cancelled.id), eq(schema.receipt.residenceId, residenceId)),
+          )
+          .returning({ id: schema.receipt.id });
+
         const recomputed = await recomputeDue(tx, residenceId, due.id, due.amountDue);
         return {
           payment: { id: cancelled.id, cancelledAt: cancelled.cancelledAt!.toISOString() },
+          receiptId: receipt?.id ?? null,
           due: { id: due.id, ...recomputed },
         };
       });
-      return c.json(result);
+      // Reçu régénéré avec la mention « ANNULÉ », sous la même clé.
+      const { receiptId, ...body } = result;
+      if (receiptId) await storeReceiptPdfSafely(residenceId, receiptId);
+      return c.json({ ...body, receipt: receiptId ? { id: receiptId } : null });
     });
   },
 );

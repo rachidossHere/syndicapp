@@ -16,3 +16,6 @@ web-build/
 # Divers
 .DS_Store
 *.log
+
+# Fichiers produits par les tests (ex. reçus PDF d’exemple)
+tmp/
