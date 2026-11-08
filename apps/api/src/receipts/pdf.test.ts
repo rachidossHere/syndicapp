@@ -4,27 +4,14 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 import { formatMad } from '@syndic/shared';
-import { getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs';
 import { describe, expect, it } from 'vitest';
 
 import { colors } from '../../../../packages/ui/src/tokens/colors';
+import { pdfText } from '../test-utils/pdf-text';
 import { dateFr, periodLabelFr, recordedByLabel } from './labels-fr';
 import { RECEIPT_COLORS, renderReceiptPdf, type ReceiptPdfData } from './pdf';
 
 const SAMPLES_DIR = resolve(import.meta.dirname, '../../tmp/receipts');
-
-/** Texte de toutes les pages, espaces (y compris insécables) normalisés. */
-export async function pdfText(bytes: Uint8Array): Promise<string> {
-  const task = getDocument({ data: bytes.slice(), useSystemFonts: false });
-  const doc = await task.promise;
-  const parts: string[] = [];
-  for (let i = 1; i <= doc.numPages; i++) {
-    const content = await (await doc.getPage(i)).getTextContent();
-    for (const item of content.items) if ('str' in item) parts.push(item.str);
-  }
-  await task.destroy();
-  return parts.join(' ').replace(/\s+/g, ' ');
-}
 
 const base: ReceiptPdfData = {
   number: '2026-0042',
