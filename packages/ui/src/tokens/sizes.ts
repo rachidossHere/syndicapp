@@ -21,6 +21,10 @@ export const sizes = {
   logo: 64,
   /** Hauteur minimale d'une tuile d'action de l'accueil syndic. */
   actionTileMinHeight: 112,
+  /** Hauteur minimale d'une tuile de choix (grille des appartements à encaisser). */
+  choiceTile: 52,
+  /** Épaisseur d'une barre de progression. */
+  progressBar: 8,
 } as const;
 
 export type SizeToken = keyof typeof sizes;

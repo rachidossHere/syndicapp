@@ -1,9 +1,11 @@
+import { arChargeTexts } from './ar-charges';
 import { arResidenceTexts } from './ar-residences';
 import type { TranslationKey } from './fr';
 
 /** Textes de l'appli en arabe. Le typage refuse une clé manquante ou en trop. */
 export const ar: Record<TranslationKey, string> = {
   ...arResidenceTexts,
+  ...arChargeTexts,
   'auth.errors.nameRequired': 'أدخل اسمك.',
   'auth.errors.nameTooShort': 'حرفان على الأقل.',
   'auth.errors.nameTooLong': '80 حرفًا على الأكثر.',

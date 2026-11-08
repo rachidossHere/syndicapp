@@ -7,10 +7,12 @@ import { useRouter } from 'expo-router';
 import Building from 'lucide-react-native/icons/building';
 import KeyRound from 'lucide-react-native/icons/key-round';
 import Plus from 'lucide-react-native/icons/plus';
+import Wallet from 'lucide-react-native/icons/wallet';
 import { useEffect, useState } from 'react';
 import { Pressable, View } from 'react-native';
 
 import { ErrorNotice } from '@/components/network-error';
+import { canManageCharges } from '@/features/charges/access';
 import { useRoleLabel } from '@/features/residences/use-role-label';
 import { useMe } from '@/hooks/use-me';
 import { useActiveResidence } from '@/hooks/use-residences';
@@ -152,6 +154,28 @@ export function HomeScreen() {
               </View>
             }
             onPress={() => router.push('/lots')}
+          />
+        )}
+        {/* Charges : syndic et trésorier (lecture des comptes, et encaissement ou lancement d'appels). */}
+        {canManageCharges(active.role) && (
+          <ListItem
+            title={t('home.charges')}
+            subtitle={t('home.chargesBody')}
+            leading={
+              <View
+                style={{
+                  width: sizes.iconBox,
+                  height: sizes.iconBox,
+                  borderRadius: radius.sm,
+                  borderCurve: 'continuous',
+                  backgroundColor: colors.successBg,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}>
+                <Icon icon={Wallet} color={colors.successFg} />
+              </View>
+            }
+            onPress={() => router.push('/charges')}
           />
         )}
         {/* Un refus d'actualisation de la liste garde l'accueil affiché, avec un message. */}

@@ -40,7 +40,7 @@ export function Badge({ label, tone = 'info', style, testID }: BadgeProps) {
 }
 
 export type StatusBadgeProps = {
-  /** Statut métier (`paid`, `unpaid`, `open`, `in_progress`, `resolved`). */
+  /** Statut métier (`paid`, `partial`, `unpaid`, `ongoing`, `closed`, `open`, `in_progress`, `resolved`). */
   status: BusinessStatus;
   style?: StyleProp<ViewStyle>;
   testID?: string;

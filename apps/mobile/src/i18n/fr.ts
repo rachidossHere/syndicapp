@@ -1,5 +1,6 @@
 import type { AuthErrorKey } from '@syndic/shared';
 
+import { frChargeTexts } from './fr-charges';
 import { frResidenceTexts } from './fr-residences';
 
 /** Erreurs d'authentification (clés de @syndic/shared) : le typage exige une traduction pour chacune. */
@@ -26,6 +27,7 @@ const authErrors: Record<AuthErrorKey, string> = {
 export const fr = {
   ...authErrors,
   ...frResidenceTexts,
+  ...frChargeTexts,
 
   'common.back': 'Retour',
   'common.loading': 'Chargement…',

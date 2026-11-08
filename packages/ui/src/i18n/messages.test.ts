@@ -7,7 +7,10 @@ describe('textes du design system', () => {
   it('donne un libellé FR conforme au plan pour chaque statut', () => {
     expect(Object.fromEntries(Object.entries(statuses).map(([k, s]) => [k, uiMessage(s.labelKey, 'fr')]))).toEqual({
       paid: 'Payé',
+      partial: 'Partiel',
       unpaid: 'Impayé',
+      ongoing: 'En cours',
+      closed: 'Clôturé',
       open: 'Ouvert',
       in_progress: 'En cours',
       resolved: 'Résolu',

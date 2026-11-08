@@ -9,6 +9,14 @@ describe('apiErrorKey', () => {
     expect(apiErrorKey(new ApiError(404, 'invitations.errors.notFound'))).toBe('invitations.errors.notFound');
   });
 
+  it('renvoie la clé de refus des charges telle quelle (409 traduits)', () => {
+    expect(apiErrorKey(new ApiError(409, 'charges.errors.periodExists'))).toBe('charges.errors.periodExists');
+    expect(apiErrorKey(new ApiError(409, 'charges.errors.amountExceedsRemaining'))).toBe(
+      'charges.errors.amountExceedsRemaining',
+    );
+    expect(apiErrorKey(new ApiError(409, 'charges.errors.inventee'))).toBe('residences.errors.conflict');
+  });
+
   it('ignore une clé inconnue envoyée par le serveur', () => {
     expect(apiErrorKey(new ApiError(410, 'invitations.errors.inventee'))).toBe('auth.errors.unknown');
   });

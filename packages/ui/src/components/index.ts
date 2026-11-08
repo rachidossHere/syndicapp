@@ -7,11 +7,13 @@ export { Banner, type BannerProps, type BannerTone } from './banner';
 export { Button, type ButtonProps, type ButtonSize, type ButtonVariant } from './button';
 export { Card, type CardProps } from './card';
 export { Chip, type ChipProps } from './chip';
+export { ChoiceTile, type ChoiceTileProps } from './choice-tile';
 export { EmptyState, type EmptyStateProps } from './empty-state';
 export { Icon, type IconComponent, type IconProps } from './icon';
 export { IconButton, type IconButtonProps } from './icon-button';
 export { getInitials } from './initials';
 export { ListItem, type ListItemProps } from './list-item';
+export { ProgressBar, type ProgressBarProps } from './progress-bar';
 export { Screen, type ScreenProps } from './screen';
 export {
   TAB_BAR_MAX_ITEMS,
