@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   View,
@@ -26,6 +27,10 @@ export type ScreenProps = {
   footer?: ReactNode;
   /** Style du contenu (fusionné en dernier) : mise en page uniquement. */
   contentStyle?: StyleProp<ViewStyle>;
+  /** Geste « tirer pour actualiser » (avec `scroll`) : appelé quand l'utilisateur tire l'écran. */
+  onRefresh?: () => void;
+  /** Actualisation en cours (indicateur du geste « tirer pour actualiser »). */
+  refreshing?: boolean;
   testID?: string;
 };
 
@@ -34,7 +39,15 @@ export type ScreenProps = {
  * Le contenu ne passe jamais sous l'encoche ni sous les barres système.
  * Les sections sont espacées de `layout.sectionGap`.
  */
-export function Screen({ children, scroll = false, footer, contentStyle, testID }: ScreenProps) {
+export function Screen({
+  children,
+  scroll = false,
+  footer,
+  contentStyle,
+  onRefresh,
+  refreshing = false,
+  testID,
+}: ScreenProps) {
   const { colors, layout } = useTheme();
 
   const content: ViewStyle = {
@@ -49,7 +62,17 @@ export function Screen({ children, scroll = false, footer, contentStyle, testID 
       contentContainerStyle={[content, contentStyle]}
       // La zone sûre est déjà appliquée par SafeAreaView : pas de second décalage sur iOS.
       contentInsetAdjustmentBehavior="never"
-      keyboardShouldPersistTaps="handled">
+      keyboardShouldPersistTaps="handled"
+      refreshControl={
+        onRefresh === undefined ? undefined : (
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={colors.primary}
+            colors={[colors.primary]}
+          />
+        )
+      }>
       {children}
     </ScrollView>
   ) : (

@@ -9,6 +9,7 @@ describe('textes du design system', () => {
       paid: 'Payé',
       partial: 'Partiel',
       unpaid: 'Impayé',
+      cancelled: 'Annulé',
       ongoing: 'En cours',
       closed: 'Clôturé',
       open: 'Ouvert',
