@@ -89,6 +89,8 @@ Le MVP est découpé en plans dans `.prompt/` (voir `00-feuille-de-route.md`), r
 | CI | **GitHub Actions** |
 | Hébergement API | **Render** (ou Railway) |
 
+`@expo/ui` est autorisé pour les sélecteurs natifs (date) ; le reste de l'interface passe par `@syndic/ui`.
+
 **Explicitement écartés :**
 - **Clerk** : ferait doublon avec Better Auth et stockerait les utilisateurs hors de notre base.
 - **Neon Auth** : refuse les requêtes sans `Origin` et n'autorise ni le plugin Expo ni SecureStore (test du 5 novembre 2026).
