@@ -19,8 +19,11 @@
     "vitest": "^5.1.0"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1164.0",
+    "@aws-sdk/s3-request-presigner": "^3.1164.0",
     "@better-auth/expo": "1.7.17",
     "@hono/node-server": "^2.1.6",
+    "@pdf-lib/fontkit": "^1.1.1",
     "@syndic/db": "workspace:*",
     "@syndic/shared": "workspace:*",
     "bcryptjs": "3.0.3",
@@ -28,6 +31,7 @@
     "dotenv": "^18.0.9",
     "drizzle-orm": "0.45.4",
     "hono": "^4.13.16",
+    "pdf-lib": "^1.17.1",
     "zod": "^4.6.7"
   }
 }
