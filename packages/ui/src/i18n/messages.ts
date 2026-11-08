@@ -7,7 +7,10 @@ import type { Language } from '@syndic/shared';
  */
 const fr = {
   'status.payment.paid': 'Payé',
+  'status.payment.partial': 'Partiel',
   'status.payment.unpaid': 'Impayé',
+  'status.charge_call.ongoing': 'En cours',
+  'status.charge_call.closed': 'Clôturé',
   'status.report.open': 'Ouvert',
   'status.report.in_progress': 'En cours',
   'status.report.resolved': 'Résolu',
@@ -20,7 +23,10 @@ export type UiMessageKey = keyof typeof fr;
 
 const ar: Record<UiMessageKey, string> = {
   'status.payment.paid': 'مدفوع',
+  'status.payment.partial': 'مدفوع جزئيًا',
   'status.payment.unpaid': 'غير مدفوع',
+  'status.charge_call.ongoing': 'جارٍ',
+  'status.charge_call.closed': 'مكتمل',
   'status.report.open': 'مفتوح',
   'status.report.in_progress': 'قيد المعالجة',
   'status.report.resolved': 'تم الحل',
