@@ -127,10 +127,19 @@ describe.skipIf(!hasDatabase)('API charges et encaissements', { timeout: 60_000 
     return row!;
   };
 
+  /**
+   * Appels, paiements et reçus des résidences de CE fichier (nom préfixé par `tag`).
+   * Jamais un compte global : les autres fichiers de tests écrivent dans la même base dev en même
+   * temps (receipts-api.test.ts, packages/db), et un compte global changeait sous nos pieds.
+   */
   const counts = async () => {
     const db = getDb();
+    const mine = db
+      .select({ id: schema.residence.id })
+      .from(schema.residence)
+      .where(like(schema.residence.name, `${tag}%`));
     const n = async (table: typeof schema.payment | typeof schema.chargeCall | typeof schema.receipt) =>
-      (await db.select({ n: count() }).from(table))[0]!.n;
+      (await db.select({ n: count() }).from(table).where(inArray(table.residenceId, mine)))[0]!.n;
     return {
       payments: await n(schema.payment),
       calls: await n(schema.chargeCall),
@@ -240,9 +249,10 @@ describe.skipIf(!hasDatabase)('API charges et encaissements', { timeout: 60_000 
         residence: resA,
         body: { periodLabel: currentQuarter, amountPerLot: 500 * MAD, dueDate: '2026-12-31' },
       });
-      expect(response.status).toBe(409);
+      // Diagnostic : en cas d'échec, le corps reçu est affiché.
+      expect(response.status, JSON.stringify(response.json)).toBe(409);
       expect(response.json).toEqual({ error: CHARGE_ERRORS.periodExists });
-      expect((await counts()).calls).toBe(before.calls);
+      expect((await counts()).calls, 'appels comptés').toBe(before.calls);
     });
 
     it('période au mauvais format pour la résidence : 400 periodMismatch', async () => {
