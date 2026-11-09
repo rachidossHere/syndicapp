@@ -34,18 +34,11 @@ describe('createExpenseSchema', () => {
     expect(createExpenseSchema.safeParse({ ...valid, category: 'plomberie' }).success).toBe(false);
     expect(createExpenseSchema.safeParse({ ...valid, recordedBy: 'x' }).success).toBe(false);
   });
-  it('refuse une date inexistante et une facture trop lourde ou d’un mauvais type', () => {
+  it('refuse une date inexistante et une clé de facture vide', () => {
     expect(createExpenseSchema.safeParse({ ...valid, spentOn: '2026-02-31' }).success).toBe(false);
-    const invoice = { key: 'k', contentType: 'image/jpeg', size: 1000 };
-    expect(createExpenseSchema.safeParse({ ...valid, invoice }).success).toBe(true);
-    expect(
-      createExpenseSchema.safeParse({ ...valid, invoice: { ...invoice, size: 15 * 1024 * 1024 } })
-        .success,
-    ).toBe(false);
-    expect(
-      createExpenseSchema.safeParse({ ...valid, invoice: { ...invoice, contentType: 'application/x-msdownload' } })
-        .success,
-    ).toBe(false);
+    expect(createExpenseSchema.safeParse({ ...valid, invoiceKey: 'residences/r/invoices/a.jpg' }).success).toBe(true);
+    expect(createExpenseSchema.safeParse({ ...valid, invoiceKey: '  ' }).success).toBe(false);
+    expect(createExpenseSchema.safeParse({ ...valid, invoice: { key: 'k' } }).success).toBe(false);
   });
   it('exige un client_id valide quand il est fourni', () => {
     expect(createExpenseSchema.safeParse({ ...valid, clientId: 'abc' }).success).toBe(false);

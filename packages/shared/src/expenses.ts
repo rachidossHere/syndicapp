@@ -105,15 +105,6 @@ export const expenseListQuerySchema = z
 export const MAX_EXPENSE_LABEL_LENGTH = 120;
 export const MAX_SUPPLIER_LENGTH = 120;
 
-/** Facture déjà envoyée vers R2 : clé de l'objet, type et taille vérifiés par l'API. */
-export const expenseInvoiceSchema = z
-  .object({
-    key: z.string().trim().min(1).max(300),
-    contentType: z.enum(INVOICE_CONTENT_TYPES),
-    size: z.number().int().positive().max(MAX_INVOICE_SIZE_BYTES),
-  })
-  .strict();
-
 /** Saisie d'une dépense (permission `expenses.write`). `clientId` rend la création idempotente. */
 export const createExpenseSchema = z
   .object({
@@ -123,7 +114,8 @@ export const createExpenseSchema = z
     // AAAA-MM-JJ (fuseau Africa/Casablanca) ; aujourd'hui par défaut. Une date future est refusée par l'API.
     spentOn: isoDateSchema.optional(),
     supplier: z.string().trim().min(1).max(MAX_SUPPLIER_LENGTH).optional(),
-    invoice: expenseInvoiceSchema.optional(),
+    // Clé de la facture déjà envoyée vers R2 ; type et taille sont lus dans R2 par l'API.
+    invoiceKey: z.string().trim().min(1).max(300).optional(),
     clientId: z.uuid().optional(),
   })
   .strict();
