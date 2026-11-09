@@ -43,6 +43,13 @@
       "when": 1794065330976,
       "tag": "0005_charges_payments_receipts",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1794232021319,
+      "tag": "0006_opening_balance",
+      "breakpoints": true
     }
   ]
 }

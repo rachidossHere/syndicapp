@@ -5,6 +5,7 @@ import { sql } from 'drizzle-orm';
 import {
   boolean,
   check,
+  date,
   foreignKey,
   index,
   integer,
@@ -33,6 +34,10 @@ export const residence = pgTable('residence', {
   address: text('address'),
   // Périodicité des appels de charges (plan 05), réglable plus tard.
   chargePeriod: chargePeriod('charge_period').notNull().default(DEFAULT_CHARGE_PERIOD),
+  // Solde de départ de la caisse (plan 06), en centimes : saisi par le syndic et historisé dans
+  // opening_balance_change. Le solde de la caisse, lui, n'est jamais stocké.
+  openingBalance: integer('opening_balance').notNull().default(0),
+  openingBalanceDate: date('opening_balance_date', { mode: 'string' }),
   createdAt: createdAt(),
 });
 
@@ -127,5 +132,42 @@ export const invitation = pgTable(
     check('invitation_role_not_manager', sql`${table.role} <> 'manager'`),
     // used_at et used_by sont renseignés ensemble.
     check('invitation_used_consistent', sql`(${table.usedAt} is null) = (${table.usedBy} is null)`),
+  ],
+);
+
+/**
+ * Historique du solde de départ (plan 06). La première saisie a `old_amount` nul et pas de motif ;
+ * toute correction suivante garde l'ancien et le nouveau montant, l'auteur, la date et un motif
+ * obligatoire. Jamais modifié ni supprimé.
+ */
+export const openingBalanceChange = pgTable(
+  'opening_balance_change',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    residenceId: uuid('residence_id')
+      .notNull()
+      .references(() => residence.id, { onDelete: 'restrict' }),
+    // Nul à la première saisie.
+    oldAmount: integer('old_amount'),
+    newAmount: integer('new_amount').notNull(),
+    asOfDate: date('as_of_date', { mode: 'string' }).notNull(),
+    reason: text('reason'),
+    changedBy: text('changed_by')
+      .notNull()
+      .references(() => user.id, { onDelete: 'restrict' }),
+    changedAt: timestamp('changed_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    // Historique d'une résidence, du plus récent au plus ancien.
+    index('opening_balance_change_residence_idx').on(table.residenceId, table.changedAt),
+    // Une seule première saisie par résidence.
+    uniqueIndex('opening_balance_change_one_first_idx')
+      .on(table.residenceId)
+      .where(sql`${table.oldAmount} is null`),
+    // Motif obligatoire (non vide) pour toute correction.
+    check(
+      'opening_balance_change_reason_required',
+      sql`${table.oldAmount} is null or length(btrim(coalesce(${table.reason}, ''))) > 0`,
+    ),
   ],
 );
