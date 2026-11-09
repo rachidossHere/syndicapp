@@ -7,6 +7,7 @@ import { useRouter } from 'expo-router';
 import Building from 'lucide-react-native/icons/building';
 import KeyRound from 'lucide-react-native/icons/key-round';
 import Plus from 'lucide-react-native/icons/plus';
+import Receipt from 'lucide-react-native/icons/receipt';
 import Wallet from 'lucide-react-native/icons/wallet';
 import { useEffect, useState } from 'react';
 import { Pressable, View } from 'react-native';
@@ -22,6 +23,7 @@ import { useSession } from '@/hooks/use-session';
 import { useT } from '@/i18n/use-t';
 import { ApiError } from '@/lib/api';
 import { apiErrorKey } from '@/lib/api-errors';
+import { setFlashMessage, useFlashMessage } from '@/lib/flash-message';
 import { currentNetworkErrorKey } from '@/lib/network';
 import { consumeJustSignedUp } from '@/lib/welcome-flag';
 
@@ -41,6 +43,8 @@ export function HomeScreen() {
   // Mes charges : requête faite uniquement pour un copropriétaire (jamais pour un locataire ou un gardien).
   const myDues = useMyDues(myDuesResidenceId(active));
   const [showWelcome, setShowWelcome] = useState(consumeJustSignedUp);
+  // Confirmation laissée par un écran qui vient de se fermer (« Dépense enregistrée… »).
+  const flash = useFlashMessage();
   const [signingOut, setSigningOut] = useState(false);
   const [signOutError, setSignOutError] = useState<string | undefined>();
   const [meErrorKey, setMeErrorKey] = useState<AuthErrorKey>(AUTH_ERROR_KEYS.network);
@@ -50,6 +54,12 @@ export function HomeScreen() {
     const timer = setTimeout(() => setShowWelcome(false), WELCOME_TOAST_MS);
     return () => clearTimeout(timer);
   }, [showWelcome]);
+
+  useEffect(() => {
+    if (flash === undefined) return;
+    const timer = setTimeout(() => setFlashMessage(undefined), WELCOME_TOAST_MS);
+    return () => clearTimeout(timer);
+  }, [flash]);
 
   // Erreur réseau sur /api/me : « pas de connexion » ou « serveur injoignable » (expo-network).
   const meNetworkFailure = me.error instanceof ApiError && me.error.status === 0;
@@ -184,6 +194,28 @@ export function HomeScreen() {
             onPress={() => router.push('/charges')}
           />
         )}
+        {/* Dépenses : syndic et trésorier (expenses.write). L'API refuse de toute façon les autres rôles. */}
+        {can(active.role, 'expenses.write') && (
+          <ListItem
+            title={t('home.addExpense')}
+            subtitle={t('home.addExpenseBody')}
+            leading={
+              <View
+                style={{
+                  width: sizes.iconBox,
+                  height: sizes.iconBox,
+                  borderRadius: radius.sm,
+                  borderCurve: 'continuous',
+                  backgroundColor: colors.warningBg,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}>
+                <Icon icon={Receipt} color={colors.warningFg} />
+              </View>
+            }
+            onPress={() => router.push('/add-expense')}
+          />
+        )}
         {/* Un refus d'actualisation de la liste garde l'accueil affiché, avec un message. */}
         {residencesQuery.error && <Banner message={t('home.residenceError')} />}
       </View>
@@ -237,6 +269,7 @@ export function HomeScreen() {
         </>
       }>
       {showWelcome && <Toast message={t('home.welcomeToast')} />}
+      {flash !== undefined && <Toast message={t(flash)} />}
 
       {me.data !== undefined ? (
         <View style={{ gap: spacing.xs }}>
