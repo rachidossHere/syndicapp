@@ -41,6 +41,8 @@ export type BorderWidthToken = keyof typeof borderWidth;
 export const opacity = {
   /** Retour visuel d'appui quand aucune couleur « appuyée » n'existe (bouton accent). */
   pressed: 0.85,
+  /** Fond assombri derrière une feuille (couleur `text`). */
+  scrim: 0.4,
 } as const;
 
 export type OpacityToken = keyof typeof opacity;

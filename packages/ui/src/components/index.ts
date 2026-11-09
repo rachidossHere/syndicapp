@@ -15,6 +15,7 @@ export { getInitials } from './initials';
 export { ListItem, type ListItemProps } from './list-item';
 export { ProgressBar, type ProgressBarProps } from './progress-bar';
 export { Screen, type ScreenProps } from './screen';
+export { Sheet, type SheetProps } from './sheet';
 export {
   TAB_BAR_MAX_ITEMS,
   TabBar,
