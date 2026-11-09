@@ -286,6 +286,7 @@ Le projet démarre sur des offres gratuites, dont les conditions changent : les 
 - [ ] `pnpm typecheck` et `pnpm lint` passent.
 - [ ] Les entrées sont validées par Zod.
 - [ ] Les règles d'accès (authentification, résidence, rôle) sont vérifiées par l'API et testées.
+- [ ] Tests automatiques obligatoires pour `apps/api` et les packages (`db`, `shared`, `ui`), surtout pour la sécurité, les permissions, l'isolation entre résidences et l'argent. Pendant le MVP, on n'écrit plus de nouveaux tests pour `apps/mobile` (React Native) : les tests existants sont gardés et doivent passer, et Rachid vérifie l'appli sur l'iPhone.
 - [ ] Les textes affichés passent par les traductions (FR et AR) et l'écran fonctionne en RTL.
 - [ ] Aucune valeur de style codée en dur ; seulement `@syndic/ui`.
 - [ ] Aucune donnée sensible n'est envoyée à un service tiers ni écrite dans les logs.
