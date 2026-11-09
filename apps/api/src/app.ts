@@ -10,7 +10,9 @@ import { withClientIp } from './client-ip';
 import { isProduction } from './env';
 import { describeError, formatErrorSummary } from './error-log';
 import { loggablePath, requestLogger } from './middleware/request-logger';
+import { cash } from './routes/cash';
 import { chargeCalls } from './routes/charge-calls';
+import { expenses } from './routes/expenses';
 import { health } from './routes/health';
 import { invitations } from './routes/invitations';
 import { lots } from './routes/lots';
@@ -45,6 +47,8 @@ app.route('/api/invitations', invitations);
 app.route('/api/charge-calls', chargeCalls);
 app.route('/api/payments', payments);
 app.route('/api/receipts', receipts);
+app.route('/api/expenses', expenses);
+app.route('/api/cash', cash);
 
 app.notFound((c) => c.json({ error: 'not_found' }, 404));
 
