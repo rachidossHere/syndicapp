@@ -8,13 +8,15 @@ Le syndic enregistre une dépense en prenant la facture en photo, et tous les co
 
 ## Décisions
 
-- Tables : `expense` (montant, libellé, catégorie, date, fournisseur facultatif, facture), `expense_category` (liste fixe : entretien, ascenseur, électricité, eau, nettoyage, gardiennage, réparations, autre).
-- Qui saisit : `syndic` et `tresorier`. Qui lit : tous sauf `locataire`.
+- Tables : `expense` (montant, libellé, catégorie, date, fournisseur facultatif, facture). Catégories : liste fixe, en anglais dans le code et la base (`maintenance`, `elevator`, `electricity`, `water`, `cleaning`, `security`, `repairs`, `other`) ; libellés traduits à l'affichage (entretien, ascenseur, électricité, eau, nettoyage, gardiennage, réparations, autre).
+- Permissions : `expenses.write` (`manager`, `treasurer`) pour saisir et annuler une dépense ; `accounts.read` pour lire les comptes (tous les rôles sauf `tenant` et `caretaker`).
 - Facture : photo prise avec `expo-image-picker` (appareil photo ou galerie), **compressée** avec `expo-image-manipulator` (1600 px de large max, JPEG 0,7) avant l'envoi, ou PDF. Envoi direct vers R2 avec une URL signée d'envoi (l'API ne reçoit pas le fichier).
 - Facture facultative à la saisie, mais une dépense sans facture affiche le badge « Sans facture ».
-- **Solde de la caisse** = solde d'ouverture (saisi à la création de la résidence) + paiements non annulés − dépenses non annulées. Calculé par l'API, jamais stocké en dur.
+- **Solde de la caisse** = solde de départ + paiements non annulés − dépenses non annulées. Calculé par l'API, jamais stocké en dur.
+- **Solde de départ** : saisi par le syndic (`residence.manage`) avec une date. Toute correction est historisée (ancien montant, nouveau montant, qui, quand, motif).
 - Pas de suppression : annulation tracée avec motif, visible par tous (« Annulée le … par … : motif »).
 - Le journal des mouvements (entrées et sorties) est visible par les copropriétaires, sans le nom des copropriétaires qui ont payé (seulement « Charge reçue · B12 »).
+- Design : la référence visuelle est `docs/depenses.png` (comptes, ajouter une dépense, dépense prête, détail, solde de départ, comptes en arabe). Les valeurs exactes viennent des jetons de `@syndic/ui`. Sur l'image, les polices sont des remplacements (Inter, DejaVu Sans).
 
 ## Hors périmètre
 

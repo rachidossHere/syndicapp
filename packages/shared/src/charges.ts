@@ -42,7 +42,7 @@ export const MAX_CANCEL_REASON_LENGTH = 500;
 export const centimesSchema = z.number().int().positive().max(MAX_AMOUNT_CENTIMES);
 
 /** Date au format AAAA-MM-JJ, réellement existante (pas de 2026-02-31). */
-const isoDateSchema = z
+export const isoDateSchema = z
   .string()
   .regex(/^\d{4}-\d{2}-\d{2}$/)
   .refine((value) => {
