@@ -175,6 +175,8 @@ describe.skipIf(!hasDatabase)('API charges et encaissements', { timeout: 60_000 
       putObject: async () => undefined,
       getSignedReadUrl: async () => 'https://stockage.invalid/objet',
       deleteObject: async () => undefined,
+      getSignedUploadUrl: async () => 'https://stockage.invalid/envoi',
+      headObject: async () => null,
     });
     await getDb()
       .insert(schema.user)

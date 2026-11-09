@@ -4,6 +4,7 @@
 import {
   DeleteObjectCommand,
   GetObjectCommand,
+  HeadObjectCommand,
   PutObjectCommand,
   S3Client,
 } from '@aws-sdk/client-s3';
@@ -29,6 +30,13 @@ export type Storage = {
     options: { filename: string; contentType: string; signingDate?: Date },
   ): Promise<string>;
   deleteObject(key: string): Promise<void>;
+  /** URL d'envoi (PUT) valable 5 minutes ; le type et la taille font partie de la signature. */
+  getSignedUploadUrl(
+    key: string,
+    options: { contentType: string; size: number; signingDate?: Date },
+  ): Promise<string>;
+  /** Type et taille de l'objet, ou null s'il n'existe pas. */
+  headObject(key: string): Promise<{ contentType: string | undefined; size: number } | null>;
 };
 
 /** Client R2 : point d'accès https://<compte>.r2.cloudflarestorage.com, région « auto ». */
@@ -71,6 +79,35 @@ export function createR2Storage(config: R2Config): Storage {
         }),
         { expiresIn: SIGNED_URL_TTL_SECONDS, signingDate },
       );
+    },
+
+    getSignedUploadUrl(key, { contentType, size, signingDate }) {
+      return getSignedUrl(
+        client,
+        new PutObjectCommand({
+          Bucket: config.bucket,
+          Key: key,
+          ContentType: contentType,
+          ContentLength: size,
+        }),
+        {
+          expiresIn: SIGNED_URL_TTL_SECONDS,
+          signingDate,
+          // Type et taille signés : R2 refuse un envoi qui ne les respecte pas.
+          signableHeaders: new Set(['content-type', 'content-length']),
+        },
+      );
+    },
+
+    async headObject(key) {
+      try {
+        const head = await client.send(new HeadObjectCommand({ Bucket: config.bucket, Key: key }));
+        return { contentType: head.ContentType, size: head.ContentLength ?? 0 };
+      } catch (error) {
+        const e = error as { name?: string; $metadata?: { httpStatusCode?: number } };
+        if (e.name === 'NotFound' || e.$metadata?.httpStatusCode === 404) return null;
+        throw error;
+      }
     },
 
     async deleteObject(key) {

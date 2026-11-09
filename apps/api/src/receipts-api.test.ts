@@ -348,6 +348,8 @@ describe.skipIf(!configured)('reçus PDF et R2', { timeout: 120_000 }, () => {
         throw new Error('indisponible');
       },
       deleteObject: async () => undefined,
+      getSignedUploadUrl: async () => 'https://stockage.invalid/envoi',
+      headObject: async () => null,
     });
     let failed: Awaited<ReturnType<typeof pay>>;
     try {
