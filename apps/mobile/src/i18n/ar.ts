@@ -26,6 +26,9 @@ export const ar: Record<TranslationKey, string> = {
   'common.back': 'رجوع',
   'common.loading': 'جارٍ التحميل…',
   'common.retry': 'إعادة المحاولة',
+  'common.cancel': 'إلغاء',
+  'common.confirm': 'تأكيد',
+  'common.closeSheet': 'إغلاق دون تغيير',
   'common.switchLanguage': 'التبديل إلى الفرنسية',
 
   'welcome.appName': 'SyndicApp',

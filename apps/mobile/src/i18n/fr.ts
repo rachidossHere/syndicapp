@@ -32,6 +32,9 @@ export const fr = {
   'common.back': 'Retour',
   'common.loading': 'Chargement…',
   'common.retry': 'Réessayer',
+  'common.cancel': 'Annuler',
+  'common.confirm': 'Valider',
+  'common.closeSheet': 'Fermer sans changer',
   'common.switchLanguage': 'Passer en arabe',
 
   'welcome.appName': 'SyndicApp',

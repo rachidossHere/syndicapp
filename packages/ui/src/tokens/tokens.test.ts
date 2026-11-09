@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 // Import des jetons seuls : l'index du package exporte aussi les composants (react-native),
 // que vitest ne charge pas sous Node.
-import { colors, layout, radius, spacing, statuses, statusTones, typography } from './index';
+import { colors, layout, opacity, radius, spacing, statuses, statusTones, typography } from './index';
 
 describe('jetons de @syndic/ui', () => {
   it('reprend les couleurs clés du plan 02', () => {
@@ -22,6 +22,14 @@ describe('jetons de @syndic/ui', () => {
     expect(spacing.lg).toBe(16);
     expect(radius.pill).toBe(999);
     expect(layout).toEqual({ screenPadding: 20, listGap: 12, sectionGap: 16 });
+  });
+
+  it('garde des opacités entre 0 et 1, dont le fond assombri des feuilles', () => {
+    expect(opacity.scrim).toBe(0.4);
+    for (const value of Object.values(opacity)) {
+      expect(value).toBeGreaterThan(0);
+      expect(value).toBeLessThan(1);
+    }
   });
 
   it('garde des espacements multiples de 4', () => {

@@ -147,7 +147,7 @@ export const arChargeTexts: Record<keyof typeof frChargeTexts, string> = {
   'charges.new.amount': 'المبلغ لكل شقة',
   'charges.new.amountHelp': 'بالدرهم (MAD).',
   'charges.new.dueDate': 'يُؤدّى قبل',
-  'charges.new.dueDateHelp': 'المس لاختيار التاريخ.',
+  'charges.new.dueDateSheet': 'تاريخ الاستحقاق',
   'charges.new.lotsOne': 'شقة واحدة ({count}) ×',
   'charges.new.lotsMany': '{count} شقة ×',
   'charges.new.previewNote': 'سيرى كل مالك مشترك المبلغ الخاص به في التطبيق.',

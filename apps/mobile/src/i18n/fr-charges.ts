@@ -147,7 +147,7 @@ export const frChargeTexts = {
   'charges.new.amount': 'Montant par appartement',
   'charges.new.amountHelp': 'En dirhams (MAD).',
   'charges.new.dueDate': 'À régler avant le',
-  'charges.new.dueDateHelp': 'Touchez pour choisir la date.',
+  'charges.new.dueDateSheet': "Date d'échéance",
   'charges.new.lotsOne': '{count} appartement ×',
   'charges.new.lotsMany': '{count} appartements ×',
   'charges.new.previewNote': 'Chaque copropriétaire verra son montant dans l’appli.',
