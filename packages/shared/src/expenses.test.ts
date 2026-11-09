@@ -2,6 +2,9 @@ import { describe, expect, it } from 'vitest';
 
 import {
   cancelExpenseSchema,
+  currentPeriodBounds,
+  EXPENSE_ERRORS,
+  invoiceKeyPrefix,
   createExpenseSchema,
   EXPENSE_CATEGORIES,
   EXPENSE_CATEGORY_LABEL_KEYS,
@@ -82,5 +85,18 @@ describe('ledgerQuerySchema', () => {
 describe('formatPaymentLedgerLabel', () => {
   it('donne « Charge reçue · B12 »', () => {
     expect(formatPaymentLedgerLabel('B12')).toBe('Charge reçue · B12');
+  });
+});
+
+describe('période en cours et clés de facture (06.2)', () => {
+  it('trimestre et mois', () => {
+    expect(currentPeriodBounds('quarterly', '2026-11-09')).toEqual({ from: '2026-10-01', to: '2026-12-31' });
+    expect(currentPeriodBounds('quarterly', '2026-02-28')).toEqual({ from: '2026-01-01', to: '2026-03-31' });
+    expect(currentPeriodBounds('monthly', '2028-02-10')).toEqual({ from: '2028-02-01', to: '2028-02-29' });
+  });
+  it('préfixe de résidence et clés d\'erreur', () => {
+    expect(invoiceKeyPrefix('abc')).toBe('residences/abc/invoices/');
+    expect(EXPENSE_ERRORS.invalidFileType).toBe('expenses.errors.invalidFileType');
+    expect(EXPENSE_ERRORS.openingReasonRequired).toBe('expenses.errors.openingReasonRequired');
   });
 });
