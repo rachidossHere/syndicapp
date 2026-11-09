@@ -10,7 +10,7 @@
     "dev": "pnpm --filter @syndic/api dev",
     "typecheck": "pnpm --recursive --if-present typecheck",
     "lint": "pnpm --recursive --if-present lint",
-    "test": "pnpm --recursive --if-present test",
+    "test": "pnpm --recursive --if-present --workspace-concurrency=1 test",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "ip": "node scripts/local-ip.mjs"
