@@ -12,7 +12,7 @@ import { useEffect, useState } from 'react';
 import { Pressable, View } from 'react-native';
 
 import { ErrorNotice } from '@/components/network-error';
-import { canManageCharges } from '@/features/charges/access';
+import { canManageCharges, myDuesResidenceId } from '@/features/charges/access';
 import { MyChargesSummary } from '@/features/charges/my-charges-summary';
 import { useRoleLabel } from '@/features/residences/use-role-label';
 import { useMyDues } from '@/hooks/use-charges';
@@ -39,7 +39,7 @@ export function HomeScreen() {
   const me = useMe(true);
   const { active, residences, query: residencesQuery, setActive } = useActiveResidence();
   // Mes charges : requête faite uniquement pour un copropriétaire (jamais pour un locataire ou un gardien).
-  const myDues = useMyDues(active?.role === 'owner' ? active.id : undefined);
+  const myDues = useMyDues(myDuesResidenceId(active));
   const [showWelcome, setShowWelcome] = useState(consumeJustSignedUp);
   const [signingOut, setSigningOut] = useState(false);
   const [signOutError, setSignOutError] = useState<string | undefined>();

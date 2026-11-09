@@ -12,8 +12,9 @@ import { useRefreshOnFocus } from '@/hooks/use-refresh-on-focus';
 import { useActiveResidence } from '@/hooks/use-residences';
 import { useT } from '@/i18n/use-t';
 
+import { myDuesResidenceId } from './access';
 import { MyChargeCard } from './my-charge-card';
-import { currentDuePerLot, lotReferences } from './my-charges';
+import { currentDuePerLot, lastActivePayment, lotReferences } from './my-charges';
 import { QueryFallback } from './query-fallback';
 import { ReferenceBox } from './reference-box';
 import { useChargeFormat } from './use-charge-format';
@@ -31,7 +32,7 @@ export function MyChargesScreen() {
   const format = useChargeFormat();
   const { active, query: residencesQuery } = useActiveResidence();
   const isOwner = active !== null && active.role === 'owner';
-  const dues = useMyDues(isOwner ? active.id : undefined);
+  const dues = useMyDues(myDuesResidenceId(active));
   useRefreshOnFocus(dues.refetch);
 
   if (residencesQuery.data !== undefined && !isOwner) return <Redirect href="/home" />;
@@ -42,7 +43,7 @@ export function MyChargesScreen() {
 
   const subtitle = (due: MyDue) => {
     if (due.status === 'paid') {
-      const last = due.payments.filter((payment) => payment.cancelledAt === null).at(-1);
+      const last = lastActivePayment(due);
       return last ? t('mine.rowPaid', { date: format.instant(last.paidAt) }) : t('charges.status.paid');
     }
     if (due.status === 'partial') return t('mine.rowPartial', { date: format.date(due.dueDate) });
