@@ -13,7 +13,9 @@ import { Pressable, View } from 'react-native';
 
 import { ErrorNotice } from '@/components/network-error';
 import { canManageCharges } from '@/features/charges/access';
+import { MyChargesSummary } from '@/features/charges/my-charges-summary';
 import { useRoleLabel } from '@/features/residences/use-role-label';
+import { useMyDues } from '@/hooks/use-charges';
 import { useMe } from '@/hooks/use-me';
 import { useActiveResidence } from '@/hooks/use-residences';
 import { useSession } from '@/hooks/use-session';
@@ -36,6 +38,8 @@ export function HomeScreen() {
   const { signOut } = useSession();
   const me = useMe(true);
   const { active, residences, query: residencesQuery, setActive } = useActiveResidence();
+  // Mes charges : requête faite uniquement pour un copropriétaire (jamais pour un locataire ou un gardien).
+  const myDues = useMyDues(active?.role === 'owner' ? active.id : undefined);
   const [showWelcome, setShowWelcome] = useState(consumeJustSignedUp);
   const [signingOut, setSigningOut] = useState(false);
   const [signOutError, setSignOutError] = useState<string | undefined>();
@@ -135,6 +139,8 @@ export function HomeScreen() {
             </View>
           </View>
         )}
+        {/* Copropriétaire : la carte « Mes charges » est le contenu principal de l'accueil. */}
+        {active.role === 'owner' && <MyChargesSummary residenceId={active.id} />}
         {can(active.role, 'lots.write') && (
           <ListItem
             title={t('home.lots')}
@@ -222,6 +228,8 @@ export function HomeScreen() {
   return (
     <Screen
       scroll
+      onRefresh={active?.role === 'owner' ? () => void myDues.refetch() : undefined}
+      refreshing={myDues.isRefetching}
       footer={
         <>
           {signOutError !== undefined && <ErrorNotice errorKey={signOutError} />}

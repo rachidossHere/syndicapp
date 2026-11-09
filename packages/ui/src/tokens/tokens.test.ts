@@ -32,7 +32,7 @@ describe('jetons de @syndic/ui', () => {
 
   it('couvre tous les statuts du tableau avec un ton valide', () => {
     expect(Object.keys(statuses).sort()).toEqual(
-      ['closed', 'in_progress', 'ongoing', 'open', 'paid', 'partial', 'resolved', 'unpaid'].sort(),
+      ['cancelled', 'closed', 'in_progress', 'ongoing', 'open', 'paid', 'partial', 'resolved', 'unpaid'].sort(),
     );
     for (const [key, status] of Object.entries(statuses)) {
       expect(statusTones).toContain(status.tone);

@@ -53,6 +53,18 @@ describe('traductions', () => {
     expect(fr['charges.errors.periodExists']).toBe('Cet appel de charges existe déjà.');
   });
 
+  it('textes de « Mes charges » (écrans 5 et 7 de docs/charges.png)', () => {
+    expect(translate('fr', 'mine.payBefore', { date: '15 décembre' })).toBe(
+      'À régler avant le 15 décembre, en espèces ou par virement au syndic.',
+    );
+    expect(translate('ar', 'mine.payBefore', { date: '15 دجنبر' })).toBe(
+      'يجب الأداء قبل 15 دجنبر، نقدًا أو بتحويل إلى وكيل الإقامة.',
+    );
+    expect(ar['mine.title']).toBe('مصاريفي');
+    expect(translate('fr', 'receipt.title', { number: '2026-0042' })).toBe('Reçu n° 2026-0042');
+    expect(fr['mine.emptyTitle']).toBe('Aucune charge pour l’instant');
+  });
+
   it('a exactement les mêmes clés en français et en arabe', () => {
     expect(Object.keys(ar).sort()).toEqual(Object.keys(fr).sort());
   });

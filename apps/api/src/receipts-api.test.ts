@@ -278,6 +278,30 @@ describe.skipIf(!configured)('reçus PDF et R2', { timeout: 120_000 }, () => {
     }
   });
 
+  it('détail du reçu : rôle de l\'encaisseur, jamais son nom ; mêmes règles d\'accès', async () => {
+    const detail = (user: string, residence = resA) =>
+      api(uid(user), 'GET', `/api/receipts/${paid.receipt.id}`, residence);
+    const owner = await detail('ownerA11');
+    expect(owner.status).toBe(200);
+    expect(owner.json).toEqual({
+      id: paid.receipt.id,
+      number: paid.receipt.number,
+      residenceName: `${tag} Al Andalous`,
+      lotReference: 'A11',
+      periodLabel: periodLabelOf('quarterly', today),
+      amount: 45_000,
+      method: 'cash',
+      paidAt: expect.any(String),
+      recordedByRole: 'manager',
+      cancelledAt: null,
+    });
+    expect((await detail('treasurerA')).status).toBe(200);
+    for (const name of ['ownerA12', 'tenantA11', 'deputyA', 'caretakerA', 'ownerB']) {
+      expect((await detail(name)).status, name).toBe(403);
+    }
+    expect((await detail('mgrB', resB)).status).toBe(404);
+  });
+
   it('aucun accès croisé entre résidences', async () => {
     // Non membre de A : 403 (membership), même réponse qu'une résidence inexistante.
     expect((await receiptUrl('ownerB', paid.receipt.id)).status).toBe(403);

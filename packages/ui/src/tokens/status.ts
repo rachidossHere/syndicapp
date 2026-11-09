@@ -21,6 +21,8 @@ export const statuses = {
   paid: { domain: 'payment', tone: 'success', labelKey: 'status.payment.paid' },
   partial: { domain: 'payment', tone: 'warning', labelKey: 'status.payment.partial' },
   unpaid: { domain: 'payment', tone: 'danger', labelKey: 'status.payment.unpaid' },
+  // Paiement annulé (reçu conservé, marqué « Annulé »).
+  cancelled: { domain: 'payment', tone: 'danger', labelKey: 'status.payment.cancelled' },
   // Appel de charges (plan 05) : en cours d'encaissement, ou entièrement encaissé.
   ongoing: { domain: 'charge_call', tone: 'warning', labelKey: 'status.charge_call.ongoing' },
   closed: { domain: 'charge_call', tone: 'success', labelKey: 'status.charge_call.closed' },
