@@ -3,4 +3,5 @@
 // ne pas le modifier à la main.
 export * from './auth';
 export * from './charges';
+export * from './expenses';
 export * from './residence';

@@ -50,6 +50,13 @@
       "when": 1794232021319,
       "tag": "0006_opening_balance",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1794232109692,
+      "tag": "0007_expenses",
+      "breakpoints": true
     }
   ]
 }
