@@ -1,4 +1,5 @@
 import { arChargeTexts } from './ar-charges';
+import { arExpenseTexts } from './ar-expenses';
 import { arResidenceTexts } from './ar-residences';
 import type { TranslationKey } from './fr';
 
@@ -6,6 +7,7 @@ import type { TranslationKey } from './fr';
 export const ar: Record<TranslationKey, string> = {
   ...arResidenceTexts,
   ...arChargeTexts,
+  ...arExpenseTexts,
   'auth.errors.nameRequired': 'أدخل اسمك.',
   'auth.errors.nameTooShort': 'حرفان على الأقل.',
   'auth.errors.nameTooLong': '80 حرفًا على الأكثر.',

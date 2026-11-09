@@ -2,6 +2,8 @@ import {
   AUTH_ERROR_KEY_LIST,
   CHARGE_ERRORS,
   CHARGE_PERIOD_LABEL_KEYS,
+  EXPENSE_CATEGORY_LABEL_KEYS,
+  EXPENSE_ERRORS,
   DUE_STATUS_LABEL_KEYS,
   PAYMENT_METHOD_LABEL_KEYS,
 } from '@syndic/shared';
@@ -9,6 +11,7 @@ import { describe, expect, it } from 'vitest';
 
 import { ar } from './ar';
 import { fr } from './fr';
+import { EXPENSE_FORM_ERRORS } from '../lib/expense-form';
 import { translate } from './translate';
 
 const ARABIC_LETTER = /[؀-ۿ]/;
@@ -21,6 +24,8 @@ const NO_WORDS = [
   'charges.date.short',
   'charges.date.long',
   'charges.payment.line',
+  'expenses.field.currency',
+  'expenses.date.display',
 ];
 const placeholders = (text: string) => (text.match(/\{\w+\}/g) ?? []).sort();
 
@@ -63,6 +68,41 @@ describe('traductions', () => {
     expect(ar['mine.title']).toBe('مصاريفي');
     expect(translate('fr', 'receipt.title', { number: '2026-0042' })).toBe('Reçu n° 2026-0042');
     expect(fr['mine.emptyTitle']).toBe('Aucune charge pour l’instant');
+  });
+
+  it('traduit les textes de l’ajout de dépense (erreurs, catégories, formulaire)', () => {
+    const keys = [
+      ...Object.values(EXPENSE_ERRORS),
+      ...Object.values(EXPENSE_CATEGORY_LABEL_KEYS),
+      ...Object.values(EXPENSE_FORM_ERRORS),
+    ];
+    for (const key of keys) {
+      expect(fr[key as keyof typeof fr], `fr : ${key}`).toBeTruthy();
+      expect(ar[key as keyof typeof ar], `ar : ${key}`).toMatch(ARABIC_LETTER);
+    }
+    // Aucune clé expenses.errors.* sans origine connue (API ou formulaire).
+    const known = new Set<string>([...Object.values(EXPENSE_ERRORS), ...Object.values(EXPENSE_FORM_ERRORS)]);
+    for (const key of Object.keys(fr).filter((k) => k.startsWith('expenses.errors.'))) {
+      expect(known.has(key), key).toBe(true);
+    }
+  });
+
+  it('textes de docs/depenses.png (écrans 2 et 3)', () => {
+    expect(fr['expenses.add.title']).toBe('Nouvelle dépense');
+    expect(fr['expenses.invoice.take']).toBe('Prendre la facture en photo');
+    expect(fr['expenses.invoice.or']).toBe('ou choisir une image ou un PDF');
+    expect(fr['expenses.invoice.added']).toBe('Facture ajoutée');
+    expect(fr['expenses.field.label']).toBe('Pour quoi ?');
+    expect(fr['expenses.field.category']).toBe('Catégorie');
+    expect(fr['expenses.submit']).toBe('Enregistrer la dépense');
+    expect(translate('fr', 'expenses.uploading', { percent: 64 })).toBe('Envoi de la facture… 64 %');
+    expect(fr['expenses.note.withInvoice']).toBe('Visible par tous les copropriétaires, avec sa facture.');
+    expect(fr['expenses.toast.withInvoice']).toBe('Dépense enregistrée avec facture · visible par tous');
+    expect(fr['expenses.category.maintenance']).toBe('Entretien');
+    expect(ar['expenses.category.repairs']).toBe('إصلاحات');
+    expect(translate('fr', 'expenses.date.display', { day: 8, month: fr['charges.dateMonthsShort.11'], year: 2026 })).toMatch(
+      /^8 nov/,
+    );
   });
 
   it('a exactement les mêmes clés en français et en arabe', () => {
