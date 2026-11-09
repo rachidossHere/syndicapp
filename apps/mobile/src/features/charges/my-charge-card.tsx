@@ -6,13 +6,14 @@ import { View } from 'react-native';
 import type { MyDue } from '@/hooks/use-charges';
 import { useT } from '@/i18n/use-t';
 
+import { dueDisplay } from './my-charges';
 import { useChargeFormat } from './use-charge-format';
 
 export function MyChargeCard({ due, showLot }: { due: MyDue; showLot: boolean }) {
   const { colors, radius, spacing } = useTheme();
   const t = useT();
   const format = useChargeFormat();
-  const settled = due.remaining === 0;
+  const { settled, amount } = dueDisplay(due);
 
   return (
     <View
@@ -33,7 +34,7 @@ export function MyChargeCard({ due, showLot }: { due: MyDue; showLot: boolean })
         <StatusBadge status={due.status} />
       </View>
       {/* Montant restant à payer ; une fois réglé, le montant de l'appel. */}
-      <Amount centimes={settled ? due.amountDue : due.remaining} variant="display" tone="inverse" />
+      <Amount centimes={amount} variant="display" tone="inverse" />
       <Text variant="small" tone="inverse">
         {settled ? t('mine.settled') : t('mine.payBefore', { date: format.date(due.dueDate, 'long') })}
       </Text>
