@@ -2,6 +2,9 @@ import { describe, expect, it } from 'vitest';
 
 import {
   cancelExpenseSchema,
+  currentPeriodBounds,
+  EXPENSE_ERRORS,
+  invoiceKeyPrefix,
   createExpenseSchema,
   EXPENSE_CATEGORIES,
   EXPENSE_CATEGORY_LABEL_KEYS,
@@ -31,18 +34,11 @@ describe('createExpenseSchema', () => {
     expect(createExpenseSchema.safeParse({ ...valid, category: 'plomberie' }).success).toBe(false);
     expect(createExpenseSchema.safeParse({ ...valid, recordedBy: 'x' }).success).toBe(false);
   });
-  it('refuse une date inexistante et une facture trop lourde ou d’un mauvais type', () => {
+  it('refuse une date inexistante et une clé de facture vide', () => {
     expect(createExpenseSchema.safeParse({ ...valid, spentOn: '2026-02-31' }).success).toBe(false);
-    const invoice = { key: 'k', contentType: 'image/jpeg', size: 1000 };
-    expect(createExpenseSchema.safeParse({ ...valid, invoice }).success).toBe(true);
-    expect(
-      createExpenseSchema.safeParse({ ...valid, invoice: { ...invoice, size: 15 * 1024 * 1024 } })
-        .success,
-    ).toBe(false);
-    expect(
-      createExpenseSchema.safeParse({ ...valid, invoice: { ...invoice, contentType: 'application/x-msdownload' } })
-        .success,
-    ).toBe(false);
+    expect(createExpenseSchema.safeParse({ ...valid, invoiceKey: 'residences/r/invoices/a.jpg' }).success).toBe(true);
+    expect(createExpenseSchema.safeParse({ ...valid, invoiceKey: '  ' }).success).toBe(false);
+    expect(createExpenseSchema.safeParse({ ...valid, invoice: { key: 'k' } }).success).toBe(false);
   });
   it('exige un client_id valide quand il est fourni', () => {
     expect(createExpenseSchema.safeParse({ ...valid, clientId: 'abc' }).success).toBe(false);
@@ -82,5 +78,18 @@ describe('ledgerQuerySchema', () => {
 describe('formatPaymentLedgerLabel', () => {
   it('donne « Charge reçue · B12 »', () => {
     expect(formatPaymentLedgerLabel('B12')).toBe('Charge reçue · B12');
+  });
+});
+
+describe('période en cours et clés de facture (06.2)', () => {
+  it('trimestre et mois', () => {
+    expect(currentPeriodBounds('quarterly', '2026-11-09')).toEqual({ from: '2026-10-01', to: '2026-12-31' });
+    expect(currentPeriodBounds('quarterly', '2026-02-28')).toEqual({ from: '2026-01-01', to: '2026-03-31' });
+    expect(currentPeriodBounds('monthly', '2028-02-10')).toEqual({ from: '2028-02-01', to: '2028-02-29' });
+  });
+  it('préfixe de résidence et clés d\'erreur', () => {
+    expect(invoiceKeyPrefix('abc')).toBe('residences/abc/invoices/');
+    expect(EXPENSE_ERRORS.invalidFileType).toBe('expenses.errors.invalidFileType');
+    expect(EXPENSE_ERRORS.openingReasonRequired).toBe('expenses.errors.openingReasonRequired');
   });
 });

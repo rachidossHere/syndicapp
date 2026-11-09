@@ -119,3 +119,24 @@ export async function getLedger(
   });
   return { items, total: Number(result.rows[0]?.total ?? 0) };
 }
+
+/**
+ * Encaissé et dépensé d'une période (bornes incluses, AAAA-MM-JJ), mouvements non annulés.
+ * Les paiements sont rangés par jour de paiement à Casablanca, les dépenses par date de dépense.
+ */
+export async function getPeriodTotals(
+  residenceId: string,
+  period: { from: string; to: string },
+): Promise<{ collected: number; spent: number }> {
+  const result = await db.execute<{ collected: string; spent: string }>(sql`
+    select
+      coalesce((select sum(p.amount) from payment p
+                where p.residence_id = ${residenceId} and p.cancelled_at is null
+                  and to_char(p.paid_at at time zone ${TIMEZONE}, 'YYYY-MM-DD') between ${period.from} and ${period.to}), 0) as collected,
+      coalesce((select sum(e.amount) from expense e
+                where e.residence_id = ${residenceId} and e.cancelled_at is null
+                  and to_char(e.spent_on, 'YYYY-MM-DD') between ${period.from} and ${period.to}), 0) as spent
+  `);
+  const row = result.rows[0];
+  return { collected: Number(row?.collected ?? 0), spent: Number(row?.spent ?? 0) };
+}
