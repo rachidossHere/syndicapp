@@ -136,7 +136,7 @@ export function NewChargeCallScreen() {
           value={dueDate}
           display={format.date(dueDate, 'long')}
           minimum={today}
-          helper={t('charges.new.dueDateHelp')}
+          sheetTitle={t('charges.new.dueDateSheet')}
           onChange={setChosenDueDate}
         />
 

@@ -1,15 +1,20 @@
-// Sélecteur de date natif : versions iOS (native-date-picker.ios.tsx) et Android
-// (native-date-picker.android.tsx). Ailleurs (web, non pris en charge par le MVP) : rien.
-export type NativeDatePickerProps = {
+// Choix d'une date : versions iOS (date-picker-sheet.ios.tsx, calendrier dans une feuille) et
+// Android (date-picker-sheet.android.tsx, sélecteur natif). Ailleurs (web, hors MVP) : rien.
+export type DatePickerSheetProps = {
+  /** Feuille ou dialogue affiché. */
+  visible: boolean;
+  /** Titre de la feuille (déjà traduit). */
+  title: string;
   /** Date choisie, AAAA-MM-JJ. */
   value: string;
-  /** Première date proposée, AAAA-MM-JJ. */
+  /** Première date sélectionnable, AAAA-MM-JJ : les dates passées sont grisées. */
   minimum: string;
-  onChange: (value: string) => void;
-  /** Fermeture sans choix (dialogue Android). */
+  /** Date validée. */
+  onConfirm: (value: string) => void;
+  /** Fermeture sans changement. */
   onClose: () => void;
 };
 
-export function NativeDatePicker(_props: NativeDatePickerProps) {
+export function DatePickerSheet(_props: DatePickerSheetProps) {
   return null;
 }

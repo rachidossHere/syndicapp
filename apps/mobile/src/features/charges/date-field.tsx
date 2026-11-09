@@ -1,9 +1,9 @@
 import { Icon, Text, useTheme } from '@syndic/ui';
 import Calendar from 'lucide-react-native/icons/calendar';
 import { useState } from 'react';
-import { Pressable, View } from 'react-native';
+import { Keyboard, Pressable, View } from 'react-native';
 
-import { NativeDatePicker } from './native-date-picker';
+import { DatePickerSheet } from './date-picker-sheet';
 
 export type DateFieldProps = {
   label: string;
@@ -11,17 +11,19 @@ export type DateFieldProps = {
   value: string;
   /** Texte affiché (date formatée dans la langue active). */
   display: string;
-  /** Première date proposée, AAAA-MM-JJ. */
+  /** Première date sélectionnable, AAAA-MM-JJ. */
   minimum: string;
-  helper?: string;
+  /** Titre de la feuille du calendrier (déjà traduit). */
+  sheetTitle: string;
   onChange: (value: string) => void;
 };
 
 /**
  * Champ de date : même allure qu'un champ de saisie (jetons de @syndic/ui), avec une icône de
- * calendrier. Le toucher ouvre le sélecteur natif (calendrier iOS, dialogue Android).
+ * calendrier. Le toucher ferme le clavier, puis ouvre le calendrier dans une feuille (iOS) ou le
+ * sélecteur natif (Android) ; la date ne change qu'à la validation.
  */
-export function DateField({ label, value, display, minimum, helper, onChange }: DateFieldProps) {
+export function DateField({ label, value, display, minimum, sheetTitle, onChange }: DateFieldProps) {
   const { colors, radius, spacing, sizes, borderWidth } = useTheme();
   const [open, setOpen] = useState(false);
 
@@ -33,9 +35,12 @@ export function DateField({ label, value, display, minimum, helper, onChange }: 
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={`${label}, ${display}`}
-        accessibilityHint={helper}
         accessibilityState={{ expanded: open }}
-        onPress={() => setOpen((current) => !current)}
+        onPress={() => {
+          // Le clavier du montant ne doit pas rester ouvert par-dessus le calendrier.
+          Keyboard.dismiss();
+          setOpen(true);
+        }}
         style={({ pressed }) => ({
           minHeight: sizes.input,
           flexDirection: 'row',
@@ -52,14 +57,17 @@ export function DateField({ label, value, display, minimum, helper, onChange }: 
         <Text>{display}</Text>
         <Icon icon={Calendar} color={colors.iconInactive} />
       </Pressable>
-      {helper !== undefined && (
-        <Text variant="small" tone="muted">
-          {helper}
-        </Text>
-      )}
-      {open && (
-        <NativeDatePicker value={value} minimum={minimum} onChange={onChange} onClose={() => setOpen(false)} />
-      )}
+      <DatePickerSheet
+        visible={open}
+        title={sheetTitle}
+        value={value}
+        minimum={minimum}
+        onConfirm={(date) => {
+          onChange(date);
+          setOpen(false);
+        }}
+        onClose={() => setOpen(false)}
+      />
     </View>
   );
 }
