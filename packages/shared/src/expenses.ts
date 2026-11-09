@@ -13,3 +13,9 @@ export const EXPENSE_CATEGORIES = [
   'other',
 ] as const;
 export type ExpenseCategory = (typeof EXPENSE_CATEGORIES)[number];
+
+/** Libellé d'un encaissement dans le journal : « Charge reçue · B12 », jamais le nom du payeur. */
+export const PAYMENT_LEDGER_LABEL = 'Charge reçue';
+export function formatPaymentLedgerLabel(lotReference: string): string {
+  return `${PAYMENT_LEDGER_LABEL} · ${lotReference}`;
+}
