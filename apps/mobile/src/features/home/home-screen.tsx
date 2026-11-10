@@ -5,6 +5,7 @@ import { AUTH_ERROR_KEYS, can, type AuthErrorKey } from '@syndic/shared';
 import { Banner, Button, Card, Chip, Icon, ListItem, Screen, Text, Toast, useTheme } from '@syndic/ui';
 import { useRouter } from 'expo-router';
 import Building from 'lucide-react-native/icons/building';
+import ChartColumn from 'lucide-react-native/icons/chart-column';
 import KeyRound from 'lucide-react-native/icons/key-round';
 import Plus from 'lucide-react-native/icons/plus';
 import Receipt from 'lucide-react-native/icons/receipt';
@@ -13,6 +14,7 @@ import { useEffect, useState } from 'react';
 import { Pressable, View } from 'react-native';
 
 import { ErrorNotice } from '@/components/network-error';
+import { canSeeAccounts } from '@/lib/cash';
 import { canManageCharges, myDuesResidenceId } from '@/features/charges/access';
 import { MyChargesSummary } from '@/features/charges/my-charges-summary';
 import { useRoleLabel } from '@/features/residences/use-role-label';
@@ -192,6 +194,28 @@ export function HomeScreen() {
               </View>
             }
             onPress={() => router.push('/charges')}
+          />
+        )}
+        {/* Comptes : rôles avec accounts.read (syndic, trésorier, adjoint, copropriétaire). Ni locataire ni gardien. */}
+        {canSeeAccounts(active.role) && (
+          <ListItem
+            title={t('home.accounts')}
+            subtitle={t('home.accountsBody')}
+            leading={
+              <View
+                style={{
+                  width: sizes.iconBox,
+                  height: sizes.iconBox,
+                  borderRadius: radius.sm,
+                  borderCurve: 'continuous',
+                  backgroundColor: colors.infoBg,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}>
+                <Icon icon={ChartColumn} color={colors.infoFg} />
+              </View>
+            }
+            onPress={() => router.push('/accounts')}
           />
         )}
         {/* Dépenses : syndic et trésorier (expenses.write). L'API refuse de toute façon les autres rôles. */}

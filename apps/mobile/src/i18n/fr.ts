@@ -1,6 +1,7 @@
 import type { AuthErrorKey } from '@syndic/shared';
 
 import { frChargeTexts } from './fr-charges';
+import { frAccountTexts } from './fr-accounts';
 import { frExpenseTexts } from './fr-expenses';
 import { frResidenceTexts } from './fr-residences';
 
@@ -30,6 +31,7 @@ export const fr = {
   ...frResidenceTexts,
   ...frChargeTexts,
   ...frExpenseTexts,
+  ...frAccountTexts,
 
   'common.back': 'Retour',
   'common.loading': 'Chargement…',

@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Modal, Pressable, StyleSheet, View } from 'react-native';
+import { KeyboardAvoidingView, Modal, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useTheme } from '../theme/theme-provider';
@@ -37,7 +37,8 @@ export function Sheet({ visible, title, dismissLabel, onClose, children, footer,
       navigationBarTranslucent
       onRequestClose={onClose}
       testID={testID}>
-      <View style={styles.container}>
+      {/* Le clavier ne doit pas recouvrir un champ de la feuille (ex. motif d'une annulation). */}
+      <KeyboardAvoidingView behavior="padding" style={styles.container}>
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={dismissLabel}
@@ -60,7 +61,7 @@ export function Sheet({ visible, title, dismissLabel, onClose, children, footer,
           {children}
           {footer}
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }

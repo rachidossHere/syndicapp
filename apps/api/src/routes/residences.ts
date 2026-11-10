@@ -9,7 +9,7 @@ import {
   todayInCasablanca,
   updateResidenceSettingsSchema,
 } from '@syndic/shared';
-import { and, eq, inArray } from 'drizzle-orm';
+import { and, desc, eq, inArray } from 'drizzle-orm';
 import { Hono } from 'hono';
 
 import { ChargeRefusal, withRefusals } from '../charge-errors';
@@ -160,5 +160,44 @@ residences.put(
     if (result === null) return c.json({ error: 'forbidden' }, 403);
     if (result === 'reason_required') return expenseRefusal(EXPENSE_ERRORS.openingReasonRequired);
     return c.json(result);
+  },
+);
+
+/**
+ * Syndic (residence.manage) : solde de départ et historique de ses changements, du plus récent au
+ * plus ancien. Aucun identifiant ni nom de personne n'est envoyé : seul le syndic peut le modifier.
+ */
+residences.get(
+  '/current/opening-balance',
+  requireAuth,
+  requireMembership,
+  requirePermission('residence.manage'),
+  async (c) => {
+    const residenceId = c.get('residenceId');
+    const [current] = await db
+      .select({
+        openingBalance: schema.residence.openingBalance,
+        openingBalanceDate: schema.residence.openingBalanceDate,
+      })
+      .from(schema.residence)
+      .where(eq(schema.residence.id, residenceId))
+      .limit(1);
+    if (!current) return c.json({ error: 'forbidden' }, 403);
+    const rows = await db
+      .select({
+        id: schema.openingBalanceChange.id,
+        oldAmount: schema.openingBalanceChange.oldAmount,
+        newAmount: schema.openingBalanceChange.newAmount,
+        asOfDate: schema.openingBalanceChange.asOfDate,
+        reason: schema.openingBalanceChange.reason,
+        changedAt: schema.openingBalanceChange.changedAt,
+      })
+      .from(schema.openingBalanceChange)
+      .where(eq(schema.openingBalanceChange.residenceId, residenceId))
+      .orderBy(desc(schema.openingBalanceChange.changedAt));
+    return c.json({
+      ...current,
+      changes: rows.map((row) => ({ ...row, changedAt: row.changedAt.toISOString() })),
+    });
   },
 );
