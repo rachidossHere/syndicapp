@@ -89,8 +89,11 @@ lots.post('/bulk', requireAuth, requireMembership, requirePermission('lots.write
   }
 });
 
-/** Lots de la résidence, triés par référence, avec leur statut (member, pending, free). */
-lots.get('/', requireAuth, requireMembership, async (c) => {
+/**
+ * Syndic (lots.write) : lots de la résidence, triés par référence, avec leur statut (member,
+ * pending, free). Le statut révèle qui est membre ou invité : réservé à celui qui gère les lots.
+ */
+lots.get('/', requireAuth, requireMembership, requirePermission('lots.write'), async (c) => {
   const residenceId = c.get('residenceId');
   const rows = await db
     .select({

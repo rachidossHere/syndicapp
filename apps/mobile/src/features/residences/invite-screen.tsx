@@ -61,7 +61,9 @@ export function InviteScreen({ lotId, invitationId }: InviteScreenProps) {
   const allowed = active !== null && can(active.role, 'members.invite');
   const residenceId = allowed ? active.id : undefined;
 
-  const lots = useLots(lotId !== undefined ? residenceId : undefined);
+  // GET /api/lots exige lots.write : l'appli ne l'appelle que pour les rôles qui l'ont.
+  const canListLots = active !== null && can(active.role, 'lots.write');
+  const lots = useLots(lotId !== undefined && canListLots ? residenceId : undefined);
   const pending = usePendingInvitations(residenceId, invitationId !== undefined);
   const createInvitation = useCreateInvitation(residenceId);
   const cancelInvitation = useCancelInvitation(residenceId);
