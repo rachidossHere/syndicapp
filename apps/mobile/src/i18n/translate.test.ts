@@ -26,6 +26,7 @@ const NO_WORDS = [
   'charges.payment.line',
   'expenses.field.currency',
   'expenses.date.display',
+  'accounts.ledger.expenseLine',
 ];
 const placeholders = (text: string) => (text.match(/\{\w+\}/g) ?? []).sort();
 
