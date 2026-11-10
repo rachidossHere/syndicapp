@@ -169,6 +169,7 @@ syndicapp/
 - `pnpm --filter @syndic/api auth:generate` : regénère `packages/db/src/schema/auth.ts` avec la CLI de Better Auth.
 - `cd apps/mobile && npx expo start` : appli seule.
 - `pnpm ip` : adresse IP locale du PC et ligne `EXPO_PUBLIC_API_URL` à mettre dans `apps/mobile/.env.local`.
+- Git : le dépôt distant s'appelle **`remote`** (et non `origin`), et la branche principale `master`. Exemple : `git pull remote master`. Ne rien pousser sans validation.
 
 ---
 
@@ -252,6 +253,7 @@ syndicapp/
 Le projet démarre sur des offres gratuites, dont les conditions changent : les vérifier avant tout déploiement.
 
 - **Neon** : mise en veille possible avec un délai au réveil, stockage et calcul limités. Chaque branche a sa propre base.
+- **Expiration de la branche `dev`** : une branche Neon peut avoir une date d'expiration (celle de `dev` était fixée à 7 jours après sa création, retirée le 10 novembre 2026) ; passé cette date, elle est supprimée avec ses données. Vérifier la colonne « Expires At » de `neon branches list` et retirer l'expiration de `dev` avec `neon branches set-expiration <id de dev> --project-id <projet>` (sans `--expires-at`). Ne jamais lancer cette commande sur `production`.
 - La limitation des tentatives est en mémoire : elle repart à zéro au redémarrage et ne vaut que pour une instance. À passer en base ou dans Redis au plan 12.
 - **Cloudflare R2** : quota gratuit de stockage et d'opérations ; d'où la compression des images.
 - **Render / Railway** : mise en veille et ressources limitées.
