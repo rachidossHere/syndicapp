@@ -18,7 +18,7 @@ export type { DatePickerSheetProps } from './date-picker-sheet';
 /** Langue de l'appli → locale du calendrier (Maroc pour l'arabe, chiffres latins). */
 const CALENDAR_LOCALES = { fr: 'fr-FR', ar: 'ar-MA' } as const;
 
-export function DatePickerSheet({ visible, title, value, minimum, onConfirm, onClose }: DatePickerSheetProps) {
+export function DatePickerSheet({ visible, title, value, minimum, maximum, onConfirm, onClose }: DatePickerSheetProps) {
   const { colors, spacing } = useTheme();
   const t = useT();
   const { language } = useLanguage();
@@ -52,7 +52,10 @@ export function DatePickerSheet({ visible, title, value, minimum, onConfirm, onC
         <DatePicker
           title={title}
           selection={dateFromString(draft)}
-          range={{ start: dateFromString(minimum) }}
+          range={{
+            ...(minimum !== undefined ? { start: dateFromString(minimum) } : {}),
+            ...(maximum !== undefined ? { end: dateFromString(maximum) } : {}),
+          }}
           displayedComponents={['date']}
           // Le calendrier donne une date à l'heure locale : on garde le jour affiché.
           onDateChange={(date) => setDraft(localDateString(date))}

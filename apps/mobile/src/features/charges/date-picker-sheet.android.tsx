@@ -10,7 +10,7 @@ import type { DatePickerSheetProps } from './date-picker-sheet';
 
 export type { DatePickerSheetProps } from './date-picker-sheet';
 
-export function DatePickerSheet({ visible, value, minimum, onConfirm, onClose }: DatePickerSheetProps) {
+export function DatePickerSheet({ visible, value, minimum, maximum, onConfirm, onClose }: DatePickerSheetProps) {
   const { colors } = useTheme();
   const t = useT();
 
@@ -21,7 +21,10 @@ export function DatePickerSheet({ visible, value, minimum, onConfirm, onClose }:
       <DatePickerDialog
         // Compose travaille en UTC : « 2026-12-15 » est minuit UTC, et la date choisie revient en UTC.
         initialDate={value}
-        selectableDates={{ start: new Date(`${minimum}T00:00:00Z`) }}
+        selectableDates={{
+          ...(minimum !== undefined ? { start: new Date(`${minimum}T00:00:00Z`) } : {}),
+          ...(maximum !== undefined ? { end: new Date(`${maximum}T23:59:59Z`) } : {}),
+        }}
         color={colors.primary}
         confirmButtonLabel={t('common.confirm')}
         dismissButtonLabel={t('common.cancel')}

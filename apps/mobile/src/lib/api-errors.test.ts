@@ -17,6 +17,13 @@ describe('apiErrorKey', () => {
     expect(apiErrorKey(new ApiError(409, 'charges.errors.inventee'))).toBe('residences.errors.conflict');
   });
 
+  it('renvoie la clé de refus des dépenses telle quelle (facture, date, fichier)', () => {
+    expect(apiErrorKey(new ApiError(400, 'expenses.errors.fileTooLarge'))).toBe('expenses.errors.fileTooLarge');
+    expect(apiErrorKey(new ApiError(0, 'network_error'))).toBe('auth.errors.network');
+    expect(apiErrorKey(new ApiError(403, 'expenses.errors.uploadFailed'))).toBe('expenses.errors.uploadFailed');
+    expect(apiErrorKey(new ApiError(400, 'expenses.errors.inventee'))).toBe('auth.errors.invalidInput');
+  });
+
   it('ignore une clé inconnue envoyée par le serveur', () => {
     expect(apiErrorKey(new ApiError(410, 'invitations.errors.inventee'))).toBe('auth.errors.unknown');
   });

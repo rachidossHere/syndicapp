@@ -11,7 +11,9 @@ export function apiErrorKey(error: unknown): TranslationKey {
   if (!(error instanceof ApiError)) return AUTH_ERROR_KEYS.unknown;
   if (error.status === 0) return AUTH_ERROR_KEYS.network;
   if (
-    (error.code.startsWith('invitations.errors.') || error.code.startsWith('charges.errors.')) &&
+    (error.code.startsWith('invitations.errors.') ||
+      error.code.startsWith('charges.errors.') ||
+      error.code.startsWith('expenses.errors.')) &&
     error.code in fr
   ) {
     return error.code as TranslationKey;

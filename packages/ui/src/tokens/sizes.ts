@@ -25,6 +25,8 @@ export const sizes = {
   choiceTile: 52,
   /** Épaisseur d'une barre de progression. */
   progressBar: 8,
+  /** Hauteur de la zone « Prendre la facture en photo » (et de l'aperçu de la facture). */
+  invoiceZone: 176,
 } as const;
 
 export type SizeToken = keyof typeof sizes;

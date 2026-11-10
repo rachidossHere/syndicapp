@@ -34,7 +34,15 @@
         }
       ],
       "expo-font",
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "expo-image-picker",
+        {
+          "cameraPermission": "SyndicApp utilise l’appareil photo pour photographier les factures des dépenses de la résidence.",
+          "photosPermission": "SyndicApp accède à vos photos pour joindre la facture d’une dépense.",
+          "microphonePermission": false
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

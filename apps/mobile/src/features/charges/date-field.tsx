@@ -12,7 +12,9 @@ export type DateFieldProps = {
   /** Texte affiché (date formatée dans la langue active). */
   display: string;
   /** Première date sélectionnable, AAAA-MM-JJ. */
-  minimum: string;
+  minimum?: string | undefined;
+  /** Dernière date sélectionnable, AAAA-MM-JJ. */
+  maximum?: string | undefined;
   /** Titre de la feuille du calendrier (déjà traduit). */
   sheetTitle: string;
   onChange: (value: string) => void;
@@ -23,7 +25,7 @@ export type DateFieldProps = {
  * calendrier. Le toucher ferme le clavier, puis ouvre le calendrier dans une feuille (iOS) ou le
  * sélecteur natif (Android) ; la date ne change qu'à la validation.
  */
-export function DateField({ label, value, display, minimum, sheetTitle, onChange }: DateFieldProps) {
+export function DateField({ label, value, display, minimum, maximum, sheetTitle, onChange }: DateFieldProps) {
   const { colors, radius, spacing, sizes, borderWidth } = useTheme();
   const [open, setOpen] = useState(false);
 
@@ -62,6 +64,7 @@ export function DateField({ label, value, display, minimum, sheetTitle, onChange
         title={sheetTitle}
         value={value}
         minimum={minimum}
+        maximum={maximum}
         onConfirm={(date) => {
           onChange(date);
           setOpen(false);

@@ -32,6 +32,8 @@ export type TextFieldProps = Omit<
    * Saisie toujours de gauche à droite, même en arabe (e-mail, code, URL).
    */
   ltr?: boolean;
+  /** Texte fixe à la fin du champ, dans le cadre (ex. « MAD » après un montant). */
+  suffix?: string;
   /**
    * Référence vers le TextInput : compatible React Hook Form (`field.ref`).
    * Avec React 19, `ref` est une prop ordinaire : `forwardRef` n'est plus nécessaire.
@@ -51,6 +53,7 @@ export function TextField({
   error,
   password = false,
   ltr = false,
+  suffix,
   ref,
   containerStyle,
   onFocus,
@@ -115,6 +118,11 @@ export function TextField({
           ]}
           {...inputProps}
         />
+        {suffix !== undefined && (
+          <Text variant="small" tone="muted" style={{ paddingEnd: spacing.md }}>
+            {suffix}
+          </Text>
+        )}
         {password && (
           <Pressable
             onPress={() => setHidden((value) => !value)}

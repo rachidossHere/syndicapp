@@ -8,7 +8,9 @@ export type DatePickerSheetProps = {
   /** Date choisie, AAAA-MM-JJ. */
   value: string;
   /** Première date sélectionnable, AAAA-MM-JJ : les dates passées sont grisées. */
-  minimum: string;
+  minimum?: string | undefined;
+  /** Dernière date sélectionnable, AAAA-MM-JJ : les dates futures sont grisées (dépenses). */
+  maximum?: string | undefined;
   /** Date validée. */
   onConfirm: (value: string) => void;
   /** Fermeture sans changement. */
