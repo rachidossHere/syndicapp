@@ -503,6 +503,27 @@ describe.skipIf(!configured)('API des dépenses et de la caisse', { timeout: 120
         .from(schema.residence)
         .where(eq(schema.residence.id, resA));
       expect(res).toEqual({ b: 950000, d: '2026-10-02' });
+
+      // Historique (syndic seulement) : plus récent d'abord, sans aucun identifiant de personne.
+      const read = await as('mgrA').get('/api/residences/current/opening-balance');
+      expect(read.status).toBe(200);
+      expect(read.json).toMatchObject({ openingBalance: 950000, openingBalanceDate: '2026-10-02' });
+      expect(
+        read.json.changes.map((h: { oldAmount: number | null; newAmount: number; reason: string | null }) => [
+          h.oldAmount,
+          h.newAmount,
+          h.reason,
+        ]),
+      ).toEqual([
+        [1000000, 950000, 'Erreur de comptage'],
+        [null, 1000000, null],
+      ]);
+      expect(JSON.stringify(read.json)).not.toContain(uid('mgrA'));
+      // Autre résidence : son propre historique (vide) ; autres rôles : refus.
+      expect((await as('mgrB', resB).get('/api/residences/current/opening-balance')).json.changes).toEqual([]);
+      for (const name of ['treasurerA', 'ownerA11', 'tenantA11', 'caretakerA']) {
+        expect((await as(name).get('/api/residences/current/opening-balance')).status, name).toBe(403);
+      }
     });
 
     it('solde exact après dépenses, paiements et annulations', async () => {
