@@ -15,6 +15,7 @@ import { chargeCalls } from './routes/charge-calls';
 import { expenses } from './routes/expenses';
 import { health } from './routes/health';
 import { invitations } from './routes/invitations';
+import { issues } from './routes/issues';
 import { lots } from './routes/lots';
 import { me } from './routes/me';
 import { payments } from './routes/payments';
@@ -48,6 +49,7 @@ app.route('/api/charge-calls', chargeCalls);
 app.route('/api/payments', payments);
 app.route('/api/receipts', receipts);
 app.route('/api/expenses', expenses);
+app.route('/api/issues', issues);
 app.route('/api/cash', cash);
 
 app.notFound((c) => c.json({ error: 'not_found' }, 404));
