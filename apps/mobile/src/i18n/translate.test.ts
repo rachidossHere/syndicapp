@@ -5,7 +5,9 @@ import {
   EXPENSE_CATEGORY_LABEL_KEYS,
   EXPENSE_ERRORS,
   DUE_STATUS_LABEL_KEYS,
+  INVITATION_ERRORS,
   PAYMENT_METHOD_LABEL_KEYS,
+  ROLE_LABEL_KEYS,
 } from '@syndic/shared';
 import { describe, expect, it } from 'vitest';
 
@@ -45,6 +47,14 @@ describe('traductions', () => {
       ...Object.values(DUE_STATUS_LABEL_KEYS),
       ...Object.values(PAYMENT_METHOD_LABEL_KEYS),
     ];
+    for (const key of keys) {
+      expect(fr[key as keyof typeof fr], `fr : ${key}`).toBeTruthy();
+      expect(ar[key as keyof typeof ar], `ar : ${key}`).toMatch(ARABIC_LETTER);
+    }
+  });
+
+  it('traduit les refus d’invitation et les rôles de @syndic/shared', () => {
+    const keys = [...Object.values(INVITATION_ERRORS), ...Object.values(ROLE_LABEL_KEYS)];
     for (const key of keys) {
       expect(fr[key as keyof typeof fr], `fr : ${key}`).toBeTruthy();
       expect(ar[key as keyof typeof ar], `ar : ${key}`).toMatch(ARABIC_LETTER);

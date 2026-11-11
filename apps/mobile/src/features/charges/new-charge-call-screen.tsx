@@ -32,7 +32,8 @@ export function NewChargeCallScreen() {
   const residenceId = allowed ? active.id : undefined;
   const residence = useCurrentResidence(residenceId);
   const calls = useChargeCalls(residenceId);
-  const lots = useLots(residenceId);
+  // GET /api/lots exige lots.write : l'appli ne l'appelle que pour les rôles qui l'ont.
+  const lots = useLots(active !== null && can(active.role, 'lots.write') ? residenceId : undefined);
   const create = useCreateChargeCall(residenceId);
 
   const today = useMemo(() => todayCasablanca(), []);

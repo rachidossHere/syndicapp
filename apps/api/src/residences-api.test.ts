@@ -219,10 +219,11 @@ describe.skipIf(!hasDatabase)('API résidences et lots', () => {
       },
     );
 
-    it('tout membre peut lire la liste des lots', async () => {
+    it('seul le syndic lit la liste des lots (lots.write)', async () => {
       for (const name of ['owner', 'tenant', 'caretaker']) {
-        expect((await api(uid(name), 'GET', '/api/lots', { residence: resA })).status).toBe(200);
+        expect((await api(uid(name), 'GET', '/api/lots', { residence: resA })).status).toBe(403);
       }
+      expect((await api(uid('mgrA'), 'GET', '/api/lots', { residence: resA })).status).toBe(200);
     });
 
     it('le syndic crée un lot ; une référence en double donne 409', async () => {
