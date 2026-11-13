@@ -79,14 +79,19 @@ export function Screen({
     <View style={[styles.fill, content, contentStyle]}>{children}</View>
   );
 
+  // L'arbre est le même avec ou sans pied : un pied qui apparaît ou disparaît (les boutons d'une
+  // dépense disparaissent quand elle est annulée) ne doit jamais changer le type du parent du
+  // contenu. Sinon React démonte puis remonte tout le contenu, y compris une feuille (Modal)
+  // encore présentée, et iOS garde une présentation fantôme qui capte les touchers.
   return (
     <SafeAreaView edges={ALL_EDGES} style={[styles.fill, { backgroundColor: colors.bg }]} testID={testID}>
-      {footer === undefined ? (
-        body
-      ) : (
-        // iOS : le clavier recouvre l'écran, on remonte le pied ; Android redimensionne déjà la fenêtre.
-        <KeyboardAvoidingView style={styles.fill} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-          {body}
+      {/* iOS : le clavier recouvre l'écran, on remonte le pied ; Android redimensionne déjà la fenêtre. */}
+      <KeyboardAvoidingView
+        style={styles.fill}
+        enabled={footer !== undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        {body}
+        {footer !== undefined && (
           <View
             style={{
               paddingHorizontal: layout.screenPadding,
@@ -95,8 +100,8 @@ export function Screen({
             }}>
             {footer}
           </View>
-        </KeyboardAvoidingView>
-      )}
+        )}
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }

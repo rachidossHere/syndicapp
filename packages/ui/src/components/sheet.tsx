@@ -14,6 +14,11 @@ export type SheetProps = {
   dismissLabel: string;
   /** Fermeture sans valider : toucher en dehors, geste ou bouton retour d'Android. */
   onClose: () => void;
+  /**
+   * Appelé quand la feuille a fini de se fermer (iOS seulement : Android n'envoie pas cet
+   * événement). Un écran qui change son contenu à cause de la fermeture doit attendre cet appel.
+   */
+  onDismissed?: () => void;
   children: ReactNode;
   /** Actions en bas de la feuille (ex. « Annuler » et « Valider »). */
   footer?: ReactNode;
@@ -24,7 +29,7 @@ export type SheetProps = {
  * Feuille qui monte du bas de l'écran, au-dessus d'un fond assombri : fond `surface`, coins
  * supérieurs arrondis, marges de l'écran, zone sûre du bas respectée. Toucher le fond la ferme.
  */
-export function Sheet({ visible, title, dismissLabel, onClose, children, footer, testID }: SheetProps) {
+export function Sheet({ visible, title, dismissLabel, onClose, onDismissed, children, footer, testID }: SheetProps) {
   const { colors, layout, opacity, radius } = useTheme();
   const insets = useSafeAreaInsets();
 
@@ -36,6 +41,7 @@ export function Sheet({ visible, title, dismissLabel, onClose, children, footer,
       statusBarTranslucent
       navigationBarTranslucent
       onRequestClose={onClose}
+      onDismiss={onDismissed}
       testID={testID}>
       {/* Le clavier ne doit pas recouvrir un champ de la feuille (ex. motif d'une annulation). */}
       <KeyboardAvoidingView behavior="padding" style={styles.container}>
