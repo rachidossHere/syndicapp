@@ -1,6 +1,6 @@
 # 05 · Charges et encaissements
 
-Statut : brouillon
+Statut : terminé
 
 ## Objectif
 

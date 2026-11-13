@@ -3,6 +3,7 @@ export * from './charges';
 export * from './constants';
 export * from './expenses';
 export * from './invitations';
+export * from './issues';
 export * from './language';
 export * from './money';
 export * from './residences';

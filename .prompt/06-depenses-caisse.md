@@ -1,6 +1,6 @@
 # 06 · Dépenses et caisse
 
-Statut : brouillon
+Statut : terminé
 
 ## Objectif
 

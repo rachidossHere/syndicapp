@@ -45,7 +45,14 @@ const PNG = Buffer.from(
 );
 
 /** Identifiants des objets d'une résidence, utilisés dans les chemins sondés. */
-type Ids = { call: string; payment: string; receipt: string; expense: string; invitation: string };
+type Ids = {
+  call: string;
+  payment: string;
+  receipt: string;
+  expense: string;
+  invitation: string;
+  issue: string;
+};
 
 /** Route sondée : méthode, chemin (selon les objets visés) et corps éventuel. */
 type Probe = {
@@ -60,6 +67,7 @@ type Probe = {
 const ALL = ['manager', 'treasurer', 'deputy', 'owner', 'ownerOtherLot', 'tenant', 'caretaker'];
 const ACCOUNTS = ['manager', 'treasurer', 'deputy', 'owner', 'ownerOtherLot'];
 const COLLECTORS = ['manager', 'treasurer'];
+const ISSUE_STAFF = ['manager', 'deputy', 'caretaker'];
 
 const PROBES: Probe[] = [
   { name: 'GET /residences/current', method: 'GET', path: () => '/api/residences/current', allowed: ALL },
@@ -87,6 +95,15 @@ const PROBES: Probe[] = [
   { name: 'POST /expenses/:id/cancel', method: 'POST', path: (ids) => `/api/expenses/${ids.expense}/cancel`, body: {}, allowed: COLLECTORS },
   { name: 'GET /expenses/:id/invoice-url', method: 'GET', path: (ids) => `/api/expenses/${ids.expense}/invoice-url`, allowed: ACCOUNTS },
   { name: 'GET /cash', method: 'GET', path: () => '/api/cash', allowed: ACCOUNTS },
+  // Signalements (plan 07) : le signalement sondé a pour auteur le syndic.
+  { name: 'POST /issues/upload-url', method: 'POST', path: () => '/api/issues/upload-url', body: {}, allowed: ALL },
+  { name: 'POST /issues', method: 'POST', path: () => '/api/issues', body: {}, allowed: ALL },
+  { name: 'GET /issues', method: 'GET', path: () => '/api/issues', allowed: ALL },
+  { name: 'GET /issues/:id', method: 'GET', path: (ids) => `/api/issues/${ids.issue}`, allowed: ALL },
+  { name: 'POST /issues/:id/status', method: 'POST', path: (ids) => `/api/issues/${ids.issue}/status`, body: {}, allowed: ISSUE_STAFF },
+  { name: 'POST /issues/:id/comments', method: 'POST', path: (ids) => `/api/issues/${ids.issue}/comments`, body: {}, allowed: ISSUE_STAFF },
+  { name: 'POST /issues/:id/reopen', method: 'POST', path: (ids) => `/api/issues/${ids.issue}/reopen`, body: {}, allowed: ['manager'] },
+  { name: 'GET /issues/:id/photo-url', method: 'GET', path: (ids) => `/api/issues/${ids.issue}/photo-url`, allowed: ALL },
 ];
 
 describe.skipIf(!configured)('Vérification des plans 04 à 06', { timeout: 300_000 }, () => {
@@ -159,6 +176,9 @@ describe.skipIf(!configured)('Vérification des plans 04 à 06', { timeout: 300_
     });
     expect(expense.status).toBe(201);
 
+    const issue = await api(manager, 'POST', '/api/issues', residence, { title: 'Ascenseur bloqué au 3e', location: 'elevator' });
+    expect(issue.status).toBe(201);
+
     const invitation = await api(manager, 'POST', '/api/invitations', residence, { role: 'caretaker' });
     expect(invitation.status).toBe(201);
     return {
@@ -167,6 +187,7 @@ describe.skipIf(!configured)('Vérification des plans 04 à 06', { timeout: 300_
       receipt: payment.json.receipt.id,
       expense: expense.json.id,
       invitation: invitation.json.id,
+      issue: issue.json.id,
     };
   };
 
@@ -183,6 +204,8 @@ describe.skipIf(!configured)('Vérification des plans 04 à 06', { timeout: 300_
       db.select().from(schema.payment).where(eq(schema.payment.residenceId, resB)),
       db.select().from(schema.receipt).where(eq(schema.receipt.residenceId, resB)),
       db.select().from(schema.expense).where(eq(schema.expense.residenceId, resB)),
+      db.select().from(schema.issue).where(eq(schema.issue.residenceId, resB)),
+      db.select().from(schema.issueEvent).where(eq(schema.issueEvent.residenceId, resB)),
       db.select().from(schema.openingBalanceChange).where(eq(schema.openingBalanceChange.residenceId, resB)),
     ]);
     const sort = (rows: any[]) => [...rows].sort((a, b) => String(a.id).localeCompare(String(b.id)));
@@ -257,6 +280,8 @@ describe.skipIf(!configured)('Vérification des plans 04 à 06', { timeout: 300_
       ]);
       for (const key of all) await storage.deleteObject(key);
 
+      await db.delete(schema.issueEvent).where(inArray(schema.issueEvent.residenceId, residenceIds));
+      await db.delete(schema.issue).where(inArray(schema.issue.residenceId, residenceIds));
       await db.delete(schema.expense).where(inArray(schema.expense.residenceId, residenceIds));
       await db.delete(schema.openingBalanceChange).where(inArray(schema.openingBalanceChange.residenceId, residenceIds));
       await db.delete(schema.receipt).where(inArray(schema.receipt.residenceId, residenceIds));
@@ -319,6 +344,11 @@ describe.skipIf(!configured)('Vérification des plans 04 à 06', { timeout: 300_
       ['POST', `/api/expenses/${ids.B.expense}/cancel`, { reason: 'test croisé' }],
       ['GET', `/api/expenses/${ids.B.expense}/invoice-url`],
       ['DELETE', `/api/invitations/${ids.B.invitation}`],
+      ['GET', `/api/issues/${ids.B.issue}`],
+      ['POST', `/api/issues/${ids.B.issue}/status`, { status: 'resolved' }],
+      ['POST', `/api/issues/${ids.B.issue}/comments`, { message: 'test croisé' }],
+      ['POST', `/api/issues/${ids.B.issue}/reopen`, {}],
+      ['GET', `/api/issues/${ids.B.issue}/photo-url`],
     ];
     for (const [method, path, body] of attempts) {
       const response = await api(uid('manager'), method, path, resA, body);

@@ -1,6 +1,6 @@
 # 04 · Résidences, lots et rôles
 
-Statut : brouillon
+Statut : terminé
 
 ## Objectif
 

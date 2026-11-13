@@ -15,6 +15,13 @@ describe('table des permissions', () => {
     expect(can('caretaker', 'issues.write')).toBe(true);
   });
 
+  it('tous les rôles peuvent signaler, seuls manager, deputy et caretaker traitent (plan 07)', () => {
+    for (const role of ROLES) {
+      expect(can(role, 'issues.write')).toBe(true);
+      expect(can(role, 'issues.manage')).toBe(['manager', 'deputy', 'caretaker'].includes(role));
+    }
+  });
+
   it("owner n'a pas members.invite", () => {
     expect(can('owner', 'members.invite')).toBe(false);
   });

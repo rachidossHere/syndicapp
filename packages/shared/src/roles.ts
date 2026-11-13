@@ -32,7 +32,7 @@ export type Permission = (typeof PERMISSIONS)[number];
 /** Table rôle → permissions, conforme à AGENTS.md section 2. */
 export const ROLE_PERMISSIONS = {
   manager: PERMISSIONS,
-  treasurer: ['accounts.read', 'payments.write', 'expenses.write'],
+  treasurer: ['accounts.read', 'payments.write', 'expenses.write', 'issues.write'],
   deputy: ['accounts.read', 'announcements.write', 'issues.write', 'issues.manage'],
   owner: ['accounts.read', 'issues.write'],
   tenant: ['issues.write'],
