@@ -15,7 +15,7 @@ import { useT } from '@/i18n/use-t';
 import { apiErrorKey } from '@/lib/api-errors';
 import { defaultDueDate, parseMadInput, todayCasablanca, upcomingPeriods } from '@/lib/charges-format';
 
-import { DateField } from './date-field';
+import { DateField } from '@/components/date-field';
 import { QueryFallback } from './query-fallback';
 import { useChargeFormat } from './use-charge-format';
 
@@ -136,7 +136,7 @@ export function NewChargeCallScreen() {
           label={t('charges.new.dueDate')}
           value={dueDate}
           display={format.date(dueDate, 'long')}
-          minimum={today}
+          usage="chargeDue"
           sheetTitle={t('charges.new.dueDateSheet')}
           onChange={setChosenDueDate}
         />

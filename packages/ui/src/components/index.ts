@@ -31,3 +31,13 @@ export { Stepper, type StepperProps } from './stepper';
 export { Text, type TextProps, type TextTone, type TextVariant } from './text';
 export { TextField, type TextFieldProps } from './text-field';
 export { Toast, type ToastProps } from './toast';
+export { Calendar, type CalendarProps } from './calendar';
+export {
+  isDateSelectable,
+  isMonthReachable,
+  monthOf,
+  monthWeeks,
+  shiftMonth,
+  type CalendarDay,
+  type CalendarMonth,
+} from './calendar-grid';
