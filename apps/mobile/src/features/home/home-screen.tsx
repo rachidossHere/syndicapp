@@ -6,6 +6,7 @@ import { Banner, Button, Card, Chip, Icon, ListItem, Screen, Text, Toast, useThe
 import { useRouter } from 'expo-router';
 import Building from 'lucide-react-native/icons/building';
 import ChartColumn from 'lucide-react-native/icons/chart-column';
+import Flag from 'lucide-react-native/icons/flag';
 import KeyRound from 'lucide-react-native/icons/key-round';
 import Plus from 'lucide-react-native/icons/plus';
 import Receipt from 'lucide-react-native/icons/receipt';
@@ -15,6 +16,7 @@ import { Pressable, View } from 'react-native';
 
 import { ErrorNotice } from '@/components/network-error';
 import { canSeeAccounts } from '@/lib/cash';
+import { canUseIssues } from '@/lib/issues';
 import { canManageCharges, myDuesResidenceId } from '@/features/charges/access';
 import { MyChargesSummary } from '@/features/charges/my-charges-summary';
 import { useRoleLabel } from '@/features/residences/use-role-label';
@@ -238,6 +240,28 @@ export function HomeScreen() {
               </View>
             }
             onPress={() => router.push('/add-expense')}
+          />
+        )}
+        {/* Signalements : tous les rôles qui ont issues.write (gardien et locataire compris). */}
+        {canUseIssues(active.role) && (
+          <ListItem
+            title={t('home.issues')}
+            subtitle={t('home.issuesBody')}
+            leading={
+              <View
+                style={{
+                  width: sizes.iconBox,
+                  height: sizes.iconBox,
+                  borderRadius: radius.sm,
+                  borderCurve: 'continuous',
+                  backgroundColor: colors.dangerBg,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}>
+                <Icon icon={Flag} color={colors.dangerFg} />
+              </View>
+            }
+            onPress={() => router.push('/issues')}
           />
         )}
         {/* Un refus d'actualisation de la liste garde l'accueil affiché, avec un message. */}
