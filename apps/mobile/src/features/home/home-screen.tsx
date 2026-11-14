@@ -16,7 +16,7 @@ import { Pressable, View } from 'react-native';
 
 import { ErrorNotice } from '@/components/network-error';
 import { canSeeAccounts } from '@/lib/cash';
-import { canUseIssues } from '@/lib/issues';
+import { canUseIssues, issuesViewFor } from '@/lib/issues';
 import { canManageCharges, myDuesResidenceId } from '@/features/charges/access';
 import { MyChargesSummary } from '@/features/charges/my-charges-summary';
 import { useRoleLabel } from '@/features/residences/use-role-label';
@@ -246,7 +246,7 @@ export function HomeScreen() {
         {canUseIssues(active.role) && (
           <ListItem
             title={t('home.issues')}
-            subtitle={t('home.issuesBody')}
+            subtitle={t(issuesViewFor(active.role) === 'manage' ? 'home.issuesManageBody' : 'home.issuesBody')}
             leading={
               <View
                 style={{
