@@ -13,7 +13,8 @@ export function apiErrorKey(error: unknown): TranslationKey {
   if (
     (error.code.startsWith('invitations.errors.') ||
       error.code.startsWith('charges.errors.') ||
-      error.code.startsWith('expenses.errors.')) &&
+      error.code.startsWith('expenses.errors.') ||
+      error.code.startsWith('issues.errors.')) &&
     error.code in fr
   ) {
     return error.code as TranslationKey;

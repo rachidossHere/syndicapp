@@ -9,7 +9,7 @@ import { EXPENSE_FORM_ERRORS } from '@/lib/expense-form';
 import { invoiceCompressionPlan, isInvoiceTooLarge, isPdfAsset, type InvoiceFile } from '@/lib/invoice';
 
 /** Réduit l'image à 1600 px de large au plus, puis l'enregistre en JPEG de qualité 0,7. */
-async function compressImage(uri: string, width: number | undefined): Promise<InvoiceFile> {
+export async function compressImage(uri: string, width: number | undefined): Promise<InvoiceFile> {
   const plan = invoiceCompressionPlan(width);
   const context = ImageManipulator.manipulate(uri);
   if (plan.resizeWidth !== undefined) context.resize({ width: plan.resizeWidth });
@@ -18,7 +18,7 @@ async function compressImage(uri: string, width: number | undefined): Promise<In
   return { uri: saved.uri, kind: 'image', contentType: 'image/jpeg' };
 }
 
-const IMAGE_OPTIONS: ImagePicker.ImagePickerOptions = {
+export const IMAGE_OPTIONS: ImagePicker.ImagePickerOptions = {
   mediaTypes: ['images'],
   // Qualité maximale ici : la seule compression est celle de compressImage (pas de double perte).
   quality: 1,
