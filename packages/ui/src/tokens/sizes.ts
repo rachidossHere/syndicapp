@@ -27,6 +27,8 @@ export const sizes = {
   progressBar: 8,
   /** Hauteur de la zone « Prendre la facture en photo » (et de l'aperçu de la facture). */
   invoiceZone: 176,
+  /** Hauteur de la zone « Ajouter une photo » d'un signalement. */
+  photoZone: 96,
 } as const;
 
 export type SizeToken = keyof typeof sizes;

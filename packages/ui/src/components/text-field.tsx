@@ -34,6 +34,8 @@ export type TextFieldProps = Omit<
   ltr?: boolean;
   /** Texte fixe à la fin du champ, dans le cadre (ex. « MAD » après un montant). */
   suffix?: string;
+  /** Champ de plusieurs lignes : hauteur minimale de ce nombre de lignes, texte aligné en haut. */
+  lines?: number;
   /**
    * Référence vers le TextInput : compatible React Hook Form (`field.ref`).
    * Avec React 19, `ref` est une prop ordinaire : `forwardRef` n'est plus nécessaire.
@@ -54,6 +56,7 @@ export function TextField({
   password = false,
   ltr = false,
   suffix,
+  lines,
   ref,
   containerStyle,
   onFocus,
@@ -115,7 +118,12 @@ export function TextField({
             },
             // E-mail, code : l'ordre des caractères reste de gauche à droite, même en arabe.
             ltr && { writingDirection: 'ltr' },
+            lines !== undefined && {
+              minHeight: typography.body.lineHeight * lines + spacing.sm * 2,
+              textAlignVertical: 'top',
+            },
           ]}
+          multiline={lines !== undefined}
           {...inputProps}
         />
         {suffix !== undefined && (

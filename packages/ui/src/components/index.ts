@@ -41,3 +41,4 @@ export {
   type CalendarDay,
   type CalendarMonth,
 } from './calendar-grid';
+export { SwitchRow, type SwitchRowProps } from './switch-row';
