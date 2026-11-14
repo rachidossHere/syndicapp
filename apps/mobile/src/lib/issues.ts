@@ -3,6 +3,7 @@
 // et formatage des dates. Fonctions pures, sans React : testées avec vitest.
 import {
   ISSUE_LOCATIONS,
+  ISSUE_STATUSES,
   MAX_ISSUE_DESCRIPTION_LENGTH,
   MAX_ISSUE_MESSAGE_LENGTH,
   MAX_ISSUE_TITLE_LENGTH,
@@ -10,6 +11,7 @@ import {
   createIssueSchema,
   isWithinReopenWindow,
   type CreateIssueInput,
+  type IssueCountsResponse,
   type IssueEventType,
   type IssueLocation,
   type IssueStatus,
@@ -38,7 +40,7 @@ export type IssueItem = {
   resolvedAt: string | null;
   /** Vrai si le lecteur est l'auteur : le seul indice donné à un habitant. */
   byYou: boolean;
-  /** Réservé aux rôles avec `issues.manage` (étape 3) : jamais envoyé à un habitant. */
+  /** Réservé aux rôles avec `issues.manage` : jamais envoyé à un habitant. */
   author?: { name: string | null; lot: string | null };
 };
 
@@ -52,6 +54,8 @@ export type IssueEvent = {
   byYou: boolean;
   /** Rôle du personnel qui a agi (jamais celui de l'auteur du signalement pour un habitant). */
   authorRole: Role | null;
+  /** Réservé aux rôles avec `issues.manage` : jamais envoyé à un habitant. */
+  authorName?: string | null;
 };
 
 export type IssueDetail = IssueItem & {
@@ -60,14 +64,14 @@ export type IssueDetail = IssueItem & {
   events: IssueEvent[];
 };
 
-export type IssueCounts = { open: number; in_progress: number; resolved: number; urgentUnresolved: number };
+/** GET /api/issues/counts : par statut, et urgents non résolus. */
+export type IssueCounts = IssueCountsResponse;
 
 export type IssueListPage = {
   items: IssueItem[];
   total: number;
   limit: number;
   offset: number;
-  counts: IssueCounts;
 };
 
 // ---------------------------------------------------------------------------------------------
@@ -82,40 +86,91 @@ export function issuesResidenceId(active: { id: string; role: Role } | null): st
 }
 
 // ---------------------------------------------------------------------------------------------
-// Filtres et tri
+// Vue selon le rôle, filtres
 
-export const ISSUE_FILTERS = ['active', 'resolved'] as const;
-export type IssueFilter = (typeof ISSUE_FILTERS)[number];
+/** Vue de la liste et du détail : « traitement » (issues.manage) ou « habitant » (les autres rôles). */
+export type IssuesView = 'manage' | 'resident';
+export const issuesViewFor = (role: Role | undefined): IssuesView =>
+  role !== undefined && can(role, 'issues.manage') ? 'manage' : 'resident';
 
-/** « En cours » = ouverts et en cours de traitement ; « Résolus » = résolus. */
-export const filterStatuses = (filter: IssueFilter): readonly IssueStatus[] =>
-  filter === 'active' ? ['open', 'in_progress'] : ['resolved'];
+/** Habitant : « En cours » (ouverts et en cours de traitement) et « Résolus ». */
+export const RESIDENT_FILTERS = ['active', 'resolved'] as const;
+/** Syndic, adjoint, gardien : Tous, Ouverts, En cours, Résolus. */
+export const MANAGE_FILTERS = ['all', 'open', 'in_progress', 'resolved'] as const;
+export type IssueFilter = (typeof RESIDENT_FILTERS)[number] | (typeof MANAGE_FILTERS)[number];
 
-/** Compteur d'un filtre, à partir des compteurs de la résidence. */
-export const filterCount = (filter: IssueFilter, counts: IssueCounts): number =>
-  filter === 'active' ? counts.open + counts.in_progress : counts.resolved;
+export const filtersFor = (view: IssuesView): readonly IssueFilter[] =>
+  view === 'manage' ? MANAGE_FILTERS : RESIDENT_FILTERS;
+export const defaultFilterFor = (view: IssuesView): IssueFilter => (view === 'manage' ? 'all' : 'active');
 
-/** Un signalement urgent et pas encore résolu passe avant tous les autres. */
-const isUrgentOpen = (issue: IssueItem): boolean => issue.urgent && issue.status !== 'resolved';
-
-/**
- * Ordre de la liste : urgents non résolus d'abord, puis du plus récent au plus ancien. C'est aussi
- * l'ordre de l'API ; il est refait ici quand « En cours » fusionne deux requêtes (ouverts et en cours).
- */
-export function sortIssues(items: readonly IssueItem[]): IssueItem[] {
-  return [...items].sort((a, b) => {
-    const urgent = Number(isUrgentOpen(b)) - Number(isUrgentOpen(a));
-    if (urgent !== 0) return urgent;
-    if (a.createdAt !== b.createdAt) return a.createdAt < b.createdAt ? 1 : -1;
-    return a.id < b.id ? 1 : a.id > b.id ? -1 : 0;
-  });
+/** Statuts d'un filtre ; `undefined` pour « Tous » (aucun filtre). */
+export function filterStatuses(filter: IssueFilter): readonly IssueStatus[] | undefined {
+  switch (filter) {
+    case 'all':
+      return undefined;
+    case 'active':
+      return ['open', 'in_progress'];
+    default:
+      return [filter];
+  }
 }
 
-/** Fusionne des listes de pages, sans doublon, dans l'ordre d'affichage. */
-export function mergeIssues(lists: readonly (readonly IssueItem[])[]): IssueItem[] {
-  const byId = new Map<string, IssueItem>();
-  for (const list of lists) for (const issue of list) byId.set(issue.id, issue);
-  return sortIssues([...byId.values()]);
+/** Valeur du paramètre `status` de GET /api/issues (« open,in_progress »), absente pour « Tous ». */
+export const filterStatusParam = (filter: IssueFilter): string | undefined => filterStatuses(filter)?.join(',');
+
+/** Compteur d'un filtre, à partir des compteurs de la résidence. */
+export function filterCount(filter: IssueFilter, counts: IssueCounts): number {
+  const statuses = filterStatuses(filter) ?? ISSUE_STATUSES;
+  return statuses.reduce((sum, status) => sum + counts[status], 0);
+}
+
+/** Texte du bandeau « N signalement(s) urgent(s) à traiter » : singulier pour 1, pluriel sinon. */
+export const urgentBannerKey = (count: number): TranslationKey =>
+  count === 1 ? 'issues.manage.urgentBanner.one' : 'issues.manage.urgentBanner.other';
+
+// ---------------------------------------------------------------------------------------------
+// Traitement (écran 5)
+
+export type IssueUpdatePlan =
+  | { kind: 'none' }
+  | { kind: 'status'; status: IssueStatus; message?: string }
+  | { kind: 'comment'; message: string };
+
+/**
+ * Ce que fait « Mettre à jour » : le statut a changé → changement de statut (avec le message
+ * facultatif) ; sinon un message seul → commentaire visible des habitants ; sinon rien (bouton inactif).
+ */
+export function planIssueUpdate(current: IssueStatus, selected: IssueStatus, message: string): IssueUpdatePlan {
+  const text = message.trim();
+  if (selected !== current) {
+    return text === '' ? { kind: 'status', status: selected } : { kind: 'status', status: selected, message: text };
+  }
+  return text === '' ? { kind: 'none' } : { kind: 'comment', message: text };
+}
+
+/** « Mettre à jour » n'est actif que si le statut change ou qu'un message est saisi. */
+export const canSubmitUpdate = (current: IssueStatus, selected: IssueStatus, message: string): boolean =>
+  planIssueUpdate(current, selected, message).kind !== 'none';
+
+/** Entre isolants de gauche à droite : une référence (A12, B-31) reste lisible dans une phrase arabe. */
+const ltr = (text: string): string => `⁦${text}⁩`;
+
+/** Ligne d'un signalement pour le personnel : « A12 · Y. Alaoui · il y a 2 h » (parties absentes omises). */
+export function staffLineParts(issue: Pick<IssueItem, 'author'>, age: string): string[] {
+  const lot = issue.author?.lot;
+  const name = issue.author?.name;
+  return [...(lot ? [ltr(lot)] : []), ...(name ? [name] : []), age];
+}
+
+/** Qui a agi, vu par le personnel : le nom (ou « vous »), l'appartement pour « Signalé », sinon le rôle. */
+export function manageEventActor(
+  event: Pick<IssueEvent, 'type' | 'byYou' | 'authorRole' | 'authorName'>,
+  author: IssueItem['author'],
+): { kind: 'text'; text: string } | { kind: 'key'; key: TranslationKey } {
+  if (event.byYou) return { kind: 'key', key: 'issues.actor.you' };
+  if (event.type === 'created' && author?.lot) return { kind: 'text', text: ltr(author.lot) };
+  if (event.authorName) return { kind: 'text', text: event.authorName };
+  return { kind: 'key', key: eventActorKey(event) };
 }
 
 // ---------------------------------------------------------------------------------------------
