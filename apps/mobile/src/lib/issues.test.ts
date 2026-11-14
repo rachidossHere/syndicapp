@@ -11,14 +11,21 @@ import {
   dayRelation,
   eventActorKey,
   eventTitleKey,
+  canSubmitUpdate,
+  defaultFilterFor,
   filterCount,
+  filterStatusParam,
   filterStatuses,
+  filtersFor,
   issueFieldsFrom,
   issueFormSchema,
   issuesResidenceId,
-  mergeIssues,
+  issuesViewFor,
+  manageEventActor,
   newestFirst,
-  sortIssues,
+  planIssueUpdate,
+  staffLineParts,
+  urgentBannerKey,
   type IssueCounts,
   type IssueEvent,
   type IssueFormValues,
@@ -53,55 +60,134 @@ const event = (overrides: Partial<IssueEvent>): IssueEvent => ({
   ...overrides,
 });
 
-describe('filtres « En cours » et « Résolus »', () => {
+describe('filtres', () => {
   const counts: IssueCounts = { open: 2, in_progress: 1, resolved: 12, urgentUnresolved: 1 };
 
-  it('« En cours » regroupe ouverts et en cours, « Résolus » les résolus', () => {
+  it('« En cours » regroupe ouverts et en cours, « Résolus » les résolus, « Tous » aucun filtre', () => {
     expect(filterStatuses('active')).toEqual(['open', 'in_progress']);
     expect(filterStatuses('resolved')).toEqual(['resolved']);
+    expect(filterStatuses('open')).toEqual(['open']);
+    expect(filterStatuses('in_progress')).toEqual(['in_progress']);
+    expect(filterStatuses('all')).toBeUndefined();
   });
 
-  it('les compteurs suivent les filtres : 3 en cours, 12 résolus', () => {
+  it('le paramètre status envoyé à l’API accepte plusieurs statuts', () => {
+    expect(filterStatusParam('active')).toBe('open,in_progress');
+    expect(filterStatusParam('resolved')).toBe('resolved');
+    expect(filterStatusParam('all')).toBeUndefined();
+  });
+
+  it('les compteurs suivent les filtres de l’habitant : 3 en cours, 12 résolus', () => {
     expect(filterCount('active', counts)).toBe(3);
     expect(filterCount('resolved', counts)).toBe(12);
     expect(translate('fr', 'issues.filter.active', { count: 3 })).toBe('En cours · 3');
     expect(translate('fr', 'issues.filter.resolved', { count: 12 })).toBe('Résolus · 12');
   });
+
+  it('les compteurs suivent les filtres du personnel : Tous · 15, Ouverts · 2, En cours · 1', () => {
+    expect(filterCount('all', counts)).toBe(15);
+    expect(filterCount('open', counts)).toBe(2);
+    expect(filterCount('in_progress', counts)).toBe(1);
+    expect(filterCount('resolved', counts)).toBe(12);
+    expect(translate('fr', 'issues.manage.filter.all', { count: 15 })).toBe('Tous · 15');
+    expect(translate('fr', 'issues.manage.filter.open', { count: 2 })).toBe('Ouverts · 2');
+    expect(translate('fr', 'issues.manage.filter.in_progress', { count: 1 })).toBe('En cours · 1');
+  });
+
+  it('chaque vue a ses filtres et sa valeur par défaut', () => {
+    expect(filtersFor('resident')).toEqual(['active', 'resolved']);
+    expect(filtersFor('manage')).toEqual(['all', 'open', 'in_progress', 'resolved']);
+    expect(defaultFilterFor('resident')).toBe('active');
+    expect(defaultFilterFor('manage')).toBe('all');
+  });
 });
 
-describe('ordre de la liste', () => {
-  it('les urgents non résolus passent en premier, puis du plus récent au plus ancien', () => {
-    const list = sortIssues([
-      issue({ id: 'a', createdAt: '2026-11-12T10:00:00.000Z' }),
-      issue({ id: 'b', urgent: true, createdAt: '2026-11-01T10:00:00.000Z' }),
-      issue({ id: 'c', createdAt: '2026-11-13T10:00:00.000Z' }),
-      issue({ id: 'd', urgent: true, status: 'in_progress', createdAt: '2026-11-05T10:00:00.000Z' }),
-    ]);
-    expect(list.map((item) => item.id)).toEqual(['d', 'b', 'c', 'a']);
+describe('vue selon le rôle (habitant ou traitement)', () => {
+  it('syndic, adjoint et gardien ont la vue de traitement', () => {
+    for (const role of ['manager', 'deputy', 'caretaker'] as const) expect(issuesViewFor(role), role).toBe('manage');
   });
 
-  it('un urgent déjà résolu ne passe plus devant les autres', () => {
-    const list = sortIssues([
-      issue({ id: 'old', createdAt: '2026-11-01T10:00:00.000Z' }),
-      issue({ id: 'resolved-urgent', urgent: true, status: 'resolved', createdAt: '2026-11-02T10:00:00.000Z' }),
-      issue({ id: 'new-urgent', urgent: true, createdAt: '2026-10-01T10:00:00.000Z' }),
-    ]);
-    expect(list.map((item) => item.id)).toEqual(['new-urgent', 'resolved-urgent', 'old']);
+  it('copropriétaire, locataire et trésorier ont la vue de l’habitant', () => {
+    for (const role of ['owner', 'tenant', 'treasurer'] as const) expect(issuesViewFor(role), role).toBe('resident');
   });
 
-  it('« En cours » fusionne ouverts et en cours sans doublon, urgents d’abord', () => {
-    const open = [issue({ id: 'u', urgent: true, createdAt: '2026-11-01T10:00:00.000Z' }), issue({ id: 'o', createdAt: '2026-11-11T10:00:00.000Z' })];
-    const inProgress = [
-      issue({ id: 'p', status: 'in_progress', createdAt: '2026-11-12T10:00:00.000Z' }),
-      issue({ id: 'o', createdAt: '2026-11-11T10:00:00.000Z' }),
-    ];
-    expect(mergeIssues([open, inProgress]).map((item) => item.id)).toEqual(['u', 'p', 'o']);
+  it('sans rôle connu (résidence pas encore chargée), la vue de l’habitant', () => {
+    expect(issuesViewFor(undefined)).toBe('resident');
+  });
+});
+
+describe('bandeau des urgents', () => {
+  it('singulier pour 1, pluriel sinon', () => {
+    expect(urgentBannerKey(1)).toBe('issues.manage.urgentBanner.one');
+    expect(urgentBannerKey(2)).toBe('issues.manage.urgentBanner.other');
+    expect(urgentBannerKey(12)).toBe('issues.manage.urgentBanner.other');
+    expect(translate('fr', urgentBannerKey(1))).toBe('Signalement urgent à traiter');
+    expect(translate('fr', urgentBannerKey(3))).toBe('Signalements urgents à traiter');
+    expect(translate('ar', urgentBannerKey(1))).toMatch(/[؀-ۿ]/);
+    expect(translate('ar', urgentBannerKey(3))).not.toBe(translate('ar', urgentBannerKey(1)));
+  });
+});
+
+describe('« Mettre à jour »', () => {
+  it('inactif sans changement de statut et sans message', () => {
+    expect(canSubmitUpdate('open', 'open', '')).toBe(false);
+    expect(canSubmitUpdate('open', 'open', '   ')).toBe(false);
+    expect(planIssueUpdate('open', 'open', '')).toEqual({ kind: 'none' });
   });
 
-  it('ne modifie pas la liste reçue', () => {
-    const input = [issue({ id: 'a' }), issue({ id: 'b', urgent: true })];
-    sortIssues(input);
-    expect(input.map((item) => item.id)).toEqual(['a', 'b']);
+  it('actif quand le statut change, avec ou sans message', () => {
+    expect(canSubmitUpdate('open', 'in_progress', '')).toBe(true);
+    expect(planIssueUpdate('open', 'in_progress', '')).toEqual({ kind: 'status', status: 'in_progress' });
+    expect(planIssueUpdate('in_progress', 'resolved', '  Réparé.  ')).toEqual({
+      kind: 'status',
+      status: 'resolved',
+      message: 'Réparé.',
+    });
+  });
+
+  it('actif quand un message est saisi : envoyé comme commentaire si le statut ne change pas', () => {
+    expect(canSubmitUpdate('in_progress', 'in_progress', 'Le technicien passe à 14 h.')).toBe(true);
+    expect(planIssueUpdate('in_progress', 'in_progress', ' Le technicien passe à 14 h. ')).toEqual({
+      kind: 'comment',
+      message: 'Le technicien passe à 14 h.',
+    });
+  });
+
+  it('redevient inactif quand on revient au statut d’origine sans message', () => {
+    expect(canSubmitUpdate('open', 'resolved', '')).toBe(true);
+    expect(canSubmitUpdate('open', 'open', '')).toBe(false);
+  });
+});
+
+describe('ligne et historique du personnel', () => {
+  it('« A12 · Y. Alaoui · il y a 2 h », parties absentes omises, appartement isolé de gauche à droite', () => {
+    const parts = staffLineParts({ author: { name: 'Y. Alaoui', lot: 'A12' } }, 'il y a 2 h');
+    expect(parts).toHaveLength(3);
+    expect(parts[0]).toBe('⁦A12⁩');
+    expect(parts.slice(1)).toEqual(['Y. Alaoui', 'il y a 2 h']);
+    expect(staffLineParts({ author: { name: 'Y. Alaoui', lot: null } }, 'hier')).toEqual(['Y. Alaoui', 'hier']);
+    expect(staffLineParts({ author: { name: null, lot: null } }, 'hier')).toEqual(['hier']);
+    expect(staffLineParts({}, 'hier')).toEqual(['hier']);
+  });
+
+  it('acteur d’un événement : « vous », l’appartement pour « Signalé », sinon le nom, sinon le rôle', () => {
+    const author = { name: 'Y. Alaoui', lot: 'A12' };
+    expect(manageEventActor({ type: 'status_changed', byYou: true, authorRole: 'manager', authorName: 'Moi' }, author)).toEqual({
+      kind: 'key',
+      key: 'issues.actor.you',
+    });
+    expect(manageEventActor({ type: 'created', byYou: false, authorRole: 'owner', authorName: 'Y. Alaoui' }, author)).toEqual({
+      kind: 'text',
+      text: '⁦A12⁩',
+    });
+    expect(manageEventActor({ type: 'status_changed', byYou: false, authorRole: 'caretaker', authorName: 'K. Benali' }, author)).toEqual({
+      kind: 'text',
+      text: 'K. Benali',
+    });
+    expect(manageEventActor({ type: 'comment', byYou: false, authorRole: 'deputy', authorName: null }, author)).toEqual({
+      kind: 'key',
+      key: 'issues.actor.deputy',
+    });
   });
 });
 
