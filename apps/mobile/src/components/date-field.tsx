@@ -1,7 +1,10 @@
 import { Icon, Text, useTheme } from '@syndic/ui';
-import Calendar from 'lucide-react-native/icons/calendar';
-import { useState } from 'react';
+import CalendarIcon from 'lucide-react-native/icons/calendar';
+import { useMemo, useState } from 'react';
 import { Keyboard, Pressable, View } from 'react-native';
+
+import { todayCasablanca } from '@/lib/charges-format';
+import { dateBoundsFor, type DateUsage } from '@/lib/date-bounds';
 
 import { DatePickerSheet } from './date-picker-sheet';
 
@@ -11,23 +14,26 @@ export type DateFieldProps = {
   value: string;
   /** Texte affiché (date formatée dans la langue active). */
   display: string;
-  /** Première date sélectionnable, AAAA-MM-JJ. */
-  minimum?: string | undefined;
-  /** Dernière date sélectionnable, AAAA-MM-JJ. */
-  maximum?: string | undefined;
+  /**
+   * Usage de la date, qui fixe les bornes : échéance des charges (aujourd'hui ou plus tard),
+   * dépense et solde de départ (aujourd'hui ou plus tôt). Voir lib/date-bounds.ts.
+   */
+  usage: DateUsage;
   /** Titre de la feuille du calendrier (déjà traduit). */
   sheetTitle: string;
   onChange: (value: string) => void;
 };
 
 /**
- * Champ de date : même allure qu'un champ de saisie (jetons de @syndic/ui), avec une icône de
- * calendrier. Le toucher ferme le clavier, puis ouvre le calendrier dans une feuille (iOS) ou le
- * sélecteur natif (Android) ; la date ne change qu'à la validation.
+ * Seul champ de date de l'appli (échéance des charges, date de dépense, date du solde de départ) :
+ * même allure qu'un champ de saisie (jetons de @syndic/ui), avec une icône de calendrier. Le
+ * toucher ferme le clavier, puis ouvre le calendrier de l'appli dans une feuille ; la date ne
+ * change qu'à la validation.
  */
-export function DateField({ label, value, display, minimum, maximum, sheetTitle, onChange }: DateFieldProps) {
+export function DateField({ label, value, display, usage, sheetTitle, onChange }: DateFieldProps) {
   const { colors, radius, spacing, sizes, borderWidth } = useTheme();
   const [open, setOpen] = useState(false);
+  const { minimum, maximum } = useMemo(() => dateBoundsFor(usage, todayCasablanca()), [usage]);
 
   return (
     <View style={{ gap: spacing.xs }}>
@@ -57,7 +63,7 @@ export function DateField({ label, value, display, minimum, maximum, sheetTitle,
           backgroundColor: pressed ? colors.bg : colors.surface,
         })}>
         <Text>{display}</Text>
-        <Icon icon={Calendar} color={colors.iconInactive} />
+        <Icon icon={CalendarIcon} color={colors.iconInactive} />
       </Pressable>
       <DatePickerSheet
         visible={open}

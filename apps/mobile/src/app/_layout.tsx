@@ -5,6 +5,7 @@ import { Stack } from 'expo-router/stack';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
+import { Appearance } from 'react-native';
 
 import { LoadingScreen } from '@/features/auth/loading-screen';
 import { StartupErrorScreen } from '@/features/auth/startup-error-screen';
@@ -15,6 +16,11 @@ import { queryClient } from '@/lib/query-client';
 import { LanguageProvider } from '@/providers/language-provider';
 
 SplashScreen.preventAutoHideAsync();
+
+// Thème clair uniquement (MVP), quel que soit le mode du téléphone. `userInterfaceStyle` d'app.json
+// ne s'applique pas dans Expo Go : sans ceci, un iPhone en mode sombre rend les champs, les feuilles
+// (Modal) et les contrôles natifs en sombre, avec du texte blanc sur nos fonds clairs.
+Appearance.setColorScheme('light');
 
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts(fontSources);

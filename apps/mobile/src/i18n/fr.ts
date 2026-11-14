@@ -40,6 +40,16 @@ export const fr = {
   'common.confirm': 'Valider',
   'common.closeSheet': 'Fermer sans changer',
   'common.switchLanguage': 'Passer en arabe',
+  // Calendrier : semaine du lundi au dimanche.
+  'calendar.weekday.1': 'Lun',
+  'calendar.weekday.2': 'Mar',
+  'calendar.weekday.3': 'Mer',
+  'calendar.weekday.4': 'Jeu',
+  'calendar.weekday.5': 'Ven',
+  'calendar.weekday.6': 'Sam',
+  'calendar.weekday.7': 'Dim',
+  'calendar.previousMonth': 'Mois précédent',
+  'calendar.nextMonth': 'Mois suivant',
 
   'welcome.appName': 'SyndicApp',
   'welcome.logoLabel': 'Logo de SyndicApp',

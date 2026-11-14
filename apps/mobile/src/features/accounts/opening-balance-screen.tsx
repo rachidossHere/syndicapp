@@ -9,7 +9,7 @@ import { View } from 'react-native';
 
 import { ErrorNotice } from '@/components/network-error';
 import { AuthHeader } from '@/features/auth/auth-header';
-import { DateField } from '@/features/charges/date-field';
+import { DateField } from '@/components/date-field';
 import { QueryFallback } from '@/features/charges/query-fallback';
 import { useChargeFormat } from '@/features/charges/use-charge-format';
 import { useOpeningBalance, useSetOpeningBalance, type OpeningBalanceState } from '@/hooks/use-cash';
@@ -174,7 +174,7 @@ function OpeningForm({
             label={t('accounts.opening.date')}
             value={asOfDate}
             display={display}
-            maximum={today}
+            usage="openingBalance"
             sheetTitle={t('accounts.opening.dateSheet')}
             onChange={(value) => {
               setAsOfDate(value);

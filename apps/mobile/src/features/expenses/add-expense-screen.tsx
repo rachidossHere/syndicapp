@@ -16,7 +16,7 @@ import { View } from 'react-native';
 
 import { ErrorNotice } from '@/components/network-error';
 import { AuthHeader } from '@/features/auth/auth-header';
-import { DateField } from '@/features/charges/date-field';
+import { DateField } from '@/components/date-field';
 import { useCreateExpense } from '@/hooks/use-expenses';
 import { useActiveResidence } from '@/hooks/use-residences';
 import { useErrorText } from '@/i18n/use-error-text';
@@ -194,7 +194,7 @@ export function AddExpenseScreen() {
                   label={t('expenses.field.date')}
                   value={value}
                   display={display(value)}
-                  maximum={today}
+                  usage="expense"
                   sheetTitle={t('expenses.field.dateSheet')}
                   onChange={onChange}
                 />

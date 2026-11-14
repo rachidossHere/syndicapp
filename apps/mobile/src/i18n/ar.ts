@@ -34,6 +34,16 @@ export const ar: Record<TranslationKey, string> = {
   'common.confirm': 'تأكيد',
   'common.closeSheet': 'إغلاق دون تغيير',
   'common.switchLanguage': 'التبديل إلى الفرنسية',
+  // Calendrier : semaine du lundi au dimanche.
+  'calendar.weekday.1': 'إث',
+  'calendar.weekday.2': 'ثل',
+  'calendar.weekday.3': 'أر',
+  'calendar.weekday.4': 'خم',
+  'calendar.weekday.5': 'جم',
+  'calendar.weekday.6': 'سب',
+  'calendar.weekday.7': 'أح',
+  'calendar.previousMonth': 'الشهر السابق',
+  'calendar.nextMonth': 'الشهر التالي',
 
   'welcome.appName': 'SyndicApp',
   'welcome.logoLabel': 'شعار SyndicApp',

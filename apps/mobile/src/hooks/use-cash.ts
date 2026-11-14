@@ -4,6 +4,7 @@
 import type { ExpenseCategory, Role, SetOpeningBalanceInput } from '@syndic/shared';
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import * as WebBrowser from 'expo-web-browser';
+import { useCallback } from 'react';
 
 import { apiFetch } from '@/lib/api';
 import { INVOICE_URL_MAX_CACHE_MS, type LedgerEntry } from '@/lib/cash';
@@ -97,23 +98,31 @@ export function useOpenInvoice() {
   });
 }
 
-/** Annulation d'une dépense (motif obligatoire) : caisse, journal et dépenses sont rafraîchis. */
-export function useCancelExpense(residenceId: string | undefined) {
-  const queryClient = useQueryClient();
+/**
+ * Annulation d'une dépense (motif obligatoire). Elle n'actualise pas les données elle-même : l'écran
+ * appelle `useRefreshExpenses` une fois sa feuille fermée (lib/cancel-flow.ts), car l'écran change
+ * dès que les données arrivent.
+ */
+export function useCancelExpense() {
   return useMutation({
     mutationFn: ({ id, reason }: { id: string; reason: string }) =>
       apiFetch<ExpenseDetail>(`/api/expenses/${encodeURIComponent(id)}/cancel`, {
         method: 'POST',
         body: JSON.stringify({ reason }),
       }),
-    onSettled: async () => {
-      const id = residenceId ?? 'none';
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: cashQueryKey(id) }),
-        queryClient.invalidateQueries({ queryKey: expensesQueryKey(id) }),
-      ]);
-    },
   });
+}
+
+/** Actualise la caisse, le journal et les dépenses de la résidence. */
+export function useRefreshExpenses(residenceId: string | undefined) {
+  const queryClient = useQueryClient();
+  return useCallback(async () => {
+    const id = residenceId ?? 'none';
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: cashQueryKey(id) }),
+      queryClient.invalidateQueries({ queryKey: expensesQueryKey(id) }),
+    ]);
+  }, [queryClient, residenceId]);
 }
 
 /** Solde de départ et historique de ses changements (GET /api/residences/current/opening-balance). */
