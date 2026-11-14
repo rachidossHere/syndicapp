@@ -461,8 +461,7 @@ describe.skipIf(!configured)('API des signalements', { timeout: 120_000 }, () =>
       expect(open.items.map((item: any) => item.id)).toContain(normal.id);
       expect(open.items.map((item: any) => item.id)).not.toContain(urgentResolved.id);
       expect(open.total).toBe(open.items.length);
-      expect(open.counts).toEqual(list.counts); // compteurs de la résidence, indépendants du filtre
-      expect(list.counts.open + list.counts.in_progress + list.counts.resolved).toBe(list.total);
+      expect(list.counts).toBeUndefined(); // les compteurs ont leur propre route : GET /issues/counts
 
       const page1 = (await as('ownerA12').get('/api/issues?limit=2&offset=0')).json;
       const page2 = (await as('ownerA12').get('/api/issues?limit=2&offset=2')).json;
@@ -473,6 +472,104 @@ describe.skipIf(!configured)('API des signalements', { timeout: 120_000 }, () =>
       for (const query of ['status=closed', 'limit=0', 'limit=101', 'offset=-1', 'x=1']) {
         expect((await as('ownerA12').get(`/api/issues?${query}`)).status, query).toBe(400);
       }
+    });
+
+    it('filtre sur plusieurs statuts, garde l’ordre (urgents non résolus, puis récents) et pagine sans doublon', async () => {
+      const make = async (title: string, urgent: boolean, status?: 'in_progress' | 'resolved') => {
+        const created = (await newIssue('ownerA11', { title, urgent })).json;
+        if (status) await as('mgrA').post(`/api/issues/${created.id}/status`, { status });
+        return created.id as string;
+      };
+      const plain = await make('multi-plain', false);
+      const urgentOpen = await make('multi-urgent', true);
+      const inProgress = await make('multi-progress', false, 'in_progress');
+      const resolved = await make('multi-resolved', true, 'resolved');
+
+      const active = (await as('ownerA12').get('/api/issues?status=open,in_progress&limit=100')).json;
+      const ids = active.items.map((item: any) => item.id);
+      expect(ids).toEqual(expect.arrayContaining([plain, urgentOpen, inProgress]));
+      expect(ids).not.toContain(resolved);
+      expect(active.items.every((item: any) => item.status !== 'resolved')).toBe(true);
+      expect(active.total).toBe(active.items.length);
+      // Urgents non résolus d'abord, puis du plus récent au plus ancien dans chaque groupe.
+      const flags = active.items.map((item: any) => item.urgent);
+      expect(flags.slice(flags.indexOf(false)).includes(true)).toBe(false);
+      for (const group of [true, false]) {
+        const dates = active.items.filter((item: any) => item.urgent === group).map((item: any) => item.createdAt);
+        expect(dates).toEqual([...dates].sort().reverse());
+      }
+      expect(ids.indexOf(urgentOpen)).toBeLessThan(ids.indexOf(plain));
+      expect(ids.indexOf(inProgress)).toBeLessThan(ids.indexOf(plain)); // même groupe, créé après : plus récent d'abord
+    });
+
+    it('un statut répété ou une liste vide ou inconnue est traité (doublons ignorés, 400 sinon)', async () => {
+      const once = (await as('ownerA12').get('/api/issues?status=open&limit=100')).json;
+      const twice = (await as('ownerA12').get('/api/issues?status=open,open&limit=100')).json;
+      expect(twice.total).toBe(once.total);
+      for (const query of ['status=', 'status=open,', 'status=open,closed', 'status=,open']) {
+        expect((await as('ownerA12').get(`/api/issues?${query}`)).status, query).toBe(400);
+      }
+    });
+
+    it('pagine un filtre multiple sans doublon ni oubli', async () => {
+      const full = (await as('ownerA12').get('/api/issues?status=open,in_progress&limit=100')).json;
+      const seen: string[] = [];
+      for (let offset = 0; offset < full.total; offset += 3) {
+        const page = (await as('ownerA12').get(`/api/issues?status=open,in_progress&limit=3&offset=${offset}`)).json;
+        expect(page.total).toBe(full.total);
+        seen.push(...page.items.map((item: any) => item.id));
+      }
+      expect(seen).toEqual(full.items.map((item: any) => item.id));
+      expect(new Set(seen).size).toBe(seen.length);
+    });
+  });
+
+  describe('compteurs (GET /issues/counts)', () => {
+    it('donne le nombre par statut et les urgents non résolus, à tous les rôles', async () => {
+      const urgent = (await newIssue('ownerA11', { title: 'cnt-urgent', urgent: true })).json;
+      const done = (await newIssue('ownerA11', { title: 'cnt-done', urgent: true })).json;
+      await as('mgrA').post(`/api/issues/${done.id}/status`, { status: 'resolved' });
+
+      const all = (await as('mgrA').get('/api/issues?limit=100')).json.items;
+      const expected = {
+        open: all.filter((item: any) => item.status === 'open').length,
+        in_progress: all.filter((item: any) => item.status === 'in_progress').length,
+        resolved: all.filter((item: any) => item.status === 'resolved').length,
+        urgentUnresolved: all.filter((item: any) => item.urgent && item.status !== 'resolved').length,
+      };
+      expect(expected.urgentUnresolved).toBeGreaterThan(0);
+      for (const name of Object.keys(MEMBERS_A)) {
+        const response = await as(name).get('/api/issues/counts');
+        expect(response.status, name).toBe(200);
+        expect(response.json, name).toEqual(expected);
+      }
+
+      // Un traitement met les compteurs à jour.
+      await as('mgrA').post(`/api/issues/${urgent.id}/status`, { status: 'in_progress' });
+      const after = (await as('mgrA').get('/api/issues/counts')).json;
+      expect(after.urgentUnresolved).toBe(expected.urgentUnresolved); // toujours non résolu
+      expect(after.open).toBe(expected.open - 1);
+      expect(after.in_progress).toBe(expected.in_progress + 1);
+      await as('mgrA').post(`/api/issues/${urgent.id}/status`, { status: 'resolved' });
+      const resolvedNow = (await as('mgrA').get('/api/issues/counts')).json;
+      expect(resolvedNow.urgentUnresolved).toBe(expected.urgentUnresolved - 1);
+      expect(resolvedNow.resolved).toBe(expected.resolved + 1);
+    });
+
+    it('ne compte que la résidence active et exige une session et une résidence', async () => {
+      const before = (await as('mgrB', resB).get('/api/issues/counts')).json;
+      await newIssue('ownerA11', { title: 'cnt-A-only', urgent: true });
+      const b = (await as('mgrB', resB).get('/api/issues/counts')).json;
+      expect(b).toEqual(before); // un signalement de A ne change pas les compteurs de B
+      // Un membre de A ne peut pas lire B : il n'y est pas membre.
+      expect((await as('mgrA', resB).get('/api/issues/counts')).status).toBe(403);
+      expect((await api(null, 'GET', '/api/issues/counts', resA)).status).toBe(401);
+      expect((await api(uid('mgrA'), 'GET', '/api/issues/counts')).status).toBe(400);
+    });
+
+    it('ne contient aucun nom ni appartement', async () => {
+      const raw = (await as('ownerA12').get('/api/issues/counts')).text;
+      expect(raw).not.toContain(tag);
     });
   });
 
