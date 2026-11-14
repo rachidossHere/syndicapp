@@ -1,7 +1,7 @@
 import { ISSUE_ERRORS, ISSUE_LOCATION_LABEL_KEYS, ISSUE_LOCATIONS, ISSUE_STATUS_LABEL_KEYS, ISSUE_STATUSES, ROLE_LABEL_KEYS } from '@syndic/shared';
 import { describe, expect, it } from 'vitest';
 
-import { ISSUE_FORM_ERRORS } from '../lib/issues';
+import { ISSUE_FORM_ERRORS, MANAGE_FILTERS, urgentBannerKey } from '../lib/issues';
 import { ar } from './ar';
 import { arIssueTexts } from './ar-issues';
 import { fr } from './fr';
@@ -10,7 +10,7 @@ import { translate } from './translate';
 
 const ARABIC_LETTER = /[؀-ۿ]/;
 // Gabarits sans mot propre : « emplacement · âge », « message · heure »…
-const NO_WORDS = ['issues.line', 'issues.time', 'issues.event.detail', 'issues.event.titleBy', 'issues.age.date', 'issues.event.quote'];
+const NO_WORDS = ['issues.line', 'issues.time', 'issues.event.detail', 'issues.event.titleBy', 'issues.age.date', 'issues.event.quote', 'issues.manage.context'];
 const placeholders = (text: string) => (text.match(/\{\w+\}/g) ?? []).sort();
 
 describe('traductions des signalements (plan 07, étape 2)', () => {
@@ -89,5 +89,45 @@ describe('traductions des signalements (plan 07, étape 2)', () => {
       'Ascenseur · signalé aujourd’hui à 9 h 10',
     );
     expect(translate('fr', 'issues.event.by', { actor: translate('fr', 'issues.actor.you') })).toBe('Par vous');
+  });
+
+  it('textes de la vue de traitement : écrans 4 et 5 de docs/signalements.png', () => {
+    expect(fr['issues.manage.urgentBanner.one']).toBe('Signalement urgent à traiter');
+    expect(fr['issues.manage.update']).toBe('Mettre à jour');
+    expect(fr['issues.manage.updated']).toBe('Signalement mis à jour');
+    expect(fr['issues.manage.status']).toBe('Statut');
+    expect(fr['issues.manage.message']).toBe('Message aux habitants (facultatif)');
+    expect(fr['issues.manage.history']).toBe('Historique');
+    for (const status of ISSUE_STATUSES) {
+      expect(fr[`issues.manage.filter.${status}` as keyof typeof fr], status).toBeTruthy();
+    }
+  });
+
+  it('chaque filtre, chaque bandeau et chaque état vide du personnel existent en français et en arabe', () => {
+    const keys = [
+      ...MANAGE_FILTERS.map((filter) => `issues.manage.filter.${filter}`),
+      urgentBannerKey(1),
+      urgentBannerKey(2),
+      'issues.manage.empty.title',
+      'issues.manage.empty.body',
+      'issues.manage.emptyFiltered.title',
+      'issues.manage.emptyFiltered.body',
+      'issues.manage.status',
+      'issues.manage.message',
+      'issues.manage.messagePlaceholder',
+      'issues.manage.update',
+      'issues.manage.updated',
+      'issues.manage.history',
+      'home.issuesManageBody',
+    ];
+    for (const key of keys) {
+      expect(fr[key as keyof typeof fr], `fr : ${key}`).toBeTruthy();
+      expect(ar[key as keyof typeof ar], `ar : ${key}`).toMatch(ARABIC_LETTER);
+    }
+  });
+
+  it('textes de la vue de traitement en arabe (RTL) : compteurs en tête', () => {
+    expect(translate('ar', 'issues.manage.filter.all', { count: 15 })).toBe('15 · الكل');
+    expect(ar['issues.manage.update']).toBe('تحديث');
   });
 });

@@ -23,6 +23,7 @@ const NO_WORDS = [
   'lots.single.referencePlaceholder',
   // Signalements : gabarits sans mot (« lieu · âge », heure, « titre · acteur », citation).
   'issues.line',
+  'issues.manage.context',
   'issues.time',
   'issues.age.date',
   'issues.event.detail',

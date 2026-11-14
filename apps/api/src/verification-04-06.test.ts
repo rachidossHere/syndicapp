@@ -99,6 +99,7 @@ const PROBES: Probe[] = [
   { name: 'POST /issues/upload-url', method: 'POST', path: () => '/api/issues/upload-url', body: {}, allowed: ALL },
   { name: 'POST /issues', method: 'POST', path: () => '/api/issues', body: {}, allowed: ALL },
   { name: 'GET /issues', method: 'GET', path: () => '/api/issues', allowed: ALL },
+  { name: 'GET /issues/counts', method: 'GET', path: () => '/api/issues/counts', allowed: ALL },
   { name: 'GET /issues/:id', method: 'GET', path: (ids) => `/api/issues/${ids.issue}`, allowed: ALL },
   { name: 'POST /issues/:id/status', method: 'POST', path: (ids) => `/api/issues/${ids.issue}/status`, body: {}, allowed: ISSUE_STAFF },
   { name: 'POST /issues/:id/comments', method: 'POST', path: (ids) => `/api/issues/${ids.issue}/comments`, body: {}, allowed: ISSUE_STAFF },

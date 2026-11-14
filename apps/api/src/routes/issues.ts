@@ -351,7 +351,36 @@ issues.post('/', requireAuth, requireMembership, requirePermission('issues.write
   return c.json(await detail(residenceId, created, viewer), 201);
 });
 
-/** Liste paginée de tous les signalements de la résidence : urgents non résolus d'abord, puis les plus récents. */
+/** Compteurs de la résidence, indépendants de tout filtre (onglets et bandeau des urgents). */
+async function countIssues(residenceId: string) {
+  const grouped = await db
+    .select({
+      status: i.status,
+      total: sql<number>`count(*)`.mapWith(Number),
+      urgent: sql<number>`count(*) filter (where ${i.urgent})`.mapWith(Number),
+    })
+    .from(i)
+    .where(eq(i.residenceId, residenceId))
+    .groupBy(i.status);
+  const counts = { open: 0, in_progress: 0, resolved: 0, urgentUnresolved: 0 };
+  for (const group of grouped) {
+    counts[group.status] = group.total;
+    if (group.status !== 'resolved') counts.urgentUnresolved += group.urgent;
+  }
+  return counts;
+}
+
+/** Nombre de signalements par statut et d'urgents non résolus (tous les membres de la résidence). */
+issues.get('/counts', requireAuth, requireMembership, async (c) => {
+  c.header('Cache-Control', 'no-store');
+  return c.json(await countIssues(c.get('residenceId')));
+});
+
+/**
+ * Liste paginée des signalements de la résidence, filtrable sur un ou plusieurs statuts
+ * (`status=open,in_progress`) : urgents non résolus d'abord, puis du plus récent au plus ancien
+ * (l'identifiant départage les égalités : l'ordre, donc la pagination, est stable).
+ */
 issues.get('/', requireAuth, requireMembership, async (c) => {
   const parsed = issueListQuerySchema.safeParse(c.req.query());
   if (!parsed.success) throw new HTTPException(400);
@@ -359,10 +388,10 @@ issues.get('/', requireAuth, requireMembership, async (c) => {
   const residenceId = c.get('residenceId');
   const viewer = viewerOf(c);
   const where = status
-    ? and(eq(i.residenceId, residenceId), eq(i.status, status))
+    ? and(eq(i.residenceId, residenceId), inArray(i.status, status))
     : eq(i.residenceId, residenceId);
 
-  const [rows, [count], grouped] = await Promise.all([
+  const [rows, [count]] = await Promise.all([
     db
       .select(columns)
       .from(i)
@@ -374,16 +403,6 @@ issues.get('/', requireAuth, requireMembership, async (c) => {
       .select({ total: sql<number>`count(*)`.mapWith(Number) })
       .from(i)
       .where(where),
-    // Compteurs de la résidence (indépendants du filtre) pour les onglets et le bandeau des urgents.
-    db
-      .select({
-        status: i.status,
-        total: sql<number>`count(*)`.mapWith(Number),
-        urgent: sql<number>`count(*) filter (where ${i.urgent})`.mapWith(Number),
-      })
-      .from(i)
-      .where(eq(i.residenceId, residenceId))
-      .groupBy(i.status),
   ]);
 
   const directory = await directoryOf(
@@ -392,17 +411,11 @@ issues.get('/', requireAuth, requireMembership, async (c) => {
     rows.flatMap((row) => (row.authorLotId ? [row.authorLotId] : [])),
     viewer.manage,
   );
-  const counts = { open: 0, in_progress: 0, resolved: 0, urgentUnresolved: 0 };
-  for (const group of grouped) {
-    counts[group.status] = group.total;
-    if (group.status !== 'resolved') counts.urgentUnresolved += group.urgent;
-  }
   return c.json({
     items: rows.map((row) => presentIssue(row, viewer, directory)),
     total: count!.total,
     limit,
     offset,
-    counts,
   });
 });
 

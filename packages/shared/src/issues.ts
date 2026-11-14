@@ -116,10 +116,24 @@ export const reopenIssueSchema = z
   .strict();
 export type ReopenIssueInput = z.infer<typeof reopenIssueSchema>;
 
-/** Liste des signalements : filtre par statut et pagination. */
+/**
+ * Filtre de statuts de la liste : un ou plusieurs statuts séparés par des virgules
+ * (`status=open,in_progress`). Chaque statut doit être connu ; les doublons sont ignorés.
+ */
+const issueStatusFilterSchema = z
+  .string()
+  .refine((raw) => raw.split(',').every((part) => (ISSUE_STATUSES as readonly string[]).includes(part)), {
+    message: 'invalid_status',
+  })
+  .transform((raw) => [...new Set(raw.split(','))] as IssueStatus[]);
+
+/** Compteurs de la résidence : nombre par statut et urgents non résolus (GET /issues/counts). */
+export type IssueCountsResponse = { open: number; in_progress: number; resolved: number; urgentUnresolved: number };
+
+/** Liste des signalements : filtre par statut(s) et pagination. */
 export const issueListQuerySchema = z
   .object({
-    status: z.enum(ISSUE_STATUSES).optional(),
+    status: issueStatusFilterSchema.optional(),
     limit: z.coerce.number().int().min(1).max(MAX_ISSUE_PAGE_SIZE).default(DEFAULT_ISSUE_PAGE_SIZE),
     offset: z.coerce.number().int().min(0).default(0),
   })
