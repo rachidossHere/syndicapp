@@ -21,6 +21,13 @@ const NO_WORDS = [
   'welcome.appName',
   'home.residenceLine',
   'lots.single.referencePlaceholder',
+  // Signalements : gabarits sans mot (« lieu · âge », heure, « titre · acteur », citation).
+  'issues.line',
+  'issues.time',
+  'issues.age.date',
+  'issues.event.detail',
+  'issues.event.titleBy',
+  'issues.event.quote',
   // Gabarits sans mot : période « {mois} {année} », dates, ligne « {mode} · {date} ».
   'charges.period.month',
   'charges.date.short',
