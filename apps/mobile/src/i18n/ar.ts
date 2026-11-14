@@ -1,6 +1,7 @@
 import { arChargeTexts } from './ar-charges';
 import { arAccountTexts } from './ar-accounts';
 import { arExpenseTexts } from './ar-expenses';
+import { arIssueTexts } from './ar-issues';
 import { arResidenceTexts } from './ar-residences';
 import type { TranslationKey } from './fr';
 
@@ -9,6 +10,7 @@ export const ar: Record<TranslationKey, string> = {
   ...arResidenceTexts,
   ...arChargeTexts,
   ...arExpenseTexts,
+  ...arIssueTexts,
   ...arAccountTexts,
   'auth.errors.nameRequired': 'أدخل اسمك.',
   'auth.errors.nameTooShort': 'حرفان على الأقل.',
