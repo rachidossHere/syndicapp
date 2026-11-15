@@ -8,6 +8,7 @@ export const ISSUE_ERROR_STATUS = {
   [ISSUE_ERRORS.invalidFileType]: 400,
   [ISSUE_ERRORS.fileTooLarge]: 400,
   [ISSUE_ERRORS.photoNotFound]: 400,
+  [ISSUE_ERRORS.photoAlreadyUsed]: 409,
   [ISSUE_ERRORS.statusUnchanged]: 409,
   [ISSUE_ERRORS.commentForbidden]: 403,
   [ISSUE_ERRORS.reopenForbidden]: 403,

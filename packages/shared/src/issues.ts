@@ -39,6 +39,7 @@ export const ISSUE_ERRORS = {
   invalidFileType: 'issues.errors.invalidFileType',
   fileTooLarge: 'issues.errors.fileTooLarge',
   photoNotFound: 'issues.errors.photoNotFound',
+  photoAlreadyUsed: 'issues.errors.photoAlreadyUsed',
   statusUnchanged: 'issues.errors.statusUnchanged',
   commentForbidden: 'issues.errors.commentForbidden',
   reopenForbidden: 'issues.errors.reopenForbidden',

@@ -5,8 +5,6 @@
 // supprimé à la fin ; les données réelles (comptes Rachidoss et Testmest, résidence Al Andalous)
 // ne sont jamais lues ni modifiées : tout est rangé sous une étiquette aléatoire `verif07-…`.
 //
-// Un test marqué `it.fails` décrit le comportement attendu d'un constat ouvert de la vérification :
-// il passe tant que le constat existe et échouera quand il sera corrigé (le retirer alors).
 import { randomBytes, randomUUID } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -399,11 +397,28 @@ describe.skipIf(!configured)('Vérification du plan 07', { timeout: 300_000 }, (
       expect((await api(uid('mgrB'), 'GET', `/api/issues/${withPhoto.id}/photo-url`, resA)).status).toBe(403);
     });
 
-    it.fails('constat : une clé de photo déjà rattachée à un signalement ne devrait pas pouvoir l’être à un second', async () => {
+    it('une clé de photo déjà rattachée à un signalement est refusée (409), par un autre membre comme par l’auteur', async () => {
       const key = await uploadPhoto('tenant');
-      expect((await newIssue('tenant', { photoKey: key })).status).toBe(201);
-      const second = await newIssue('tenant', { photoKey: key });
-      expect(second.status).toBe(400);
+      const first = await newIssue('tenant', { photoKey: key });
+      expect(first.status).toBe(201);
+      for (const name of ['tenant', 'owner2', 'mgr']) {
+        const again = await newIssue(name, { photoKey: key });
+        expect({ name, status: again.status }).toEqual({ name, status: 409 });
+        expect(again.json).toEqual({ error: ISSUE_ERRORS.photoAlreadyUsed });
+      }
+      // Rien n'a été créé par les refus, et la première photo se lit toujours.
+      const rows = await getDb().select().from(schema.issue).where(eq(schema.issue.photoKey, key));
+      expect(rows).toHaveLength(1);
+      expect((await as('mgr').get(`/api/issues/${first.json.id}/photo-url`)).status).toBe(200);
+    });
+
+    it('deux créations simultanées avec la même clé : une seule réussit, l’autre reçoit 409 (index unique), sans 500 ni événement orphelin', async () => {
+      const key = await uploadPhoto('tenant');
+      const [x, y] = await Promise.all([newIssue('tenant', { photoKey: key }), newIssue('owner2', { photoKey: key })]);
+      expect([x.status, y.status].sort()).toEqual([201, 409]);
+      const rows = await getDb().select().from(schema.issue).where(eq(schema.issue.photoKey, key));
+      expect(rows).toHaveLength(1);
+      expect(await dbEvents(rows[0]!.id)).toHaveLength(1);
     });
   });
 

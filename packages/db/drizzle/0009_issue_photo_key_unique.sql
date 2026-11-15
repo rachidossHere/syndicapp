@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX "issue_photo_key_unique" ON "issue" USING btree ("photo_key") WHERE "issue"."photo_key" is not null;

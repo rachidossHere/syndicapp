@@ -15,6 +15,7 @@ import {
   text,
   timestamp,
   unique,
+  uniqueIndex,
   uuid,
 } from 'drizzle-orm/pg-core';
 
@@ -60,6 +61,9 @@ export const issue = pgTable(
     unique('issue_id_residence_unique').on(table.id, table.residenceId),
     // Liste d'une résidence filtrée par statut, urgents d'abord.
     index('issue_residence_status_urgent_idx').on(table.residenceId, table.status, table.urgent),
+    // Une photo n'appartient qu'à un seul signalement (V07-04) : index unique partiel, les signalements
+    // sans photo (clé nulle) ne sont pas concernés.
+    uniqueIndex('issue_photo_key_unique').on(table.photoKey).where(sql`${table.photoKey} is not null`),
     check('issue_title_not_blank', sql`length(btrim(${table.title})) > 0`),
     // Photo : clé et type ensemble, taille positive.
     check(
