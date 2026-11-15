@@ -5,7 +5,7 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo } from 'react';
 
-import { apiFetch } from '@/lib/api';
+import { apiFetch, inResidence } from '@/lib/api';
 import { issueDeps } from '@/lib/issue-api';
 import { saveIssue, type SaveIssueArgs } from '@/lib/issue-save';
 import {
@@ -37,6 +37,7 @@ export function useIssueList(residenceId: string | undefined, filter: IssueFilte
     queryFn: ({ pageParam }) =>
       apiFetch<IssueListPage>(
         `/api/issues?${status === undefined ? '' : `status=${status}&`}limit=${PAGE_SIZE}&offset=${pageParam}`,
+        inResidence(residenceId),
       ),
     initialPageParam: 0,
     getNextPageParam: (last) => {
@@ -72,7 +73,7 @@ export function useIssueList(residenceId: string | undefined, filter: IssueFilte
 export function useIssueCounts(residenceId: string | undefined) {
   return useQuery({
     queryKey: [...issuesQueryKey(residenceId ?? 'none'), 'counts'],
-    queryFn: () => apiFetch<IssueCounts>('/api/issues/counts'),
+    queryFn: () => apiFetch<IssueCounts>('/api/issues/counts', inResidence(residenceId)),
     enabled: residenceId !== undefined,
   });
 }
@@ -81,7 +82,7 @@ export function useIssueCounts(residenceId: string | undefined) {
 export function useIssue(residenceId: string | undefined, id: string | undefined) {
   return useQuery({
     queryKey: [...issuesQueryKey(residenceId ?? 'none'), 'detail', id ?? 'none'],
-    queryFn: () => apiFetch<IssueDetail>(`/api/issues/${encodeURIComponent(id ?? '')}`),
+    queryFn: () => apiFetch<IssueDetail>(`/api/issues/${encodeURIComponent(id ?? '')}`, inResidence(residenceId)),
     enabled: residenceId !== undefined && id !== undefined,
   });
 }
@@ -91,7 +92,7 @@ export function useIssuePhoto(residenceId: string | undefined, id: string | unde
   return useQuery({
     queryKey: [...issuesQueryKey(residenceId ?? 'none'), 'photo-url', id ?? 'none'],
     queryFn: async () =>
-      (await apiFetch<{ url: string }>(`/api/issues/${encodeURIComponent(id ?? '')}/photo-url`)).url,
+      (await apiFetch<{ url: string }>(`/api/issues/${encodeURIComponent(id ?? '')}/photo-url`, inResidence(residenceId))).url,
     enabled: enabled && residenceId !== undefined && id !== undefined,
     staleTime: PHOTO_URL_MAX_CACHE_MS - 60_000,
     gcTime: PHOTO_URL_MAX_CACHE_MS,
@@ -114,10 +115,10 @@ export function useCommentIssue(residenceId: string | undefined, id: string) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (message: string) =>
-      apiFetch<unknown>(`/api/issues/${encodeURIComponent(id)}/comments`, {
-        method: 'POST',
-        body: JSON.stringify({ message }),
-      }),
+      apiFetch<unknown>(
+        `/api/issues/${encodeURIComponent(id)}/comments`,
+        inResidence(residenceId, { method: 'POST', body: JSON.stringify({ message }) }),
+      ),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: issuesQueryKey(residenceId ?? 'none') }),
   });
 }
@@ -127,7 +128,7 @@ export function useReopenIssue(residenceId: string | undefined, id: string) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: () =>
-      apiFetch<unknown>(`/api/issues/${encodeURIComponent(id)}/reopen`, { method: 'POST', body: '{}' }),
+      apiFetch<unknown>(`/api/issues/${encodeURIComponent(id)}/reopen`, inResidence(residenceId, { method: 'POST', body: '{}' })),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: issuesQueryKey(residenceId ?? 'none') }),
   });
 }
@@ -141,14 +142,17 @@ export function useUpdateIssue(residenceId: string | undefined, id: string) {
   return useMutation({
     mutationFn: (plan: Exclude<IssueUpdatePlan, { kind: 'none' }>) =>
       plan.kind === 'status'
-        ? apiFetch<unknown>(`/api/issues/${encodeURIComponent(id)}/status`, {
-            method: 'POST',
-            body: JSON.stringify({ status: plan.status, ...(plan.message === undefined ? {} : { message: plan.message }) }),
-          })
-        : apiFetch<unknown>(`/api/issues/${encodeURIComponent(id)}/comments`, {
-            method: 'POST',
-            body: JSON.stringify({ message: plan.message }),
-          }),
+        ? apiFetch<unknown>(
+            `/api/issues/${encodeURIComponent(id)}/status`,
+            inResidence(residenceId, {
+              method: 'POST',
+              body: JSON.stringify({ status: plan.status, ...(plan.message === undefined ? {} : { message: plan.message }) }),
+            }),
+          )
+        : apiFetch<unknown>(
+            `/api/issues/${encodeURIComponent(id)}/comments`,
+            inResidence(residenceId, { method: 'POST', body: JSON.stringify({ message: plan.message }) }),
+          ),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: issuesQueryKey(residenceId ?? 'none') }),
   });
 }

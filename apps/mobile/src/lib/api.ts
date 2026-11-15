@@ -4,6 +4,7 @@ import { ApiError } from './api-error';
 import { API_URL } from './config';
 
 export { ApiError } from './api-error';
+export { inResidence } from './residence-header';
 
 /**
  * Appel à notre API Hono avec la session Better Auth.

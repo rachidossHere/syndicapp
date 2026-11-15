@@ -6,7 +6,7 @@ import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tansta
 import * as WebBrowser from 'expo-web-browser';
 import { useCallback } from 'react';
 
-import { apiFetch } from '@/lib/api';
+import { apiFetch, inResidence } from '@/lib/api';
 import { INVOICE_URL_MAX_CACHE_MS, type LedgerEntry } from '@/lib/cash';
 
 import { cashQueryKey, expensesQueryKey } from './use-expenses';
@@ -29,7 +29,7 @@ export function useCash(residenceId: string | undefined) {
   return useInfiniteQuery({
     queryKey: [...cashQueryKey(residenceId ?? 'none'), 'ledger'],
     queryFn: ({ pageParam }) =>
-      apiFetch<CashPage>(`/api/cash?limit=${LEDGER_PAGE_SIZE}&offset=${pageParam}`),
+      apiFetch<CashPage>(`/api/cash?limit=${LEDGER_PAGE_SIZE}&offset=${pageParam}`, inResidence(residenceId)),
     initialPageParam: 0,
     getNextPageParam: (last) => {
       const next = last.ledger.offset + last.ledger.items.length;
@@ -61,14 +61,14 @@ export type ExpenseDetail = {
 export function useExpense(residenceId: string | undefined, id: string | undefined) {
   return useQuery({
     queryKey: [...expensesQueryKey(residenceId ?? 'none'), 'detail', id ?? 'none'],
-    queryFn: () => apiFetch<ExpenseDetail>(`/api/expenses/${encodeURIComponent(id ?? '')}`),
+    queryFn: () => apiFetch<ExpenseDetail>(`/api/expenses/${encodeURIComponent(id ?? '')}`, inResidence(residenceId)),
     enabled: residenceId !== undefined && id !== undefined,
   });
 }
 
 type InvoiceUrl = { url: string; expiresIn: number; filename: string; contentType: string };
-const invoiceUrl = (id: string) =>
-  apiFetch<InvoiceUrl>(`/api/expenses/${encodeURIComponent(id)}/invoice-url`);
+const invoiceUrl = (id: string, residenceId?: string) =>
+  apiFetch<InvoiceUrl>(`/api/expenses/${encodeURIComponent(id)}/invoice-url`, inResidence(residenceId));
 
 /**
  * URL signée de l'aperçu d'une image. Elle vit 5 minutes côté R2 : elle n'est jamais gardée en
@@ -77,7 +77,7 @@ const invoiceUrl = (id: string) =>
 export function useInvoicePreview(residenceId: string | undefined, id: string | undefined, enabled: boolean) {
   return useQuery({
     queryKey: [...expensesQueryKey(residenceId ?? 'none'), 'invoice-url', id ?? 'none'],
-    queryFn: async () => (await invoiceUrl(id ?? '')).url,
+    queryFn: async () => (await invoiceUrl(id ?? '', residenceId)).url,
     enabled: enabled && residenceId !== undefined && id !== undefined,
     staleTime: INVOICE_URL_MAX_CACHE_MS - 60_000,
     gcTime: INVOICE_URL_MAX_CACHE_MS,
@@ -142,7 +142,7 @@ export type OpeningBalanceState = {
 export function useOpeningBalance(residenceId: string | undefined) {
   return useQuery({
     queryKey: [...cashQueryKey(residenceId ?? 'none'), 'opening'],
-    queryFn: () => apiFetch<OpeningBalanceState>('/api/residences/current/opening-balance'),
+    queryFn: () => apiFetch<OpeningBalanceState>('/api/residences/current/opening-balance', inResidence(residenceId)),
     enabled: residenceId !== undefined,
   });
 }
@@ -154,7 +154,7 @@ export function useSetOpeningBalance(residenceId: string | undefined) {
     mutationFn: (input: SetOpeningBalanceInput) =>
       apiFetch<{ openingBalance: number; openingBalanceDate: string; corrected: boolean }>(
         '/api/residences/current/opening-balance',
-        { method: 'PUT', body: JSON.stringify(input) },
+        inResidence(residenceId, { method: 'PUT', body: JSON.stringify(input) }),
       ),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: cashQueryKey(residenceId ?? 'none') }),
   });
