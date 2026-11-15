@@ -6,6 +6,8 @@ const issueErrors: Record<IssueErrorKey, string> = {
   'issues.errors.invalidFileType': 'Format non accepté. Choisissez une photo (JPEG ou PNG).',
   'issues.errors.fileTooLarge': 'Cette photo est trop lourde (10 Mo au maximum).',
   'issues.errors.photoNotFound': 'La photo n’a pas été reçue. Réessayez de l’envoyer.',
+  'issues.errors.photoAlreadyUsed':
+    'Cette photo est déjà rattachée à un signalement. Vérifiez la liste : s’il n’y est pas, prenez une nouvelle photo.',
   'issues.errors.statusUnchanged': 'Le signalement a déjà ce statut.',
   'issues.errors.commentForbidden': 'Seul l’auteur du signalement peut le commenter.',
   'issues.errors.reopenForbidden': 'Seul l’auteur du signalement peut le rouvrir.',

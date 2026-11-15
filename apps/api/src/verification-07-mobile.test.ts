@@ -55,17 +55,39 @@ describe('vérification 07 · cache TanStack Query', () => {
     expect(scan(/persistQueryClient|PersistQueryClientProvider|createSyncStoragePersister|createAsyncStoragePersister|AsyncStorage\./)).toEqual([]);
   });
 
+  it('un 401 de l’API vide la session, le cache et la résidence active (V07-08)', () => {
+    const source = read('lib/api.ts');
+    expect(source).toContain('expireSession(');
+    expect(source).toContain('queryClient.clear()');
+    expect(source).toContain('setActiveResidenceId(null)');
+    expect(source).not.toContain('authClient.signOut().catch');
+  });
+
   it('la déconnexion vide le cache et la résidence active', () => {
     const source = read('hooks/use-session.ts');
     expect(source).toContain('queryClient.clear()');
     expect(source).toContain('setActiveResidenceId(null)');
   });
 
-  // Constat V07-03 : l'en-tête X-Residence-Id est lu dans un état global à l'envoi (après un await),
-  // alors que la clé de cache est figée au rendu : un changement de résidence entre les deux range
-  // la réponse d'une résidence sous la clé de l'autre.
-  it.fails('constat : les requêtes des signalements envoient la résidence de leur clé de cache (en-tête explicite)', () => {
-    expect(read('hooks/use-issues.ts')).toContain('X-Residence-Id');
+  // Correctif V07-03 : `apiFetch` lisait X-Residence-Id dans un état global à l'envoi (après un await),
+  // alors que la clé de cache est figée au rendu : un changement de résidence entre les deux rangeait
+  // la réponse d'une résidence sous la clé de l'autre. Chaque appel d'un hook à clé par résidence
+  // fixe donc l'en-tête avec inResidence(residenceId). Exceptions (aucune clé de cache par résidence) :
+  // actions ponctuelles sans résidence en paramètre, listées ici pour que tout nouvel appel soit vu.
+  it('les hooks à clé de cache par résidence envoient la résidence de leur clé (en-tête explicite)', () => {
+    const exceptions: Record<string, number> = {
+      'hooks/use-issues.ts': 0,
+      'hooks/use-lots.ts': 0,
+      'hooks/use-cash.ts': 1, // useCancelExpense
+      'hooks/use-charges.ts': 2, // useOpenReceipt, fetchReceiptUrl
+      'hooks/use-invitations.ts': 2, // aperçu et acceptation d'un code (avant toute résidence)
+    };
+    for (const [file, allowed] of Object.entries(exceptions)) {
+      const source = read(file);
+      const calls = (source.match(/apiFetch</g) ?? []).length;
+      const explicit = (source.match(/inResidence\(/g) ?? []).length;
+      expect({ file, explicit }).toEqual({ file, explicit: calls - allowed });
+    }
   });
 });
 

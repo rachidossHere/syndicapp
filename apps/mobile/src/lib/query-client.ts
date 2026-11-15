@@ -1,6 +1,6 @@
 import { QueryClient } from '@tanstack/react-query';
 
-import { ApiError } from './api';
+import { ApiError } from './api-error';
 
 /** Client TanStack Query de l'appli. */
 export const queryClient = new QueryClient({

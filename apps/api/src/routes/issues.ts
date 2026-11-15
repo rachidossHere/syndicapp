@@ -285,6 +285,22 @@ issues.post('/upload-url', requireAuth, requireMembership, requirePermission('is
   });
 });
 
+/**
+ * Exécute la création ; une violation de l'index unique des photos (deux créations simultanées avec la
+ * même clé) devient le refus 409 `photoAlreadyUsed` au lieu d'une erreur 500.
+ */
+async function createWithPhotoGuard<T>(run: () => Promise<T>): Promise<T | Response> {
+  try {
+    return await run();
+  } catch (error) {
+    const e = error as { code?: unknown; constraint?: unknown; cause?: { code?: unknown; constraint?: unknown } };
+    const code = e.code ?? e.cause?.code;
+    const constraint = e.constraint ?? e.cause?.constraint;
+    if (code === '23505' && constraint === 'issue_photo_key_unique') return issueRefusal(ISSUE_ERRORS.photoAlreadyUsed);
+    throw error;
+  }
+}
+
 /** Clé de photo de la résidence : residences/<id>/issues/<uuid>.<jpg|png>, rien d'autre. */
 function isOwnPhotoKey(residenceId: string, key: string): boolean {
   const prefix = issueKeyPrefix(residenceId);
@@ -311,6 +327,13 @@ issues.post('/', requireAuth, requireMembership, requirePermission('issues.write
     if (!isPhotoType(contentType)) return issueRefusal(ISSUE_ERRORS.invalidFileType);
     if (head.size > MAX_ISSUE_PHOTO_SIZE_BYTES) return issueRefusal(ISSUE_ERRORS.fileTooLarge);
     photo = { key: input.photoKey, contentType, size: head.size };
+    // Une photo n'appartient qu'à un seul signalement (index unique issue_photo_key_unique).
+    const [used] = await db
+      .select({ id: i.id })
+      .from(i)
+      .where(and(eq(i.residenceId, residenceId), eq(i.photoKey, input.photoKey)))
+      .limit(1);
+    if (used) return issueRefusal(ISSUE_ERRORS.photoAlreadyUsed);
   }
 
   // Appartement de l'auteur (facultatif), lu dans son membership de la résidence.
@@ -322,7 +345,7 @@ issues.post('/', requireAuth, requireMembership, requirePermission('issues.write
     )
     .limit(1);
 
-  const created = await db.transaction(async (tx) => {
+  const created = await createWithPhotoGuard(() => db.transaction(async (tx) => {
     const [row] = await tx
       .insert(i)
       .values({
@@ -347,7 +370,8 @@ issues.post('/', requireAuth, requireMembership, requirePermission('issues.write
       authorId: viewer.userId,
     });
     return row!;
-  });
+  }));
+  if (created instanceof Response) return created;
   return c.json(await detail(residenceId, created, viewer), 201);
 });
 

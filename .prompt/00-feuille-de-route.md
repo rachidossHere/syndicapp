@@ -6,7 +6,7 @@ Chaque fichier de ce dossier est un plan à donner à l'agent, **dans l'ordre**,
 | --- | --- | --- | --- |
 | 01 | [Mise en place du projet](01-mise-en-place.md) | Monorepo, Expo, Hono, Drizzle, Neon `dev`, outils | — |
 | 02 | [Design system](02-design-system.md) | Jetons, polices FR/AR, composants `@syndic/ui` | 01 |
-| 03 | [Authentification](03-authentification.md) | Neon Auth, connexion, API protégée | 01, 02 |
+| 03 | [Authentification](03-authentification.md) | Better Auth dans l'API Hono, connexion, API protégée | 01, 02 |
 | 04 | [Résidences, lots et rôles](04-residences-roles.md) | Créer une résidence, inviter, rôles par résidence | 03 |
 | 05 | [Charges et encaissements](05-charges-encaissements.md) | Appels de charges, paiements, reçus PDF, impayés | 04 |
 | 06 | [Dépenses et caisse](06-depenses-caisse.md) | Dépenses avec facture, solde, comptes transparents | 05 |

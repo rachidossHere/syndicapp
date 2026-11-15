@@ -7,7 +7,7 @@ import type {
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { setActiveResidenceId } from '@/lib/active-residence';
-import { apiFetch } from '@/lib/api';
+import { apiFetch, inResidence } from '@/lib/api';
 
 import { lotsQueryKey } from './use-lots';
 import { RESIDENCES_QUERY_KEY } from './use-residences';
@@ -18,7 +18,7 @@ export const invitationsQueryKey = (residenceId: string) => ['invitations', resi
 export function usePendingInvitations(residenceId: string | undefined, enabled: boolean) {
   return useQuery({
     queryKey: invitationsQueryKey(residenceId ?? 'none'),
-    queryFn: async () => (await apiFetch<{ invitations: PendingInvitation[] }>('/api/invitations')).invitations,
+    queryFn: async () => (await apiFetch<{ invitations: PendingInvitation[] }>('/api/invitations', inResidence(residenceId))).invitations,
     enabled: enabled && residenceId !== undefined,
   });
 }
@@ -30,7 +30,7 @@ export function useCreateInvitation(residenceId: string | undefined) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (input: NewInvitation) =>
-      apiFetch<CreatedInvitation>('/api/invitations', { method: 'POST', body: JSON.stringify(input) }),
+      apiFetch<CreatedInvitation>('/api/invitations', inResidence(residenceId, { method: 'POST', body: JSON.stringify(input) })),
     onSuccess: async () => {
       const id = residenceId ?? 'none';
       await Promise.all([
@@ -45,7 +45,7 @@ export function useCreateInvitation(residenceId: string | undefined) {
 export function useCancelInvitation(residenceId: string | undefined) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (invitationId: string) => apiFetch<void>(`/api/invitations/${invitationId}`, { method: 'DELETE' }),
+    mutationFn: (invitationId: string) => apiFetch<void>(`/api/invitations/${invitationId}`, inResidence(residenceId, { method: 'DELETE' })),
     onSuccess: async () => {
       const id = residenceId ?? 'none';
       await Promise.all([

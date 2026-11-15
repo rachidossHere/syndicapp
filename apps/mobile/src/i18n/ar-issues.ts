@@ -7,6 +7,7 @@ const issueErrors: Record<IssueErrorKey, string> = {
   'issues.errors.invalidFileType': 'صيغة غير مقبولة. اختر صورة (JPEG أو PNG).',
   'issues.errors.fileTooLarge': 'حجم هذه الصورة كبير جدًا (10 ميغابايت كحد أقصى).',
   'issues.errors.photoNotFound': 'لم يتم استلام الصورة. أعد محاولة إرسالها.',
+  'issues.errors.photoAlreadyUsed': 'هذه الصورة مرتبطة بالفعل ببلاغ. تحقق من القائمة، وإن لم تجده فالتقط صورة جديدة.',
   'issues.errors.statusUnchanged': 'البلاغ له هذه الحالة بالفعل.',
   'issues.errors.commentForbidden': 'صاحب البلاغ وحده يمكنه التعليق عليه.',
   'issues.errors.reopenForbidden': 'صاحب البلاغ وحده يمكنه إعادة فتحه.',

@@ -4,7 +4,7 @@ import type { ChargePeriod, DueStatus, PaymentMethod, Role } from '@syndic/share
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import * as WebBrowser from 'expo-web-browser';
 
-import { apiFetch } from '@/lib/api';
+import { apiFetch, inResidence } from '@/lib/api';
 
 /** Toutes les données de charges d'une résidence : invalidées ensemble. */
 export const chargesQueryKey = (residenceId: string) => ['charges', residenceId] as const;
@@ -64,7 +64,7 @@ export type CurrentResidence = { id: string; name: string; chargePeriod: ChargeP
 export function useCurrentResidence(residenceId: string | undefined) {
   return useQuery({
     queryKey: residenceKey(residenceId ?? 'none'),
-    queryFn: () => apiFetch<CurrentResidence>('/api/residences/current'),
+    queryFn: () => apiFetch<CurrentResidence>('/api/residences/current', inResidence(residenceId)),
     enabled: residenceId !== undefined,
   });
 }
@@ -73,7 +73,7 @@ export function useCurrentResidence(residenceId: string | undefined) {
 export function useChargeCalls(residenceId: string | undefined) {
   return useQuery({
     queryKey: callsKey(residenceId ?? 'none'),
-    queryFn: async () => (await apiFetch<{ chargeCalls: ChargeCallSummary[] }>('/api/charge-calls')).chargeCalls,
+    queryFn: async () => (await apiFetch<{ chargeCalls: ChargeCallSummary[] }>('/api/charge-calls', inResidence(residenceId))).chargeCalls,
     enabled: residenceId !== undefined,
   });
 }
@@ -82,7 +82,7 @@ export function useChargeCalls(residenceId: string | undefined) {
 export function useChargeCall(residenceId: string | undefined, id: string | undefined) {
   return useQuery({
     queryKey: callKey(residenceId ?? 'none', id ?? 'none'),
-    queryFn: () => apiFetch<ChargeCallDetail>(`/api/charge-calls/${encodeURIComponent(id ?? '')}`),
+    queryFn: () => apiFetch<ChargeCallDetail>(`/api/charge-calls/${encodeURIComponent(id ?? '')}`, inResidence(residenceId)),
     enabled: residenceId !== undefined && id !== undefined,
   });
 }
@@ -93,10 +93,10 @@ export function useCreateChargeCall(residenceId: string | undefined) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (input: NewChargeCall) =>
-      apiFetch<{ id: string; lotCount: number; totalDue: number }>('/api/charge-calls', {
-        method: 'POST',
-        body: JSON.stringify(input),
-      }),
+      apiFetch<{ id: string; lotCount: number; totalDue: number }>(
+        '/api/charge-calls',
+        inResidence(residenceId, { method: 'POST', body: JSON.stringify(input) }),
+      ),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: chargesQueryKey(residenceId ?? 'none') }),
   });
 }
@@ -113,7 +113,7 @@ export function useCreatePayment(residenceId: string | undefined) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (input: NewPayment) =>
-      apiFetch<CreatedPayment>('/api/payments', { method: 'POST', body: JSON.stringify(input) }),
+      apiFetch<CreatedPayment>('/api/payments', inResidence(residenceId, { method: 'POST', body: JSON.stringify(input) })),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: chargesQueryKey(residenceId ?? 'none') }),
   });
 }
@@ -123,10 +123,10 @@ export function useCancelPayment(residenceId: string | undefined) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ paymentId, reason }: { paymentId: string; reason: string }) =>
-      apiFetch<unknown>(`/api/payments/${encodeURIComponent(paymentId)}/cancel`, {
-        method: 'POST',
-        body: JSON.stringify({ reason }),
-      }),
+      apiFetch<unknown>(
+        `/api/payments/${encodeURIComponent(paymentId)}/cancel`,
+        inResidence(residenceId, { method: 'POST', body: JSON.stringify({ reason }) }),
+      ),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: chargesQueryKey(residenceId ?? 'none') }),
   });
 }
@@ -168,7 +168,7 @@ export type MyDue = {
 export function useMyDues(residenceId: string | undefined) {
   return useQuery({
     queryKey: [...chargesQueryKey(residenceId ?? 'none'), 'mine'],
-    queryFn: async () => (await apiFetch<{ dues: MyDue[] }>('/api/me/dues')).dues,
+    queryFn: async () => (await apiFetch<{ dues: MyDue[] }>('/api/me/dues', inResidence(residenceId))).dues,
     enabled: residenceId !== undefined,
   });
 }
@@ -190,7 +190,7 @@ export type ReceiptDetail = {
 export function useReceipt(residenceId: string | undefined, receiptId: string | undefined) {
   return useQuery({
     queryKey: [...chargesQueryKey(residenceId ?? 'none'), 'receipt', receiptId ?? 'none'],
-    queryFn: () => apiFetch<ReceiptDetail>(`/api/receipts/${encodeURIComponent(receiptId ?? '')}`),
+    queryFn: () => apiFetch<ReceiptDetail>(`/api/receipts/${encodeURIComponent(receiptId ?? '')}`, inResidence(residenceId)),
     enabled: residenceId !== undefined && receiptId !== undefined,
   });
 }

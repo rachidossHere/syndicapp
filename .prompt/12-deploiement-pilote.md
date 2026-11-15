@@ -9,7 +9,7 @@ L'API tourne en production, l'appli Android s'installe depuis le Play Store en t
 ## Décisions
 
 - Base : branche Neon **`production`**. Les migrations y sont appliquées uniquement par la procédure de déploiement, après validation sur `dev`.
-- Auth : Neon Auth activé sur `production`, avec ses propres domaines de confiance et un **SMTP personnalisé** si la vérification d'e-mail est activée.
+- Auth : Better Auth hébergé dans l'API Hono sur Render, avec ses propres `BETTER_AUTH_SECRET` (32 caractères minimum, différent de `dev`) et `BETTER_AUTH_URL` en `https://`, des `trustedOrigins` limités à l'appli (aucune origine `exp://`), et un **SMTP personnalisé** si la vérification d'e-mail est activée.
 - API : hébergée sur **Render** (ou Railway), région la plus proche du Maroc disponible (Europe). Variables d'environnement saisies dans l'hébergeur, jamais dans le dépôt.
 - Stockage : bucket R2 de production séparé de celui de développement.
 - Mobile : builds avec **EAS Build**, profils `development`, `preview` et `production`. Android d'abord, distribution en **test fermé** sur Google Play. iOS plus tard.
@@ -35,7 +35,7 @@ Terminé quand : une pull request avec une erreur de typage est bloquée.
 
 ### 2. Production : base, auth, stockage, API
 
-Prépare la branche Neon `production` (migrations appliquées, Neon Auth activé), le bucket R2 de production, et déploie l'API sur Render avec toutes les variables. Ajoute Sentry à l'API. Rédige `docs/deploiement.md` avec la procédure complète (y compris l'application des migrations et le retour arrière).
+Prépare la branche Neon `production` (migrations appliquées ; Better Auth n'a rien à activer côté Neon : ses tables viennent des migrations), le bucket R2 de production, et déploie l'API sur Render avec toutes les variables. Ajoute Sentry à l'API. Rédige `docs/deploiement.md` avec la procédure complète (y compris l'application des migrations et le retour arrière).
 
 Terminé quand : `GET /health` répond en production, et `docs/deploiement.md` permet de redéployer sans aide.
 
