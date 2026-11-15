@@ -82,7 +82,7 @@ Le MVP est découpé en plans dans `.prompt/` (voir `00-feuille-de-route.md`), r
 | Fichiers | **Cloudflare R2** (client S3, URL signées) |
 | Reçus PDF | **pdf-lib**, générés côté API |
 | Notifications | **Expo Push Notifications** (`expo-notifications`, `expo-server-sdk`) |
-| Hors ligne | NetInfo + cache persisté de TanStack Query, file d'attente des actions |
+| Hors ligne | État du réseau (`expo-network`, déjà installé, ou NetInfo : à trancher au plan 10) + cache persisté de TanStack Query, file d'attente des actions |
 | Analyse produit | **PostHog** (hébergement UE), après consentement |
 | Erreurs | **Sentry** (sans données personnelles) |
 | Builds et mises à jour | **EAS Build** et **EAS Update** |
@@ -142,6 +142,12 @@ syndicapp/
       src/auth-routes.ts          → routes Better Auth ouvertes et désactivées
       src/client-ip.ts            → IP du client pour la limitation des tentatives
       src/error-log.ts            → journal des erreurs (nom, code, identifiant)
+      src/routes/                 → une route Hono par domaine (residences, lots, invitations, charge-calls, payments, receipts, expenses, issues, cash, me)
+      src/middleware/             → requireAuth, requireMembership, requirePermission, journal des requêtes
+      src/services/               → logique métier partagée (caisse, charges, invitations, résidences)
+      src/storage/r2.ts           → client Cloudflare R2 (URL signées, seul endroit)
+      src/receipts/               → génération et stockage des reçus PDF
+      src/issue-errors.ts         → refus de l'API des signalements (clés de traduction, statuts HTTP)
   packages/
     db/                           → client Neon, schéma Drizzle, migrations (@syndic/db)
       src/schema/auth.ts          → tables Better Auth, générées par sa CLI, ne pas modifier à la main
@@ -151,7 +157,7 @@ syndicapp/
       src/analytics.ts            → liste fermée des événements PostHog
     ui/                           → design system : jetons, thème, composants (@syndic/ui)
   .prompt/                        → plans de réalisation (00 à 12)
-  docs/                           → références visuelles (design-system.png, auth.png), déploiement, pilote
+  docs/                           → références visuelles (design-system.png, auth.png, residences.png, charges.png, depenses.png, signalements.png) ; déploiement et pilote à créer au plan 12
   scripts/local-ip.mjs            → IP locale du PC et URL de l'API pour apps/mobile/.env.local (pnpm ip)
   AGENTS.md
   .env.example
@@ -193,11 +199,11 @@ syndicapp/
 - Pas de suppression physique des paiements et des dépenses : annulation tracée (qui, quand, motif obligatoire).
 - Les données appartiennent à la résidence, jamais à une personne.
 - Les actions sensibles (changements de rôle, passations, annulations) sont journalisées avec `logAudit` dès qu'il existe (plan 09).
-- Développement **uniquement sur la branche Neon `dev`**. Les migrations ne sont appliquées sur `production` que via la procédure de `docs/deploiement.md`.
+- Développement **uniquement sur la branche Neon `dev`**. Les migrations ne sont appliquées sur `production` que via la procédure de `docs/deploiement.md` (à écrire au plan 12 ; jusque-là, aucune migration sur `production` sans validation explicite).
 
 ### API (Hono)
 - Chaque route valide son entrée avec un schéma Zod de `packages/shared`.
-- Toute route métier passe par `requireAuth` (session Better Auth lue avec `auth.api.getSession`), puis `requireMembership` (résidence active envoyée dans l'en-tête `X-Residence-Id`), puis `requirePermission`. Seules `GET /health` et `/api/auth/*` sont publiques.
+- Toute route métier passe par `requireAuth` (session Better Auth lue avec `auth.api.getSession`), puis `requireMembership` (résidence active envoyée dans l'en-tête `X-Residence-Id`), puis `requirePermission`. Seules `GET /health` et `/api/auth/*` sont publiques. Exceptions assumées : `GET /api/me`, `GET` et `POST /api/residences` et les routes d'acceptation d'invitation n'exigent que `requireAuth` (aucune résidence active n'existe encore). Une route de **lecture ouverte à tous les rôles** de la résidence (liste, détail, compteurs, URL signée de lecture) peut omettre `requirePermission`, à condition que l'autorisation de l'objet soit vérifiée dans la route (auteur du signalement, lot du copropriétaire, rôle de l'encaisseur…), que la réponse soit adaptée au rôle et que le test de la matrice des permissions (`verification-04-06.test.ts`) la couvre : toute nouvelle route absente de cette matrice fait échouer `verification-07.test.ts`. Toute route d'écriture passe par `requirePermission`.
 - Les réponses sont adaptées au rôle : un champ réservé (nom d'un auteur, montant d'un autre lot) n'est jamais envoyé puis masqué par l'appli.
 - Les erreurs renvoyées ne contiennent jamais de détails internes (requête SQL, stack trace).
 - Le journal des erreurs n'écrit que le nom de l'erreur, son code et un identifiant de corrélation (renvoyé dans la réponse 500 `{ error: "internal_error", id }`) : jamais la requête SQL, ses paramètres ni le corps de la requête (`src/error-log.ts`).
@@ -214,7 +220,7 @@ syndicapp/
 - Les références visuelles sont dans `docs/` : `design-system.png` pour les composants, `auth.png` pour l'authentification, `residences.png` pour les résidences, lots et invitations, `charges.png` pour les appels de charges et les encaissements, `depenses.png` pour les dépenses, les comptes et le solde de départ, `signalements.png` pour les signalements. Les écrans doivent leur correspondre ; les valeurs exactes viennent des jetons de `@syndic/ui`.
 - Icônes lucide importées une par une (`lucide-react-native/icons/<nom>`), jamais depuis l'index du paquet (tout le paquet serait chargé).
 - Les écrans affichés dépendent du rôle dans la résidence active.
-- La session est gérée uniquement par le client Better Auth avec `expoClient` et SecureStore ; les appels à l'API passent par `src/lib/api.ts`. Jamais de jeton stocké à la main ni dans AsyncStorage.
+- La session est gérée uniquement par le client Better Auth avec `expoClient` et SecureStore ; les appels à l'API passent par `src/lib/api.ts`. Jamais de jeton stocké à la main ni dans AsyncStorage. Tout hook dont la clé de cache contient la résidence envoie cette résidence explicitement (`inResidence(residenceId)` de `src/lib/api.ts`), jamais la résidence active lue à l'envoi. Une réponse 401 vide la session (retour à la connexion), le cache des requêtes et la résidence active (`src/lib/session-expired.ts`).
 - Préférences locales non sensibles (langue…) dans `expo-secure-store` ou le `localStorage` d'`expo-sqlite`, jamais dans AsyncStorage.
 - Toute image est compressée avant envoi (1600 px de large, JPEG 0,7). Les fichiers partent directement vers R2 avec une URL signée.
 - Encaissements et dépenses passent par la file d'attente hors ligne ; le cache persisté ne contient jamais de jeton.
@@ -254,6 +260,7 @@ Le projet démarre sur des offres gratuites, dont les conditions changent : les 
 
 - **Neon** : mise en veille possible avec un délai au réveil, stockage et calcul limités. Chaque branche a sa propre base.
 - **Expiration de la branche `dev`** : une branche Neon peut avoir une date d'expiration (celle de `dev` était fixée à 7 jours après sa création, retirée le 10 novembre 2026) ; passé cette date, elle est supprimée avec ses données. Vérifier la colonne « Expires At » de `neon branches list` et retirer l'expiration de `dev` avec `neon branches set-expiration <id de dev> --project-id <projet>` (sans `--expires-at`). Ne jamais lancer cette commande sur `production`.
+- **Historique des migrations de `dev`** : la table des migrations appliquées de `dev` contient une entrée de plus que les fichiers de `packages/db/drizzle` (reste de l'essai Neon Auth, antérieur à `0000`). Le rejeu complet des fichiers sur une base vierge doit être prouvé sur une branche jetable avant tout déploiement sur `production`.
 - La limitation des tentatives est en mémoire : elle repart à zéro au redémarrage et ne vaut que pour une instance. À passer en base ou dans Redis au plan 12.
 - **Cloudflare R2** : quota gratuit de stockage et d'opérations ; d'où la compression des images.
 - **Render / Railway** : mise en veille et ressources limitées.
