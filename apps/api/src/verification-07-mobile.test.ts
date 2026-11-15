@@ -55,6 +55,14 @@ describe('vérification 07 · cache TanStack Query', () => {
     expect(scan(/persistQueryClient|PersistQueryClientProvider|createSyncStoragePersister|createAsyncStoragePersister|AsyncStorage\./)).toEqual([]);
   });
 
+  it('un 401 de l’API vide la session, le cache et la résidence active (V07-08)', () => {
+    const source = read('lib/api.ts');
+    expect(source).toContain('expireSession(');
+    expect(source).toContain('queryClient.clear()');
+    expect(source).toContain('setActiveResidenceId(null)');
+    expect(source).not.toContain('authClient.signOut().catch');
+  });
+
   it('la déconnexion vide le cache et la résidence active', () => {
     const source = read('hooks/use-session.ts');
     expect(source).toContain('queryClient.clear()');

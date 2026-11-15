@@ -1,7 +1,9 @@
 import { authClient } from './auth-client';
-import { getActiveResidenceId } from './active-residence';
+import { getActiveResidenceId, setActiveResidenceId } from './active-residence';
 import { ApiError } from './api-error';
 import { API_URL } from './config';
+import { queryClient } from './query-client';
+import { expireSession } from './session-expired';
 
 export { ApiError } from './api-error';
 export { inResidence } from './residence-header';
@@ -33,8 +35,13 @@ export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise
   }
 
   if (response.status === 401) {
-    // Vide le cookie et le cache de session dans SecureStore, même si le serveur ne répond pas.
-    await authClient.signOut().catch(() => undefined);
+    // Session expirée : le cookie est vidé (retour à la connexion), puis le cache des requêtes et la
+    // résidence active, pour que rien de cet utilisateur ne reste en mémoire (voir session-expired.ts).
+    await expireSession({
+      signOut: () => authClient.signOut(),
+      clearCache: () => queryClient.clear(),
+      clearResidence: () => setActiveResidenceId(null),
+    });
     throw new ApiError(401, 'unauthorized');
   }
 
