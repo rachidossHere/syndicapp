@@ -7,12 +7,12 @@ import { HTTPException } from 'hono/http-exception';
 import { auth } from './auth';
 import { OPEN_AUTH_PATHS } from './auth-routes';
 import { withClientIp } from './client-ip';
+import { mountDevRoutes } from './dev-routes';
 import { isProduction } from './env';
 import { describeError, formatErrorSummary } from './error-log';
 import { loggablePath, requestLogger } from './middleware/request-logger';
 import { cash } from './routes/cash';
 import { chargeCalls } from './routes/charge-calls';
-import { devNotifications } from './routes/dev-notifications';
 import { expenses } from './routes/expenses';
 import { health } from './routes/health';
 import { invitations } from './routes/invitations';
@@ -57,10 +57,8 @@ app.route('/api/cash', cash);
 // Liés à l'utilisateur, pas à une résidence : requireAuth seulement (plan 08).
 app.route('/api/push-tokens', pushTokens);
 app.route('/api/notification-preferences', notificationPreferences);
-// Réservé au développement : jamais monté en production.
-if (!isProduction) {
-  app.route('/api/dev/notifications', devNotifications);
-}
+// Réservé au développement : jamais monté en production (voir dev-routes.ts).
+mountDevRoutes(app, isProduction);
 
 app.notFound((c) => c.json({ error: 'not_found' }, 404));
 
