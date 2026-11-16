@@ -1,5 +1,5 @@
 // Branchement réel de push-registration.ts : expo-notifications, expo-constants, expo-device, notre API
-// et un indicateur local « écran déjà montré ». Rien n'est écrit dans AsyncStorage.
+// et un indicateur local « écran déjà montré ». Le jeton n'est stocké nulle part.
 //
 // Expo Go : les push distants n'y sont pas fournis (SDK 53+) et l'appli n'a pas de projectId EAS
 // (validation reportée au plan 12). `getToken` lève alors une erreur de code `no_project_id` ou
