@@ -21,10 +21,16 @@ pushTokens.post('/', requireAuth, async (c) => {
   const now = new Date();
   await db
     .insert(schema.pushToken)
-    .values({ userId: c.get('user').id, token: input.token, device: input.device ?? null, lastUsedAt: now })
+    .values({
+      userId: c.get('user').id,
+      token: input.token,
+      device: input.device ?? null,
+      locale: input.locale,
+      lastUsedAt: now,
+    })
     .onConflictDoUpdate({
       target: schema.pushToken.token,
-      set: { userId: c.get('user').id, device: input.device ?? null, lastUsedAt: now },
+      set: { userId: c.get('user').id, device: input.device ?? null, locale: input.locale, lastUsedAt: now },
     });
   return c.json({ ok: true });
 });

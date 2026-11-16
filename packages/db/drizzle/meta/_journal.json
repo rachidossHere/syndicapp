@@ -78,6 +78,13 @@
       "when": 1794824349320,
       "tag": "0010_push_tokens_preferences",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1794843257599,
+      "tag": "0011_sour_thunderbolt",
+      "breakpoints": true
     }
   ]
 }
