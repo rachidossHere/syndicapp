@@ -71,6 +71,13 @@
       "when": 1794744806632,
       "tag": "0009_issue_photo_key_unique",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1794824349320,
+      "tag": "0010_push_tokens_preferences",
+      "breakpoints": true
     }
   ]
 }

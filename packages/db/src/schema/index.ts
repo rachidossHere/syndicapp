@@ -5,4 +5,5 @@ export * from './auth';
 export * from './charges';
 export * from './expenses';
 export * from './issues';
+export * from './notifications';
 export * from './residence';
