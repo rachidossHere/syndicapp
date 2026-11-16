@@ -8,7 +8,7 @@
 // - si le jeton est indisponible (Expo Go, pas de projectId, réseau…), seul un CODE d'erreur est
 //   journalisé, jamais le jeton, et l'enregistrement est retenté à la prochaine ouverture de l'appli ;
 // - aucune de ces fonctions ne lève d'erreur vers l'écran : un échec ne se voit pas et ne plante pas.
-import { can, type NotificationType, type Role } from '@syndic/shared';
+import { can, type Language, type NotificationType, type Role } from '@syndic/shared';
 
 export type PermissionState = 'granted' | 'denied' | 'undetermined';
 
@@ -26,6 +26,14 @@ export type PushDeps = {
   /** Journal : un code d'erreur seulement. */
   logCode: (code: string) => void;
 };
+
+/**
+ * Corps de POST /api/push-tokens : le jeton, l'appareil et la langue de l'appli (fr ou ar), que
+ * l'API utilise pour choisir le texte des notifications.
+ */
+export function pushTokenBody(token: string, language: Language, device?: string | null) {
+  return { token, locale: language, device: device ?? undefined };
+}
 
 /** Jeton de la session de l'appli, en mémoire seulement. */
 let currentToken: string | null = null;

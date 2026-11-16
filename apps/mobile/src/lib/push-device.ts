@@ -10,7 +10,8 @@ import * as Notifications from 'expo-notifications';
 import * as SecureStore from 'expo-secure-store';
 
 import { apiFetch } from './api';
-import type { IntroStore, PermissionState, PushDeps } from './push-registration';
+import { readStoredLanguage } from './language';
+import { pushTokenBody, type IntroStore, type PermissionState, type PushDeps } from './push-registration';
 
 const INTRO_SEEN_KEY = 'syndic.pushIntroSeen';
 
@@ -37,7 +38,7 @@ export const pushDeps: PushDeps = {
   sendToken: async (token) => {
     await apiFetch('/api/push-tokens', {
       method: 'POST',
-      body: JSON.stringify({ token, device: Device.deviceName ?? Device.modelName ?? undefined }),
+      body: JSON.stringify(pushTokenBody(token, readStoredLanguage(), Device.deviceName ?? Device.modelName)),
     });
   },
   deleteToken: async (token) => {

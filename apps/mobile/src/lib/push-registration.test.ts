@@ -7,6 +7,7 @@ import {
   enablePush,
   notificationRows,
   permissionNotice,
+  pushTokenBody,
   registerPushToken,
   resetPushStateForTests,
   runPushStartup,
@@ -293,5 +294,20 @@ describe('écran « Notifications » : lignes selon le rôle', () => {
     expect(permissionNotice('denied')).toBe('open_settings');
     expect(permissionNotice('undetermined')).toBe('enable');
     expect(permissionNotice('granted')).toBe('none');
+  });
+});
+
+describe('langue envoyée avec le jeton', () => {
+  it('le corps de POST /api/push-tokens porte la langue de l’appli (fr ou ar)', () => {
+    expect(pushTokenBody('ExponentPushToken[abc]', 'ar', 'iPhone')).toEqual({
+      token: 'ExponentPushToken[abc]',
+      locale: 'ar',
+      device: 'iPhone',
+    });
+    expect(pushTokenBody('ExponentPushToken[abc]', 'fr', null)).toEqual({
+      token: 'ExponentPushToken[abc]',
+      locale: 'fr',
+      device: undefined,
+    });
   });
 });
