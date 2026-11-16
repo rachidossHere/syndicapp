@@ -21,6 +21,6 @@ describe('audiences et données de notification', () => {
     expect(notificationAudienceSchema.safeParse({ kind: 'everyone' }).success).toBe(false);
   });
   it('les données ne portent qu’un identifiant d’élément', () => {
-    expect(notificationDataSchema.parse({ itemId: crypto.randomUUID(), title: 'Coupure d’eau' })).not.toHaveProperty('title');
+    expect(notificationDataSchema.parse({ itemId: '0b5f0c8e-1c1e-4c8e-9a53-6f1d2a7b9c10', title: 'Coupure d’eau' })).not.toHaveProperty('title');
   });
 });
