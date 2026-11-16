@@ -147,6 +147,7 @@ syndicapp/
       src/services/               → logique métier partagée (caisse, charges, invitations, résidences)
       src/storage/r2.ts           → client Cloudflare R2 (URL signées, seul endroit)
       src/receipts/               → génération et stockage des reçus PDF
+      src/notify/                 → envoi des notifications push (notify, textes FR/AR, Expo, reçus) : seul point d'envoi
       src/issue-errors.ts         → refus de l'API des signalements (clés de traduction, statuts HTTP)
   packages/
     db/                           → client Neon, schéma Drizzle, migrations (@syndic/db)
@@ -211,7 +212,7 @@ syndicapp/
 - Toute route de Better Auth ouverte doit passer par nos validations Zod ; une nouvelle route ne s'ouvre qu'avec l'accord de Rachid.
 - L'IP du client est fixée par l'API (`src/client-ip.ts`) pour la limitation des tentatives : adresse de la connexion par défaut ; `CLIENT_IP_HEADER` uniquement derrière un proxy de confiance, dont on prend la dernière adresse.
 - Toute création possible hors ligne (paiement, dépense) accepte un `client_id` et est **idempotente**.
-- Toute notification passe par le module `notify`.
+- Toute notification passe par le module `notify` (`apps/api/src/notify/`) ; jamais de montant, de nom ni de numéro de lot dans le texte d'une notification.
 
 ### Mobile (Expo)
 - **Aucune couleur, taille de police, espacement ou rayon codé en dur** dans `apps/mobile` : utiliser les jetons et composants de `@syndic/ui`. Un besoin non couvert se traite en ajoutant un jeton ou un composant au package.
@@ -248,7 +249,7 @@ syndicapp/
 - Factures, reçus et photos dans R2 accessibles uniquement par URL signées de courte durée. Rien n'est public.
 - Un locataire ne voit jamais les comptes ni les paiements. Un copropriétaire ne voit que les dus et reçus de son lot.
 - Le journal des mouvements montre « Charge reçue · B12 », jamais le nom de la personne qui a payé.
-- **Notifications** : jamais de montant, de nom ni de numéro de lot dans le texte (visible sur l'écran verrouillé). Jetons push supprimés à la déconnexion et quand Expo les signale invalides.
+- **Notifications** : jamais de montant, de nom ni de numéro de lot dans le texte (visible sur l'écran verrouillé). Jetons push supprimés à la déconnexion et quand Expo les signale invalides (tickets et reçus).
 - **PostHog** : uniquement les événements et propriétés de `packages/shared/src/analytics.ts`, identifiants hachés, après consentement. Jamais de nom, e-mail, téléphone, lot, montant, texte libre, nom ou adresse de résidence. Pas de replay ni d'autocapture des clics.
 - **Sentry** : `sendDefaultPii: false`, aucune donnée personnelle dans les erreurs.
 

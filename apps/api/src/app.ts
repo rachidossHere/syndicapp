@@ -12,6 +12,7 @@ import { describeError, formatErrorSummary } from './error-log';
 import { loggablePath, requestLogger } from './middleware/request-logger';
 import { cash } from './routes/cash';
 import { chargeCalls } from './routes/charge-calls';
+import { devNotifications } from './routes/dev-notifications';
 import { expenses } from './routes/expenses';
 import { health } from './routes/health';
 import { invitations } from './routes/invitations';
@@ -56,6 +57,10 @@ app.route('/api/cash', cash);
 // Liés à l'utilisateur, pas à une résidence : requireAuth seulement (plan 08).
 app.route('/api/push-tokens', pushTokens);
 app.route('/api/notification-preferences', notificationPreferences);
+// Réservé au développement : jamais monté en production.
+if (!isProduction) {
+  app.route('/api/dev/notifications', devNotifications);
+}
 
 app.notFound((c) => c.json({ error: 'not_found' }, 404));
 

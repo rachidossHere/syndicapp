@@ -174,6 +174,8 @@ describe.skipIf(!configured)('Vérification du plan 07', { timeout: 300_000 }, (
       'DELETE /api/push-tokens',
       'GET /api/notification-preferences',
       'PUT /api/notification-preferences',
+      // Réservé au développement (non monté en production) : requireAuth seulement.
+      'POST /api/dev/notifications/test',
     ]);
     const PUBLIC = (key: string) => key.startsWith('GET /health') || key.includes('/api/auth/');
     const normalize = (path: string) => path.replace(/:\w+/g, ':id');
