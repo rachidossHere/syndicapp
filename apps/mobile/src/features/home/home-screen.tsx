@@ -4,6 +4,7 @@
 import { AUTH_ERROR_KEYS, can, type AuthErrorKey } from '@syndic/shared';
 import { Banner, Button, Card, Chip, Icon, ListItem, Screen, Text, Toast, useTheme } from '@syndic/ui';
 import { useRouter } from 'expo-router';
+import Bell from 'lucide-react-native/icons/bell';
 import Building from 'lucide-react-native/icons/building';
 import ChartColumn from 'lucide-react-native/icons/chart-column';
 import Flag from 'lucide-react-native/icons/flag';
@@ -336,6 +337,29 @@ export function HomeScreen() {
       )}
 
       {content}
+
+      {/* Notifications : réglages liés à la personne, disponibles même sans résidence. */}
+      {me.data !== undefined && (
+        <ListItem
+          title={t('home.notifications')}
+          subtitle={t('home.notificationsBody')}
+          leading={
+            <View
+              style={{
+                width: sizes.iconBox,
+                height: sizes.iconBox,
+                borderRadius: radius.sm,
+                borderCurve: 'continuous',
+                backgroundColor: colors.primarySoft,
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}>
+              <Icon icon={Bell} color={colors.primary} />
+            </View>
+          }
+          onPress={() => router.push('/notifications')}
+        />
+      )}
     </Screen>
   );
 }

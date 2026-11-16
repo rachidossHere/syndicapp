@@ -45,7 +45,13 @@ Configure `eas.json` (profils, variables par profil, canal EAS Update), l'icône
 
 Terminé quand : l'appli de production s'installe depuis le lien de test fermé et se connecte à l'API de production.
 
-### 4. Lancement du pilote
+### 4. Valider les notifications push réelles
+
+Reporté du plan 08 : les push distants ne sont pas testables dans Expo Go. Lance `eas init` pour obtenir le `projectId` et l'ajouter à la configuration, configure la clé APNs (iOS) ou FCM (Android) selon le choix, puis installe un development build ou le build `preview` sur un téléphone. Teste de bout en bout chaque événement du plan 08 : nouvelle annonce, annonce urgente, changement de statut d'un signalement, signalement urgent, relance d'impayé, encaissement. Vérifie aussi l'enregistrement du jeton après « Activer » et sa suppression à la déconnexion.
+
+Terminé quand : chaque événement du plan 08 arrive sur un téléphone réel chez les bons destinataires uniquement, et le jeton est supprimé à la déconnexion.
+
+### 5. Lancement du pilote
 
 Rédige `docs/pilote.md` : liste des résidences pilotes, contact de chaque syndic, guide de démarrage en une page (FR et AR) pour le syndic, liste des indicateurs à suivre dans PostHog, et rendez-vous de bilan à 2 et 4 semaines. Active les feature flags des résidences pilotes.
 

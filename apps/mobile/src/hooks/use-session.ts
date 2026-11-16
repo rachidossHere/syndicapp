@@ -13,6 +13,8 @@ import { authClient } from '@/lib/auth-client';
 import { toAuthResult, type AuthResult } from '@/lib/auth-errors';
 import { currentNetworkErrorKey } from '@/lib/network';
 import { isFetchFailure } from '@/lib/network-errors';
+import { pushDeps } from '@/lib/push-device';
+import { signOutWithPushCleanup, unregisterPushToken } from '@/lib/push-registration';
 import { markJustSignedUp } from '@/lib/welcome-flag';
 
 import { ME_QUERY_KEY } from './use-me';
@@ -72,7 +74,12 @@ export function useSession() {
 
   /** Déconnexion. Sans réseau, la session reste ouverte et une erreur traduite est renvoyée. */
   const signOut = async (): Promise<AuthResult> => {
-    const { error } = await callClient(() => authClient.signOut());
+    // Le jeton push est supprimé côté API AVANT la fin de la session (l'API exige la session) ;
+    // si l'appel échoue ou tarde, la déconnexion se fait quand même (jamais de jeton sans compte).
+    const { error } = await signOutWithPushCleanup({
+      unregister: () => unregisterPushToken(pushDeps),
+      signOut: () => callClient(() => authClient.signOut()),
+    });
     if (!error) {
       // Rien de l'utilisateur précédent ne doit rester : résidences, appartements, invitations.
       queryClient.clear();

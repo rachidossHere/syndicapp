@@ -4,6 +4,7 @@ import { frChargeTexts } from './fr-charges';
 import { frAccountTexts } from './fr-accounts';
 import { frExpenseTexts } from './fr-expenses';
 import { frIssueTexts } from './fr-issues';
+import { frNotificationTexts } from './fr-notifications';
 import { frResidenceTexts } from './fr-residences';
 
 /** Erreurs d'authentification (clés de @syndic/shared) : le typage exige une traduction pour chacune. */
@@ -33,6 +34,7 @@ export const fr = {
   ...frChargeTexts,
   ...frExpenseTexts,
   ...frIssueTexts,
+  ...frNotificationTexts,
   ...frAccountTexts,
 
   'common.back': 'Retour',

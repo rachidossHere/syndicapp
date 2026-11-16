@@ -6,5 +6,6 @@ export * from './invitations';
 export * from './issues';
 export * from './language';
 export * from './money';
+export * from './notifications';
 export * from './residences';
 export * from './roles';
