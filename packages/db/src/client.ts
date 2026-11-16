@@ -28,7 +28,19 @@ export function getDb(): Database {
     );
   }
 
-  pool = new Pool({ connectionString: url });
+  pool = new Pool({
+    connectionString: url,
+    // Neon coupe les connexions inactives (veille) : on ne garde pas longtemps une connexion
+    // inutilisée, et on n'attend pas indéfiniment une connexion qui ne s'établit pas.
+    idleTimeoutMillis: 10_000,
+    connectionTimeoutMillis: 15_000,
+  });
+  // Une connexion inactive coupée par le réseau ou par Neon émet 'error' sur le pool : sans
+  // gestionnaire, l'erreur est « non gérée » et peut arrêter le processus. Le pool la retire et en
+  // ouvre une nouvelle à la prochaine requête. Journal : nom et code seulement, jamais de requête.
+  pool.on('error', (error: Error & { code?: string }) => {
+    console.error(`[db] connexion du pool perdue (${error.name}${error.code ? ` ${error.code}` : ''})`);
+  });
   instance = drizzle({ client: pool, schema });
   return instance;
 }
