@@ -8,14 +8,16 @@ Le syndic publie une annonce (coupure d'eau, réunion, travaux) que tous les mem
 
 ## Décisions
 
-- Table `announcement` (titre, texte, catégorie : `travaux`, `assemblee`, `info`, `urgent`, auteur, date, épinglée oui/non) et `push_token` (utilisateur, jeton Expo, appareil, dernière utilisation).
+- Table `announcement` (titre, texte, catégorie : `works`, `meeting`, `info`, `urgent`, auteur, date, épinglée oui/non) et `push_token` (utilisateur, jeton Expo, appareil, dernière utilisation).
 - Qui publie : `syndic` et `adjoint`. Tout le monde lit.
 - Notifications avec **Expo Push Notifications** (`expo-notifications`), envoyées par l'API via le SDK `expo-server-sdk`.
 - Événements notifiés : nouvelle annonce (tous les membres), changement de statut de mon signalement (auteur), nouveau signalement urgent (syndic, adjoint, gardien), relance d'impayé (copropriétaires du lot), encaissement de mon paiement (copropriétaires du lot).
 - Relance : déclenchée **à la main** par le syndic (un lot ou tous les impayés), au maximum une fois tous les 3 jours par lot.
 - Contenu des notifications : jamais de montant ni de nom dans le texte de la notification (visible sur l'écran verrouillé). Exemple : « Un rappel de charges vous attend dans SyndicApp ».
 - Envoi asynchrone : l'API enregistre la notification à envoyer et la traite après la réponse, sans bloquer la requête. Les jetons invalides renvoyés par Expo sont supprimés.
-- Préférences : l'utilisateur peut couper chaque type de notification sauf les annonces urgentes.
+- Préférences : l'utilisateur peut couper chaque type de notification sauf les annonces urgentes. Types : `announcement`, `announcement_urgent` (non désactivable), `issue_status`, `issue_urgent`, `charge_reminder`, `payment_received`.
+- `push_token` et `notification_preference` sont liés à l'utilisateur, pas à une résidence : leurs routes n'exigent que `requireAuth` et filtrent toujours sur l'utilisateur connecté (pas d'en-tête `X-Residence-Id`).
+- Push réels non testables dans Expo Go sur iPhone : validation reportée au plan 12. En attendant, l'envoi est testé avec un faux client Expo, et le toucher d'une notification avec une notification locale.
 
 ## Hors périmètre
 
@@ -30,19 +32,21 @@ Le syndic publie une annonce (coupure d'eau, réunion, travaux) que tous les mem
 
 Installe `expo-notifications`, demande l'autorisation après la connexion (avec un écran d'explication avant la demande système), enregistre le jeton via `POST /push-tokens`, et supprime-le à la déconnexion. Crée `push_token` et `notification_preference`, migration sur `dev`.
 
-Terminé quand : le jeton du téléphone est enregistré et retiré à la déconnexion.
+Si le jeton est indisponible (Expo Go, pas de projectId), seul un code d'erreur est journalisé (jamais de jeton) et l'enregistrement est retenté à la prochaine ouverture de l'appli.
+
+Terminé quand : un test mobile où `getExpoPushTokenAsync` est simulé montre que le jeton est envoyé à `POST /api/push-tokens` après « Activer », puis supprimé à la déconnexion ; et, sur l'iPhone dans Expo Go, l'écran 1 s'affiche une fois, la demande système apparaît, l'écran 2 fonctionne (interrupteurs enregistrés, urgent verrouillé) et l'échec d'obtention du jeton est géré sans erreur visible ni plantage.
 
 ### 2. Service d'envoi
 
 Dans `apps/api`, crée un module `notify(residenceId, audience, type, payload)` qui choisit les destinataires selon le rôle et les préférences, envoie par lots via `expo-server-sdk`, lit les reçus et supprime les jetons invalides. Ajoute un endpoint de test réservé au développement.
 
-Terminé quand : une notification de test arrive sur le téléphone.
+Terminé quand : l'envoi par lots, la lecture des reçus et la suppression des jetons invalides sont prouvés par des tests avec `expo-server-sdk` simulé (la réception sur téléphone est validée au plan 12).
 
 ### 3. Annonces
 
 Routes `POST /announcements`, `GET /announcements`, `POST /announcements/:id/pin`. Écrans : liste des annonces (épinglées en tête), création par le syndic, carte « Dernière annonce » sur l'accueil. Publier une annonce notifie tous les membres.
 
-Terminé quand : une annonce publiée arrive en notification sur un second compte et s'ouvre sur son détail au toucher.
+Terminé quand : une annonce publiée déclenche l'envoi aux bons destinataires (faux client Expo), et l'ouverture de son détail au toucher est prouvée avec une notification locale portant la même donnée.
 
 ### 4. Branchement des autres événements
 
