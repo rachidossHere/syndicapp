@@ -18,6 +18,8 @@ import { invitations } from './routes/invitations';
 import { issues } from './routes/issues';
 import { lots } from './routes/lots';
 import { me } from './routes/me';
+import { notificationPreferences } from './routes/notification-preferences';
+import { pushTokens } from './routes/push-tokens';
 import { payments } from './routes/payments';
 import { receipts } from './routes/receipts';
 import { residences } from './routes/residences';
@@ -51,6 +53,9 @@ app.route('/api/receipts', receipts);
 app.route('/api/expenses', expenses);
 app.route('/api/issues', issues);
 app.route('/api/cash', cash);
+// Liés à l'utilisateur, pas à une résidence : requireAuth seulement (plan 08).
+app.route('/api/push-tokens', pushTokens);
+app.route('/api/notification-preferences', notificationPreferences);
 
 app.notFound((c) => c.json({ error: 'not_found' }, 404));
 

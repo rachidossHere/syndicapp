@@ -169,6 +169,11 @@ describe.skipIf(!configured)('Vérification du plan 07', { timeout: 300_000 }, (
       'POST /api/residences',
       'GET /api/invitations/preview/:id',
       'POST /api/invitations/accept/:id',
+      // Liés à l'utilisateur, pas à une résidence (plan 08) : requireAuth seulement.
+      'POST /api/push-tokens',
+      'DELETE /api/push-tokens',
+      'GET /api/notification-preferences',
+      'PUT /api/notification-preferences',
     ]);
     const PUBLIC = (key: string) => key.startsWith('GET /health') || key.includes('/api/auth/');
     const normalize = (path: string) => path.replace(/:\w+/g, ':id');
