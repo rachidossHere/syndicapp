@@ -1,6 +1,6 @@
 # 01 · Mise en place du projet
 
-Statut : brouillon
+Statut : terminé
 
 ## Objectif
 

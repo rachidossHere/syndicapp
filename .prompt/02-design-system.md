@@ -1,6 +1,6 @@
 # 02 · Design system
 
-Statut : brouillon
+Statut : terminé
 
 ## Objectif
 
