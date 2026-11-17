@@ -6,6 +6,8 @@ import {
   EXPENSE_ERRORS,
   DUE_STATUS_LABEL_KEYS,
   INVITATION_ERRORS,
+  LOT_BLOCKER_ERRORS,
+  LOT_ERRORS,
   PAYMENT_METHOD_LABEL_KEYS,
   ROLE_LABEL_KEYS,
 } from '@syndic/shared';
@@ -122,6 +124,23 @@ describe('traductions', () => {
     expect(translate('fr', 'expenses.date.display', { day: 8, month: fr['charges.dateMonthsShort.11'], year: 2026 })).toMatch(
       /^8 nov/,
     );
+  });
+
+  it('traduit les textes de la génération rapide, de la fiche et des refus des appartements', () => {
+    const lotKeys = Object.keys(fr).filter((key) => key.startsWith('lot.') || key.startsWith('lots.'));
+    expect(lotKeys.length).toBeGreaterThan(60);
+    for (const key of [...Object.values(LOT_ERRORS), 'lots.building.existing', 'lots.createNothing', 'lot.save', 'lot.delete']) {
+      expect(fr[key as keyof typeof fr], `fr : ${key}`).toBeTruthy();
+      expect(ar[key as keyof typeof ar], `ar : ${key}`).toMatch(ARABIC_LETTER);
+    }
+    // Chaque obstacle à la suppression a un message dans les deux langues.
+    for (const key of Object.values(LOT_BLOCKER_ERRORS)) {
+      expect(fr[key]).toContain('ne peut pas être supprimé');
+      expect(ar[key]).toMatch(ARABIC_LETTER);
+    }
+    expect(fr['lot.save']).toBe('Modifier la référence');
+    expect(fr['lot.delete']).toBe('Supprimer l’appartement');
+    expect(fr['lots.building.existing']).toBe('déjà créé');
   });
 
   it('a exactement les mêmes clés en français et en arabe', () => {
