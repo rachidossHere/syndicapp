@@ -1,4 +1,4 @@
-import type { LotStatus, LotType } from '@syndic/shared';
+import type { BulkLotsResult, LotDeleteBlocker, LotStatus, LotType } from '@syndic/shared';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { apiFetch, inResidence } from '@/lib/api';
@@ -12,6 +12,8 @@ export type Lot = {
   floor: number | null;
   type: LotType;
   status: LotStatus;
+  /** Ce qui empêche de supprimer l'appartement (membre, invitation, paiement, charge, signalement), ou `null`. */
+  deleteBlocker: LotDeleteBlocker | null;
 };
 
 /** Lots de la résidence active, triés par référence, avec leur statut. */
@@ -35,12 +37,31 @@ export function useCreateLot(residenceId: string | undefined) {
   });
 }
 
-/** Génération rapide (POST /api/lots/bulk) : tout ou rien. */
+/** Génération rapide (POST /api/lots/bulk) : les références qui existent déjà sont ignorées. */
 export function useCreateBulkLots(residenceId: string | undefined) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (input: BulkLots) =>
-      apiFetch<{ count: number }>('/api/lots/bulk', inResidence(residenceId, { method: 'POST', body: JSON.stringify(input) })),
+      apiFetch<BulkLotsResult>('/api/lots/bulk', inResidence(residenceId, { method: 'POST', body: JSON.stringify(input) })),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: lotsQueryKey(residenceId ?? 'none') }),
+  });
+}
+
+/** Modification de la référence d'un appartement (PATCH /api/lots/:id). */
+export function useUpdateLot(residenceId: string | undefined) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, reference }: { id: string; reference: string }) =>
+      apiFetch<unknown>(`/api/lots/${id}`, inResidence(residenceId, { method: 'PATCH', body: JSON.stringify({ reference }) })),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: lotsQueryKey(residenceId ?? 'none') }),
+  });
+}
+
+/** Suppression d'un appartement vide (DELETE /api/lots/:id). */
+export function useDeleteLot(residenceId: string | undefined) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => apiFetch<void>(`/api/lots/${id}`, inResidence(residenceId, { method: 'DELETE' })),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: lotsQueryKey(residenceId ?? 'none') }),
   });
 }

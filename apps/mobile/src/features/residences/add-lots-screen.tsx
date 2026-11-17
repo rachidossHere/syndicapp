@@ -1,11 +1,11 @@
 // Écran 2 de docs/residences.png : ajouter les appartements (génération rapide ou un par un).
-import { bulkLotsSchema, generateBulkLots, MAX_BULK_LOTS, type BulkLotsShape } from '@syndic/shared';
 import {
   Badge,
   Banner,
   Button,
   Card,
   Chip,
+  IconButton,
   Screen,
   SegmentedControl,
   Stepper,
@@ -15,23 +15,34 @@ import {
   useTheme,
 } from '@syndic/ui';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import X from 'lucide-react-native/icons/x';
 import { useEffect, useMemo, useState } from 'react';
 import { View } from 'react-native';
 
+import { ErrorNotice } from '@/components/network-error';
 import { AuthHeader } from '@/features/auth/auth-header';
-import { useCreateBulkLots, useCreateLot } from '@/hooks/use-lots';
+import { useCreateBulkLots, useCreateLot, useLots } from '@/hooks/use-lots';
 import { useActiveResidence } from '@/hooks/use-residences';
-import type { TranslationKey } from '@/i18n/translate';
 import { useT } from '@/i18n/use-t';
 import { ApiError } from '@/lib/api';
 import { apiErrorKey } from '@/lib/api-errors';
-import { previewReferences } from '@/lib/invite-code';
+import { setFlashMessage } from '@/lib/flash-message';
+import {
+  addBuilding,
+  buildingChips,
+  createButton,
+  existingBuildings,
+  generationSummary,
+  initialBuildingState,
+  planGeneration,
+  previewCreated,
+  removeAddedBuilding,
+  toggleBuilding,
+  type BuildingState,
+} from '@/lib/lot-generation';
 
 type Mode = 'bulk' | 'single';
-type BuildingChoice = { name: string; included: boolean };
-type BulkIssue = 'lots.errors.noBuilding' | 'lots.errors.floors' | 'lots.errors.tooMany' | 'lots.errors.invalid';
 
-const BUILDING_PATTERN = /^[A-Za-z0-9]{1,4}$/;
 const FLOOR_PATTERN = /^\d{1,3}$/;
 /** Appartements par étage proposés au maximum par le compteur. */
 const MAX_PER_FLOOR = 20;
@@ -39,21 +50,6 @@ const MAX_PER_FLOOR = 20;
 const TOAST_MS = 3000;
 /** Nombre maximal de références en conflit citées dans le message. */
 const MAX_CITED_CONFLICTS = 10;
-
-type BulkDraft = { buildings: string[]; floorFrom: string; floorTo: string; perFloor: number };
-
-/** Clé d'erreur d'un réglage de génération invalide, ou `undefined` s'il est valide. */
-function bulkIssue(draft: BulkDraft): BulkIssue | undefined {
-  if (draft.buildings.length === 0) return 'lots.errors.noBuilding';
-  if (!FLOOR_PATTERN.test(draft.floorFrom) || !FLOOR_PATTERN.test(draft.floorTo)) return 'lots.errors.floors';
-  const floorFrom = Number(draft.floorFrom);
-  const floorTo = Number(draft.floorTo);
-  if (floorFrom > floorTo) return 'lots.errors.floors';
-  const count = draft.buildings.length * (floorTo - floorFrom + 1) * draft.perFloor;
-  if (count > MAX_BULK_LOTS) return 'lots.errors.tooMany';
-  const parsed = bulkLotsSchema.safeParse({ buildings: draft.buildings, floorFrom, floorTo, perFloor: draft.perFloor });
-  return parsed.success ? undefined : 'lots.errors.invalid';
-}
 
 function conflictText(references: readonly string[]): string {
   const cited = references.slice(0, MAX_CITED_CONFLICTS).join(', ');
@@ -67,6 +63,7 @@ export function AddLotsScreen() {
   const { onboarding } = useLocalSearchParams<{ onboarding?: string }>();
   const isOnboarding = onboarding === '1';
   const { active } = useActiveResidence();
+  const lots = useLots(active?.id);
   const createBulk = useCreateBulkLots(active?.id);
   const createLot = useCreateLot(active?.id);
 
@@ -75,9 +72,10 @@ export function AddLotsScreen() {
   const [toast, setToast] = useState<string | undefined>();
 
   // Génération rapide
-  const [buildings, setBuildings] = useState<BuildingChoice[]>([{ name: 'A', included: true }]);
+  const [choice, setChoice] = useState<BuildingState | undefined>();
   const [addingBuilding, setAddingBuilding] = useState(false);
   const [newBuilding, setNewBuilding] = useState('');
+  const [newBuildingError, setNewBuildingError] = useState<string | undefined>();
   const [floorFrom, setFloorFrom] = useState('1');
   const [floorTo, setFloorTo] = useState('4');
   const [perFloor, setPerFloor] = useState(3);
@@ -94,19 +92,21 @@ export function AddLotsScreen() {
     return () => clearTimeout(timer);
   }, [toast]);
 
-  const included = useMemo(() => buildings.filter((b) => b.included).map((b) => b.name), [buildings]);
-  const issue = bulkIssue({ buildings: included, floorFrom, floorTo, perFloor });
-  const generated = useMemo(() => {
-    if (issue !== undefined) return [];
-    const shape: BulkLotsShape = {
-      buildings: included,
-      floorFrom: Number(floorFrom),
-      floorTo: Number(floorTo),
-      perFloor,
-    };
-    return generateBulkLots(shape).map((lot) => lot.reference);
-  }, [issue, included, floorFrom, floorTo, perFloor]);
-  const preview = previewReferences(generated);
+  // Les bâtiments et références déjà créés viennent des appartements de la résidence.
+  const existing = useMemo(() => existingBuildings(lots.data ?? []), [lots.data]);
+  const existingReferences = useMemo(() => (lots.data ?? []).map((lot) => lot.reference), [lots.data]);
+  // Tant que l'utilisateur n'a rien touché, l'état de départ suit les appartements chargés :
+  // les bâtiments existants ne sont pas cochés, une résidence vide propose « A ».
+  const state = choice ?? initialBuildingState(existing);
+  const chips = useMemo(() => buildingChips(existing, state), [existing, state]);
+  const selectedBuildings = chips.filter((chip) => chip.selected).map((chip) => chip.name);
+
+  const plan = planGeneration({ buildings: selectedBuildings, floorFrom, floorTo, perFloor }, existingReferences);
+  const toCreate = plan.issue === undefined ? plan.toCreate : [];
+  const skipped = plan.issue === undefined ? plan.skipped : 0;
+  const button = createButton(toCreate.length);
+  const summary = generationSummary(toCreate.length, skipped);
+  const preview = previewCreated(toCreate);
 
   const busy = createBulk.isPending || createLot.isPending;
 
@@ -117,15 +117,15 @@ export function AddLotsScreen() {
   };
   const finish = () => router.replace('/lots');
 
-  const addBuilding = () => {
-    const name = newBuilding.trim().toUpperCase();
-    if (!BUILDING_PATTERN.test(name)) return;
-    setBuildings((current) =>
-      current.some((b) => b.name === name)
-        ? current.map((b) => (b.name === name ? { ...b, included: true } : b))
-        : [...current, { name, included: true }],
-    );
+  const onAddBuilding = () => {
+    const result = addBuilding(existing, state, newBuilding);
+    if (result.name === undefined) {
+      setNewBuildingError(t('lots.building.invalid'));
+      return;
+    }
+    setChoice(result.state);
     setNewBuilding('');
+    setNewBuildingError(undefined);
     setAddingBuilding(false);
   };
 
@@ -138,18 +138,15 @@ export function AddLotsScreen() {
   };
 
   const onCreateBulk = async () => {
-    if (busy || issue !== undefined) return;
+    if (busy || plan.issue !== undefined || button.disabled) return;
     setError(undefined);
     try {
-      await createBulk.mutateAsync({
-        buildings: included,
-        floorFrom: Number(floorFrom),
-        floorTo: Number(floorTo),
-        perFloor,
-      });
+      await createBulk.mutateAsync(plan.shape);
+      // Retour à la liste : le toast s'y affiche, les compteurs sont déjà rechargés.
+      setFlashMessage('lots.toast.created');
       finish();
     } catch (caught) {
-      // Tout ou rien : rien n'a été créé, les réglages restent affichés pour être corrigés.
+      // Tout se fait dans une transaction : rien n'a été créé, les réglages restent affichés.
       setError(errorMessage(caught));
     }
   };
@@ -182,9 +179,7 @@ export function AddLotsScreen() {
     }
   };
 
-  const bulkLabel =
-    generated.length === 1 ? t('lots.createBulkOne') : t('lots.createBulk', { count: generated.length });
-  const issueKey: TranslationKey | undefined = issue;
+  const bulkReady = lots.data !== undefined;
 
   return (
     <Screen
@@ -192,8 +187,8 @@ export function AddLotsScreen() {
       footer={
         mode === 'bulk' ? (
           <Button
-            label={issue === undefined ? bulkLabel : t('lots.createBulk', { count: 0 })}
-            disabled={issue !== undefined}
+            label={t(button.key, button.params)}
+            disabled={!bulkReady || plan.issue !== undefined || button.disabled}
             loading={createBulk.isPending}
             onPress={() => void onCreateBulk()}
           />
@@ -235,100 +230,132 @@ export function AddLotsScreen() {
       />
 
       {mode === 'bulk' ? (
-        <View style={{ gap: spacing.lg }}>
-          <View style={{ gap: spacing.sm }}>
-            <Text variant="bodyStrong">{t('lots.buildings')}</Text>
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
-              {buildings.map((b) => (
+        !bulkReady ? (
+          lots.error ? (
+            <ErrorNotice
+              errorKey={apiErrorKey(lots.error)}
+              onRetry={() => void lots.refetch()}
+              retrying={lots.isFetching}
+            />
+          ) : (
+            <Text tone="muted">{t('common.loading')}</Text>
+          )
+        ) : (
+          <View style={{ gap: spacing.lg }}>
+            <View style={{ gap: spacing.sm }}>
+              <Text variant="bodyStrong">{t('lots.buildings')}</Text>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
+                {chips.map((chip) => (
+                  <View key={chip.name} style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
+                    <Chip
+                      label={chip.existing ? `${chip.name} · ${t('lots.building.existing')}` : chip.name}
+                      selected={chip.selected}
+                      onPress={() => setChoice(toggleBuilding(state, chip.name))}
+                    />
+                    {chip.removable && (
+                      <IconButton
+                        icon={X}
+                        accessibilityLabel={t('lots.building.remove', { name: chip.name })}
+                        onPress={() => setChoice(removeAddedBuilding(existing, state, chip.name))}
+                      />
+                    )}
+                  </View>
+                ))}
                 <Chip
-                  key={b.name}
-                  label={b.name}
-                  selected={b.included}
-                  onPress={() =>
-                    setBuildings((current) =>
-                      current.map((item) => (item.name === b.name ? { ...item, included: !item.included } : item)),
-                    )
-                  }
+                  label={`+ ${t('lots.addBuilding')}`}
+                  selected={addingBuilding}
+                  onPress={() => {
+                    setAddingBuilding((open) => !open);
+                    setNewBuildingError(undefined);
+                  }}
                 />
-              ))}
-              <Chip label={`+ ${t('lots.addBuilding')}`} onPress={() => setAddingBuilding((open) => !open)} />
+              </View>
+              {addingBuilding && (
+                <View style={{ gap: spacing.sm }}>
+                  <TextField
+                    label={t('lots.newBuilding')}
+                    helper={t('lots.newBuildingHelper')}
+                    value={newBuilding}
+                    onChangeText={(text) => {
+                      setNewBuilding(text.toUpperCase());
+                      setNewBuildingError(undefined);
+                    }}
+                    onSubmitEditing={onAddBuilding}
+                    error={newBuildingError}
+                    maxLength={4}
+                    ltr
+                    autoFocus
+                    autoCapitalize="characters"
+                    autoCorrect={false}
+                    returnKeyType="done"
+                  />
+                  <Button
+                    variant="secondary"
+                    label={t('lots.building.add')}
+                    disabled={newBuilding.trim() === ''}
+                    onPress={onAddBuilding}
+                  />
+                </View>
+              )}
             </View>
-            {addingBuilding && (
+
+            <View style={{ flexDirection: 'row', gap: spacing.md }}>
               <TextField
-                label={t('lots.newBuilding')}
-                helper={t('lots.newBuildingHelper')}
-                value={newBuilding}
-                onChangeText={setNewBuilding}
-                onSubmitEditing={addBuilding}
-                maxLength={4}
+                containerStyle={{ flex: 1 }}
+                label={t('lots.floorFrom')}
+                value={floorFrom}
+                onChangeText={setFloorFrom}
+                keyboardType="number-pad"
+                maxLength={3}
                 ltr
-                autoFocus
-                autoCapitalize="characters"
-                autoCorrect={false}
-                returnKeyType="done"
               />
+              <TextField
+                containerStyle={{ flex: 1 }}
+                label={t('lots.floorTo')}
+                value={floorTo}
+                onChangeText={setFloorTo}
+                keyboardType="number-pad"
+                maxLength={3}
+                ltr
+              />
+            </View>
+
+            <View style={{ gap: spacing.xs }}>
+              <Text variant="bodyStrong">{t('lots.perFloor')}</Text>
+              <Stepper
+                label={t('lots.perFloor')}
+                decreaseLabel={t('lots.decrease')}
+                increaseLabel={t('lots.increase')}
+                value={perFloor}
+                onChange={setPerFloor}
+                min={1}
+                max={MAX_PER_FLOOR}
+              />
+            </View>
+
+            {plan.issue !== undefined ? (
+              <Banner message={t(plan.issue)} />
+            ) : (
+              <Card>
+                <View style={{ gap: spacing.md }}>
+                  <Text variant="bodyStrong">{t(summary.key, summary.params)}</Text>
+                  {preview.shown.length > 0 && (
+                    // Les références se lisent toujours de gauche à droite, même en arabe.
+                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs, direction: 'ltr' }}>
+                      {preview.shown.map((ref) => (
+                        <Badge key={ref} label={ref} />
+                      ))}
+                      {preview.more > 0 && <Text variant="small" tone="muted">{t('lots.preview.more', { count: preview.more })}</Text>}
+                    </View>
+                  )}
+                  <Text variant="small" tone="muted">
+                    {t('lots.preview.hint')}
+                  </Text>
+                </View>
+              </Card>
             )}
           </View>
-
-          <View style={{ flexDirection: 'row', gap: spacing.md }}>
-            <TextField
-              containerStyle={{ flex: 1 }}
-              label={t('lots.floorFrom')}
-              value={floorFrom}
-              onChangeText={setFloorFrom}
-              keyboardType="number-pad"
-              maxLength={3}
-              ltr
-            />
-            <TextField
-              containerStyle={{ flex: 1 }}
-              label={t('lots.floorTo')}
-              value={floorTo}
-              onChangeText={setFloorTo}
-              keyboardType="number-pad"
-              maxLength={3}
-              ltr
-            />
-          </View>
-
-          <View style={{ gap: spacing.xs }}>
-            <Text variant="bodyStrong">{t('lots.perFloor')}</Text>
-            <Stepper
-              label={t('lots.perFloor')}
-              decreaseLabel={t('lots.decrease')}
-              increaseLabel={t('lots.increase')}
-              value={perFloor}
-              onChange={setPerFloor}
-              min={1}
-              max={MAX_PER_FLOOR}
-            />
-          </View>
-
-          {issueKey !== undefined ? (
-            <Banner message={t(issueKey)} />
-          ) : (
-            <Card>
-              <View style={{ gap: spacing.md }}>
-                <Text variant="bodyStrong">
-                  {generated.length === 1
-                    ? t('lots.preview.countOne')
-                    : t('lots.preview.count', { count: generated.length })}
-                </Text>
-                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs }}>
-                  {preview.shown.map((ref, index) => (
-                    <View key={ref} style={{ flexDirection: 'row', gap: spacing.xs }}>
-                      {preview.hasGap && index === 5 && <Badge label="…" />}
-                      <Badge label={ref} />
-                    </View>
-                  ))}
-                </View>
-                <Text variant="small" tone="muted">
-                  {t('lots.preview.hint')}
-                </Text>
-              </View>
-            </Card>
-          )}
-        </View>
+        )
       ) : (
         <View style={{ gap: spacing.md }}>
           <TextField
