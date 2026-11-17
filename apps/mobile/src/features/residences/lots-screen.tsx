@@ -10,12 +10,13 @@ import {
   Screen,
   Text,
   TextField,
+  Toast,
   useTheme,
 } from '@syndic/ui';
 import { Redirect, useRouter } from 'expo-router';
 import Building from 'lucide-react-native/icons/building';
 import Plus from 'lucide-react-native/icons/plus';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { View } from 'react-native';
 
 import { ErrorNotice } from '@/components/network-error';
@@ -26,12 +27,15 @@ import { useActiveResidence } from '@/hooks/use-residences';
 import { useT } from '@/i18n/use-t';
 import { ApiError } from '@/lib/api';
 import { apiErrorKey } from '@/lib/api-errors';
+import { setFlashMessage, useFlashMessage } from '@/lib/flash-message';
 import { daysUntil } from '@/lib/invite-code';
 
 import { useRoleLabel } from './use-role-label';
 
 type Filter = 'all' | LotStatus;
 const FILTERS: readonly Filter[] = ['all', 'member', 'pending', 'free'];
+/** Durée d'affichage du toast, en millisecondes. */
+const TOAST_MS = 3000;
 
 export function LotsScreen() {
   const { colors, radius, spacing, sizes } = useTheme();
@@ -44,6 +48,14 @@ export function LotsScreen() {
   const invitations = usePendingInvitations(active?.id, allowed);
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<Filter>('all');
+  // Confirmation déposée par l'écran de génération ou par la fiche (« Appartement supprimé »…).
+  const flash = useFlashMessage();
+  const toastKey = flash?.startsWith('lots.toast.') ? flash : undefined;
+  useEffect(() => {
+    if (toastKey === undefined) return;
+    const timer = setTimeout(() => setFlashMessage(undefined), TOAST_MS);
+    return () => clearTimeout(timer);
+  }, [toastKey]);
 
   const counts = useMemo(() => {
     const result: Record<Filter, number> = { all: 0, member: 0, pending: 0, free: 0 };
@@ -76,6 +88,7 @@ export function LotsScreen() {
 
   const goBack = () => (router.canGoBack() ? router.back() : router.replace('/home'));
   const filterLabel = (value: Filter) => t(`lots.filter.${value}`, { count: counts[value] });
+  const openLot = (lot: Lot) => router.push({ pathname: '/lot/[id]', params: { id: lot.id } });
   const inviteLot = (lot: Lot) => router.push({ pathname: '/invite-neighbor', params: { lotId: lot.id } });
 
   const renderRow = (lot: Lot) => {
@@ -105,6 +118,8 @@ export function LotsScreen() {
           title={t('lots.row.memberTitle')}
           subtitle={t('lots.row.memberSubtitle')}
           trailing={<Badge tone="success" label={t('lots.status.member')} />}
+          accessibilityLabel={t('lots.row.open', { reference: lot.reference })}
+          onPress={() => openLot(lot)}
         />
       );
     }
@@ -121,12 +136,9 @@ export function LotsScreen() {
             days === undefined ? undefined : days === 1 ? t('lots.row.expiresInOne') : t('lots.row.expiresIn', { days })
           }
           trailing={<Badge tone="warning" label={t('lots.status.pending')} />}
-          // Sans la liste des invitations (chargement ou erreur), la ligne n'ouvre rien.
-          onPress={
-            invitation
-              ? () => router.push({ pathname: '/invitation/[id]', params: { id: invitation.id } })
-              : undefined
-          }
+          // L'invitation en attente s'ouvre depuis la fiche de l'appartement.
+          accessibilityLabel={t('lots.row.open', { reference: lot.reference })}
+          onPress={() => openLot(lot)}
         />
       );
     }
@@ -137,6 +149,8 @@ export function LotsScreen() {
         leading={leading}
         title={t('lots.row.freeTitle')}
         subtitle={t('lots.row.freeSubtitle')}
+        accessibilityLabel={t('lots.row.open', { reference: lot.reference })}
+        onPress={() => openLot(lot)}
         trailing={
           <Button
             label={t('lots.invite')}
@@ -243,6 +257,7 @@ export function LotsScreen() {
         )}
         <Text variant="h2">{t('lots.list.title')}</Text>
       </View>
+      {toastKey !== undefined && <Toast message={t(toastKey)} />}
       {body}
     </Screen>
   );
