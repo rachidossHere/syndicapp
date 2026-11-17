@@ -345,7 +345,7 @@ export function LotsScreen() {
         renderSectionFooter={({ section }) => (section.open ? null : <View style={{ height: spacing.md }} />)}
         renderItem={({ item, index }) => (
           // Chaque ligne porte le filet de la section : il reste continu dans une liste virtualisée.
-          <AccordionContent gap style={index === 0 ? undefined : { paddingTop: 0 }}>
+          <AccordionContent gap continued={index > 0}>
             {renderRow(item)}
           </AccordionContent>
         )}

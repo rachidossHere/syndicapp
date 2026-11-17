@@ -95,6 +95,8 @@ export type AccordionContentProps = {
   children: ReactNode;
   /** Espace sous le contenu (ex. entre deux lignes d'une liste) : `layout.listGap` par défaut. */
   gap?: boolean;
+  /** Ligne qui suit une autre ligne du même contenu : pas d'espace au-dessus, le filet continue. */
+  continued?: boolean;
   style?: StyleProp<ViewStyle>;
 };
 
@@ -102,7 +104,7 @@ export type AccordionContentProps = {
  * Contenu d'une section : décalé du début et bordé d'un filet à gauche (à droite en arabe).
  * Peut entourer chaque ligne d'une liste virtualisée : le filet reste continu.
  */
-export function AccordionContent({ children, gap = false, style }: AccordionContentProps) {
+export function AccordionContent({ children, gap = false, continued = false, style }: AccordionContentProps) {
   const { colors, spacing, layout, borderWidth } = useTheme();
   return (
     <View
@@ -112,7 +114,7 @@ export function AccordionContent({ children, gap = false, style }: AccordionCont
           paddingStart: spacing.md,
           borderStartWidth: borderWidth.thin,
           borderStartColor: colors.borderStrong,
-          paddingTop: spacing.md,
+          paddingTop: continued ? undefined : spacing.md,
           paddingBottom: gap ? layout.listGap : 0,
         },
         style,
