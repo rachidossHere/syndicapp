@@ -190,6 +190,13 @@ syndicapp/
 - Dates stockées en UTC, affichées dans le fuseau `Africa/Casablanca`.
 - Chaque étape se fait sur sa propre branche `plan-NN/etape-X-titre`, créée depuis `master` ; tout est commité avec des messages clairs en français ; jamais de fusion dans `master` ni de push sans validation.
 
+### Git
+- Une branche par étape ou par correctif, créée depuis `master` à jour. Pendant le travail, plusieurs petits commits en français, préfixés par l'étape (« 08.3 : … »).
+- Les PR sont fusionnées uniquement par « Squash and merge ». Titre du commit : « NN.X : titre court (#numéro de PR) ».
+- La branche est supprimée après la fusion.
+- Pour vérifier qu'une étape précédente est fusionnée, utilise `gh pr view <branche> --json state` (état `MERGED`) ou cherche son commit « NN.X : » dans `git log master`. N'utilise jamais `git branch --merged`, qui ne détecte pas un squash.
+- L'agent ne fusionne pas, ne pousse pas, et ne réécrit jamais `master` (pas de rebase ni de `push --force`).
+
 ### Base de données (Drizzle + Neon)
 - Chaque table métier a une colonne `residence_id`.
 - **Chaque requête métier filtre sur `residence_id`** et vérifie le rôle de l'utilisateur dans cette résidence. Aucune exception.
