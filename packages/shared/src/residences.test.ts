@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest';
 
-import { bulkLotsSchema, createLotSchema, generateBulkLots } from './residences';
+import {
+  bulkLotsSchema,
+  createLotSchema,
+  generateBulkLots,
+  LOT_BLOCKER_ERRORS,
+  LOT_DELETE_BLOCKERS,
+  LOT_ERRORS,
+  updateLotSchema,
+} from './residences';
 
 describe('génération rapide des lots', () => {
   it('référence = bâtiment + étage + numéro', () => {
@@ -53,5 +61,21 @@ describe('createLotSchema', () => {
       building: undefined,
       type: 'apartment',
     });
+  });
+});
+
+describe('modification et suppression d’un appartement', () => {
+  it('updateLotSchema : mêmes règles de format que la création, et rien d’autre que la référence', () => {
+    expect(updateLotSchema.parse({ reference: ' B12 ' })).toEqual({ reference: 'B12' });
+    expect(updateLotSchema.safeParse({ reference: '' }).success).toBe(false);
+    expect(updateLotSchema.safeParse({ reference: 'X'.repeat(21) }).success).toBe(false);
+    expect(updateLotSchema.safeParse({}).success).toBe(false);
+    expect(updateLotSchema.safeParse({ reference: 'B12', floor: 1 }).success).toBe(false);
+  });
+
+  it('chaque obstacle à la suppression a son message de refus', () => {
+    expect(Object.keys(LOT_BLOCKER_ERRORS).sort()).toEqual([...LOT_DELETE_BLOCKERS].sort());
+    const keys = Object.values(LOT_ERRORS) as string[];
+    for (const key of Object.values(LOT_BLOCKER_ERRORS)) expect(keys).toContain(key);
   });
 });

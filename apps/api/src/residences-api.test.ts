@@ -251,7 +251,7 @@ describe.skipIf(!hasDatabase)('API résidences et lots', () => {
       const response = await api(uid('mgrB'), 'POST', '/api/lots/bulk', { residence: resB, body });
       expect(response.status).toBe(201);
       const json = await response.json() as any;
-      expect(json.count).toBe(24);
+      expect(json).toMatchObject({ created: 24, skipped: 0 });
 
       const list = await (await api(uid('mgrB'), 'GET', '/api/lots', { residence: resB })).json() as any;
       const refs: string[] = list.lots.map((l: { reference: string }) => l.reference);
@@ -267,23 +267,23 @@ describe.skipIf(!hasDatabase)('API résidences et lots', () => {
       });
     });
 
-    it('un second appel identique : 409 sans création partielle', async () => {
+    it('un second appel identique : rien à créer, tout est ignoré, sans erreur', async () => {
       const response = await api(uid('mgrB'), 'POST', '/api/lots/bulk', { residence: resB, body });
-      expect(response.status).toBe(409);
-      const json = await response.json() as any;
-      expect(json.error).toBe('conflict');
-      expect(json.references).toHaveLength(24);
+      expect(response.status).toBe(200);
+      expect(await response.json() as any).toMatchObject({ created: 0, skipped: 24, lots: [] });
       expect(await lotCount(resB)).toBe(24);
     });
 
-    it('un conflit partiel annule tout : aucun lot du bâtiment C créé', async () => {
+    it('un appel partiel crée les nouvelles références et ignore les autres', async () => {
       const response = await api(uid('mgrB'), 'POST', '/api/lots/bulk', {
         residence: resB,
         body: { buildings: ['A', 'C'], floorFrom: 1, floorTo: 1, perFloor: 1 },
       });
-      expect(response.status).toBe(409);
-      expect((await response.json() as any).references).toEqual(['A11']);
-      expect(await lotCount(resB)).toBe(24);
+      expect(response.status).toBe(201);
+      const json = await response.json() as any;
+      expect(json).toMatchObject({ created: 1, skipped: 1 });
+      expect(json.lots.map((l: { reference: string }) => l.reference)).toEqual(['C11']);
+      expect(await lotCount(resB)).toBe(25);
     });
 
     it('les mêmes références sont permises dans une autre résidence', async () => {
