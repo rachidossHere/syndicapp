@@ -1,6 +1,7 @@
 // Écran de démonstration du design system (plan 02, étape 6), réservé au développement.
 // Il présente chaque jeton et chaque composant de @syndic/ui, en français et en arabe.
 import {
+  Accordion,
   ActionTile,
   Amount,
   Avatar,
@@ -26,6 +27,7 @@ import {
   type ColorToken,
   type TypographyToken,
 } from '@syndic/ui';
+import Building from 'lucide-react-native/icons/building';
 import Banknote from 'lucide-react-native/icons/banknote';
 import ChartColumn from 'lucide-react-native/icons/chart-column';
 import House from 'lucide-react-native/icons/house';
@@ -52,6 +54,7 @@ export function DesignSystemScreen() {
   const t = designSystemCopy[language];
   const [activeTab, setActiveTab] = useState<TabKey>('home');
   const [toastVisible, setToastVisible] = useState(false);
+  const [accordionOpen, setAccordionOpen] = useState(true);
   const [filledValue, setFilledValue] = useState<string>(t.filled);
 
   useEffect(() => {
@@ -179,6 +182,17 @@ export function DesignSystemScreen() {
           trailing={<Amount centimes={60000} direction="out" />}
           onPress={() => undefined}
         />
+      </Section>
+
+      <Section title={t.accordion}>
+        <Accordion
+          icon={Building}
+          title={t.accordionTitle}
+          subtitle={t.accordionSubtitle}
+          expanded={accordionOpen}
+          onToggle={() => setAccordionOpen((open) => !open)}>
+          <ListItem title={t.person} subtitle={t.personRole} leading={<Avatar name={t.person} />} />
+        </Accordion>
       </Section>
 
       <Section title={t.tiles}>
