@@ -82,7 +82,8 @@ export function AddLotsScreen() {
 
   // Un par un
   const [reference, setReference] = useState('');
-  const [building, setBuilding] = useState('');
+  // Bâtiment choisi parmi ceux qui existent déjà, ou aucun.
+  const [building, setBuilding] = useState<string | undefined>();
   const [floor, setFloor] = useState('');
   const [referenceError, setReferenceError] = useState<string | undefined>();
 
@@ -168,7 +169,7 @@ export function AddLotsScreen() {
     try {
       await createLot.mutateAsync({
         reference: trimmed,
-        building: building.trim() === '' ? undefined : building.trim().toUpperCase(),
+        building,
         floor: floorValue === '' ? undefined : Number(floorValue),
       });
       setToast(t('lots.single.added', { reference: trimmed }));
@@ -370,16 +371,17 @@ export function AddLotsScreen() {
             autoCapitalize="characters"
             autoCorrect={false}
           />
-          <TextField
-            label={t('lots.single.building')}
-            value={building}
-            onChangeText={setBuilding}
-            editable={!busy}
-            maxLength={20}
-            ltr
-            autoCapitalize="characters"
-            autoCorrect={false}
-          />
+          {existing.length > 0 && (
+            <View style={{ gap: spacing.sm }}>
+              <Text variant="bodyStrong">{t('lots.single.building')}</Text>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
+                <Chip label={t('lots.single.noBuilding')} selected={building === undefined} onPress={() => setBuilding(undefined)} />
+                {existing.map((name) => (
+                  <Chip key={name} label={name} selected={building === name} onPress={() => setBuilding(name)} />
+                ))}
+              </View>
+            </View>
+          )}
           <TextField
             label={t('lots.single.floor')}
             value={floor}
