@@ -32,6 +32,39 @@ export const createLotSchema = z.object({
 });
 export type CreateLotInput = z.infer<typeof createLotSchema>;
 
+/** Modification d'un appartement : sa référence seulement (mêmes règles de format qu'à la création). */
+export const updateLotSchema = z.object({ reference: lotReferenceSchema }).strict();
+export type UpdateLotInput = z.infer<typeof updateLotSchema>;
+
+/** Ce qui empêche de supprimer un appartement (dans l'ordre où l'API les teste). */
+export const LOT_DELETE_BLOCKERS = ['member', 'invitation', 'payment', 'charge', 'issue'] as const;
+export type LotDeleteBlocker = (typeof LOT_DELETE_BLOCKERS)[number];
+
+/** Refus de l'API des appartements : clés de traduction (`lots.errors.*`). */
+export const LOT_ERRORS = {
+  notFound: 'lots.errors.notFound',
+  referenceExists: 'lots.errors.referenceExists',
+  hasMember: 'lots.errors.hasMember',
+  hasInvitation: 'lots.errors.hasInvitation',
+  hasPayments: 'lots.errors.hasPayments',
+  hasCharges: 'lots.errors.hasCharges',
+  hasIssues: 'lots.errors.hasIssues',
+  inUse: 'lots.errors.inUse',
+} as const;
+export type LotErrorKey = (typeof LOT_ERRORS)[keyof typeof LOT_ERRORS];
+
+/** Clé de refus de suppression pour chaque obstacle. */
+export const LOT_BLOCKER_ERRORS = {
+  member: LOT_ERRORS.hasMember,
+  invitation: LOT_ERRORS.hasInvitation,
+  payment: LOT_ERRORS.hasPayments,
+  charge: LOT_ERRORS.hasCharges,
+  issue: LOT_ERRORS.hasIssues,
+} as const satisfies Record<LotDeleteBlocker, LotErrorKey>;
+
+/** Réponse de la création en lot : références créées et références déjà présentes (ignorées). */
+export type BulkLotsResult = { created: number; skipped: number };
+
 /** Bâtiment : lettre ou nom court (« A », « B2 »), mis en majuscules. */
 const buildingSchema = z
   .string()

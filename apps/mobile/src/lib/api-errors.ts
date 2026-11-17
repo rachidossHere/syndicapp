@@ -4,7 +4,7 @@ import { fr, type TranslationKey } from '../i18n/fr';
 import { ApiError } from './api-error';
 
 /**
- * Clé de traduction d'une erreur de l'API. Les refus d'invitation et de charges arrivent déjà sous
+ * Clé de traduction d'une erreur de l'API. Les refus d'invitation, de charges et d'appartements (`lots.errors.*`) arrivent déjà sous
  * forme de clé (`invitations.errors.*`, `charges.errors.*`) ; les autres se déduisent du statut. Jamais de texte de l'API affiché.
  */
 export function apiErrorKey(error: unknown): TranslationKey {
@@ -14,7 +14,8 @@ export function apiErrorKey(error: unknown): TranslationKey {
     (error.code.startsWith('invitations.errors.') ||
       error.code.startsWith('charges.errors.') ||
       error.code.startsWith('expenses.errors.') ||
-      error.code.startsWith('issues.errors.')) &&
+      error.code.startsWith('issues.errors.') ||
+      error.code.startsWith('lots.errors.')) &&
     error.code in fr
   ) {
     return error.code as TranslationKey;

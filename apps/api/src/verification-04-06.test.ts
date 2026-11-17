@@ -52,6 +52,8 @@ type Ids = {
   expense: string;
   invitation: string;
   issue: string;
+  /** Appartement qui a un membre, des charges et un paiement : la suppression sondée est refusée (409). */
+  lot: string;
 };
 
 /** Route sondée : méthode, chemin (selon les objets visés) et corps éventuel. */
@@ -77,6 +79,8 @@ const PROBES: Probe[] = [
   { name: 'GET /lots', method: 'GET', path: () => '/api/lots', allowed: ['manager'] },
   { name: 'POST /lots', method: 'POST', path: () => '/api/lots', body: {}, allowed: ['manager'] },
   { name: 'POST /lots/bulk', method: 'POST', path: () => '/api/lots/bulk', body: {}, allowed: ['manager'] },
+  { name: 'PATCH /lots/:id', method: 'PATCH', path: (ids) => `/api/lots/${ids.lot}`, body: {}, allowed: ['manager'] },
+  { name: 'DELETE /lots/:id', method: 'DELETE', path: (ids) => `/api/lots/${ids.lot}`, allowed: ['manager'] },
   { name: 'GET /invitations', method: 'GET', path: () => '/api/invitations', allowed: ['manager'] },
   { name: 'POST /invitations', method: 'POST', path: () => '/api/invitations', body: {}, allowed: ['manager'] },
   { name: 'DELETE /invitations/:id', method: 'DELETE', path: () => `/api/invitations/${randomUUID()}`, allowed: ['manager'] },
@@ -189,6 +193,7 @@ describe.skipIf(!configured)('Vérification des plans 04 à 06', { timeout: 300_
       expense: expense.json.id,
       invitation: invitation.json.id,
       issue: issue.json.id,
+      lot: lotId,
     };
   };
 
