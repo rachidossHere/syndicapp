@@ -55,7 +55,16 @@ describe('palette élargie (plan 02b)', () => {
 describe('teintes par domaine', () => {
   it('les huit domaines de la maquette existent', () => {
     expect([...DOMAINS].sort()).toEqual(
-      ['accounts', 'announcements', 'charges', 'expenses', 'issues', 'members', 'notifications', 'residence'].sort(),
+      [
+        'accounts',
+        'announcements',
+        'charges',
+        'expenses',
+        'issues',
+        'members',
+        'notifications',
+        'residence',
+      ].sort(),
     );
     expect(Object.keys(domainColors).sort()).toEqual([...DOMAINS].sort());
   });
@@ -67,11 +76,14 @@ describe('teintes par domaine', () => {
     expect(contrast(fg, bg)).toBeGreaterThanOrEqual(4.5);
   });
 
-  it.each(DOMAINS)('%s : le fond teinté se distingue du fond des écrans et reste clair', (domain) => {
-    const { bg } = domainColors[domain];
-    expect(bg.toLowerCase()).not.toBe(colors.bg.toLowerCase());
-    expect(luminance(bg)).toBeGreaterThan(0.7);
-  });
+  it.each(DOMAINS)(
+    '%s : le fond teinté se distingue du fond des écrans et reste clair',
+    (domain) => {
+      const { bg } = domainColors[domain];
+      expect(bg.toLowerCase()).not.toBe(colors.bg.toLowerCase());
+      expect(luminance(bg)).toBeGreaterThan(0.7);
+    },
+  );
 });
 
 describe('jetons de mouvement', () => {
@@ -90,7 +102,9 @@ describe('jetons de mouvement', () => {
       expect(x2).toBeGreaterThanOrEqual(0);
       expect(x2).toBeLessThanOrEqual(1);
       // Un ease-in a ses deux points de contrôle sous la diagonale (y < x) : interdit.
-      expect(curve[1] >= curve[0] || curve[3] >= curve[2], `${name} ressemble à un ease-in`).toBe(true);
+      expect(curve[1] >= curve[0] || curve[3] >= curve[2], `${name} ressemble à un ease-in`).toBe(
+        true,
+      );
     }
   });
 

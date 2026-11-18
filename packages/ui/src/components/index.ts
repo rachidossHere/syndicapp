@@ -9,7 +9,18 @@ export { Card, type CardProps } from './card';
 export { Chip, type ChipProps } from './chip';
 export { ChoiceTile, type ChoiceTileProps } from './choice-tile';
 export { EmptyState, type EmptyStateProps } from './empty-state';
-export { Icon, type IconComponent, type IconProps } from './icon';
+export {
+  Icon,
+  type IconComponent,
+  type IconProps,
+  type IconTileSize,
+  type IconVariant,
+} from './icon';
+export { resolveIcon, type IconSpec, type IconSpecInput, type IconSpecTokens } from './icon-spec';
+export { PressableScale, type PressableScaleProps } from './pressable-scale';
+export { hitSlopFor, pressFeedback, type PressFeedback } from './press-feedback';
+export { ZelligePattern, type ZelligePatternProps } from './zellige-pattern';
+export { zelligeGeometry, type ZelligeGeometry } from './zellige-geometry';
 export { IconButton, type IconButtonProps } from './icon-button';
 export { getInitials } from './initials';
 export { ListItem, type ListItemProps } from './list-item';
