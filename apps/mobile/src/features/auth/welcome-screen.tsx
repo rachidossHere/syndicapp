@@ -65,7 +65,7 @@ export function WelcomeScreen() {
               accessibilityLabel={t('welcome.logoLabel')}
               onLongPress={__DEV__ ? () => router.push('/dev/design-system') : undefined}
               style={{ alignSelf: 'flex-start', minHeight: sizes.touchTarget, justifyContent: 'center' }}>
-              <Text variant="caption" tone="primary" style={{ letterSpacing: 1.5 }}>
+              <Text variant="caption" tone="primary">
                 {t('welcome.logoText')}
               </Text>
             </Pressable>
