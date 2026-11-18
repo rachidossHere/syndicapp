@@ -9,7 +9,8 @@ import { introStore, pushDeps } from '@/lib/push-device';
 import { runPushStartup } from '@/lib/push-registration';
 
 // Écrans protégés : accessibles uniquement avec une session (voir Stack.Protected dans app/_layout.tsx).
-export const unstable_settings = { anchor: 'home' };
+// L'ancre est le groupe d'onglets : un écran de détail ouvert par un lien profond a les onglets dessous.
+export const unstable_settings = { anchor: '(tabs)' };
 
 export default function AppLayout() {
   const router = useRouter();

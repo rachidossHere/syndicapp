@@ -23,7 +23,6 @@ import Wallet from 'lucide-react-native/icons/wallet';
 import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 
-import { AuthHeader } from '@/features/auth/auth-header';
 import { useRoleLabel } from '@/features/residences/use-role-label';
 import { useChargeCalls, type ChargeCallSummary } from '@/hooks/use-charges';
 import { useActiveResidence } from '@/hooks/use-residences';
@@ -126,7 +125,6 @@ export function ChargesScreen() {
 
   const canCreate = role !== undefined && can(role, 'charges.write');
   const canCollect = role !== undefined && can(role, 'payments.write');
-  const goBack = () => (router.canGoBack() ? router.back() : router.replace('/home'));
   const openCall = (id: string) => router.push({ pathname: '/charge-call/[id]', params: { id } });
   const current = calls.data?.[0];
   const previous = calls.data?.slice(1) ?? [];
@@ -202,7 +200,6 @@ export function ChargesScreen() {
   return (
     <Screen scroll footer={footer}>
       {toast !== undefined && <Toast message={toast} />}
-      <AuthHeader onBack={goBack} />
       <View style={{ gap: spacing.xs }}>
         {active !== null && (
           <Text variant="small" tone="muted">

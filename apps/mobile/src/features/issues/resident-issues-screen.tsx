@@ -11,7 +11,6 @@ import Plus from 'lucide-react-native/icons/plus';
 import { useCallback, useEffect, useState } from 'react';
 import { FlatList, RefreshControl, View } from 'react-native';
 
-import { AuthHeader } from '@/features/auth/auth-header';
 import { QueryFallback } from '@/features/charges/query-fallback';
 import { useIssueCounts, useIssueList } from '@/hooks/use-issues';
 import { useRefreshOnFocus } from '@/hooks/use-refresh-on-focus';
@@ -50,12 +49,10 @@ export function ResidentIssuesScreen() {
 
   if (residencesQuery.data !== undefined && residenceId === undefined) return <Redirect href="/home" />;
 
-  const goBack = () => (router.canGoBack() ? router.back() : router.replace('/home'));
   const openIssue = (id: string) => router.push({ pathname: '/issue/[id]', params: { id } });
 
   const header = (
     <View style={{ gap: spacing.lg }}>
-      <AuthHeader onBack={goBack} />
       {flash !== undefined && <Toast message={t(flash)} />}
       <View style={{ gap: spacing.xs }}>
         {active !== null && (
