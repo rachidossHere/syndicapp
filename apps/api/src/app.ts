@@ -14,6 +14,7 @@ import { loggablePath, requestLogger } from './middleware/request-logger';
 import { cash } from './routes/cash';
 import { announcements } from './routes/announcements';
 import { chargeCalls } from './routes/charge-calls';
+import { chargeReminders } from './routes/charge-reminders';
 import { expenses } from './routes/expenses';
 import { health } from './routes/health';
 import { invitations } from './routes/invitations';
@@ -41,7 +42,9 @@ app.route('/health', health);
 // (y compris ceux à paramètre, comme /reset-password/:token, que disabledPaths ne bloque pas).
 const OPEN_AUTH_ROUTES = new Set<string>(OPEN_AUTH_PATHS.map((path) => `/api/auth${path}`));
 app.on(['GET', 'POST'], '/api/auth/*', (c) =>
-  OPEN_AUTH_ROUTES.has(c.req.path) ? auth.handler(withClientIp(c)) : c.json({ error: 'not_found' }, 404),
+  OPEN_AUTH_ROUTES.has(c.req.path)
+    ? auth.handler(withClientIp(c))
+    : c.json({ error: 'not_found' }, 404),
 );
 
 // Routes protégées : requireAuth est appliqué route par route.
@@ -50,6 +53,7 @@ app.route('/api/residences', residences);
 app.route('/api/lots', lots);
 app.route('/api/invitations', invitations);
 app.route('/api/charge-calls', chargeCalls);
+app.route('/api/charges', chargeReminders);
 app.route('/api/payments', payments);
 app.route('/api/receipts', receipts);
 app.route('/api/expenses', expenses);
