@@ -10,13 +10,14 @@ import { and, eq, isNull } from 'drizzle-orm';
 import { Hono } from 'hono';
 import { z } from 'zod';
 
-import { ChargeRefusal, chargeRefusal, withRefusals } from '../charge-errors';
+import { ChargeRefusal, chargeRefusal, isUniqueViolation, withRefusals } from '../charge-errors';
 import { requireAuth } from '../middleware/require-auth';
 import {
   requireMembership,
   requirePermission,
   type MembershipEnv,
 } from '../middleware/require-membership';
+import { notify } from '../notify';
 import { storeReceiptPdfSafely } from '../receipts/store';
 import { parseJson } from '../validate';
 
@@ -33,6 +34,7 @@ async function lockDue(tx: Tx, residenceId: string, dueId: string) {
   const [due] = await tx
     .select({
       id: schema.chargeDue.id,
+      lotId: schema.chargeDue.lotId,
       amountDue: schema.chargeDue.amountDue,
       amountPaid: schema.chargeDue.amountPaid,
     })
@@ -64,78 +66,166 @@ async function recomputeDue(tx: Tx, residenceId: string, dueId: string, amountDu
 }
 
 /**
+ * Paiement déjà enregistré avec ce `clientId` dans la résidence, au format de la réponse de
+ * création (rejeu idempotent). Les montants du dû sont ceux d'aujourd'hui.
+ */
+async function existingPayment(residenceId: string, clientId: string | undefined) {
+  if (!clientId) return undefined;
+  const [row] = await db
+    .select({
+      id: schema.payment.id,
+      amount: schema.payment.amount,
+      method: schema.payment.method,
+      paidAt: schema.payment.paidAt,
+      dueId: schema.chargeDue.id,
+      amountDue: schema.chargeDue.amountDue,
+      amountPaid: schema.chargeDue.amountPaid,
+      status: schema.chargeDue.status,
+      receiptId: schema.receipt.id,
+      receiptNumber: schema.receipt.number,
+    })
+    .from(schema.payment)
+    .innerJoin(
+      schema.chargeDue,
+      and(
+        eq(schema.chargeDue.id, schema.payment.chargeDueId),
+        eq(schema.chargeDue.residenceId, residenceId),
+      ),
+    )
+    .innerJoin(
+      schema.receipt,
+      and(
+        eq(schema.receipt.paymentId, schema.payment.id),
+        eq(schema.receipt.residenceId, residenceId),
+      ),
+    )
+    .where(and(eq(schema.payment.residenceId, residenceId), eq(schema.payment.clientId, clientId)))
+    .limit(1);
+  if (!row) return undefined;
+  return {
+    payment: {
+      id: row.id,
+      amount: row.amount,
+      method: row.method,
+      paidAt: row.paidAt.toISOString(),
+    },
+    receipt: { id: row.receiptId, number: row.receiptNumber },
+    due: {
+      id: row.dueId,
+      amountDue: row.amountDue,
+      amountPaid: row.amountPaid,
+      remaining: row.amountDue - row.amountPaid,
+      status: row.status,
+    },
+  };
+}
+
+/**
  * Encaisseurs (payments.write) : enregistre un paiement sur un dû de la résidence active.
  * Une seule transaction : verrou sur le dû, contrôle du reste (409 s'il est dépassé), paiement,
  * montant payé et statut du dû, puis reçu numéroté (« 2026-0042 », continu par résidence et par
- * année du paiement). Le PDF du reçu viendra à l'étape 3.
+ * année du paiement). Les copropriétaires du lot sont prévenus (module notify, même transaction).
+ * Idempotent : un `clientId` déjà connu renvoie le paiement existant (200), sans second
+ * paiement ni seconde notification.
  */
-payments.post('/', requireAuth, requireMembership, requirePermission('payments.write'), async (c) => {
-  const input = await parseJson(c, createPaymentSchema);
-  const residenceId = c.get('residenceId');
-  const userId = c.get('user').id;
+payments.post(
+  '/',
+  requireAuth,
+  requireMembership,
+  requirePermission('payments.write'),
+  async (c) => {
+    const input = await parseJson(c, createPaymentSchema);
+    const residenceId = c.get('residenceId');
+    const userId = c.get('user').id;
 
-  const today = todayInCasablanca();
-  const paidOn = input.paidOn ?? today;
-  if (paidOn > today) return chargeRefusal(CHARGE_ERRORS.paymentDateInvalid);
-  // Aujourd'hui : l'heure réelle. Date passée : midi UTC, le même jour à Casablanca.
-  const paidAt = paidOn === today ? new Date() : new Date(`${paidOn}T12:00:00Z`);
+    const replay = await existingPayment(residenceId, input.clientId);
+    if (replay) return c.json(replay, 200);
 
-  return withRefusals(async () => {
-    const result = await db.transaction(async (tx) => {
-      const due = await lockDue(tx, residenceId, input.chargeDueId);
-      if (!due) throw new ChargeRefusal(CHARGE_ERRORS.notFound);
-      if (input.amount > due.amountDue - due.amountPaid) {
-        throw new ChargeRefusal(CHARGE_ERRORS.amountExceedsRemaining);
-      }
+    const today = todayInCasablanca();
+    const paidOn = input.paidOn ?? today;
+    if (paidOn > today) return chargeRefusal(CHARGE_ERRORS.paymentDateInvalid);
+    // Aujourd'hui : l'heure réelle. Date passée : midi UTC, le même jour à Casablanca.
+    const paidAt = paidOn === today ? new Date() : new Date(`${paidOn}T12:00:00Z`);
 
-      const [payment] = await tx
-        .insert(schema.payment)
-        .values({
-          residenceId,
-          chargeDueId: due.id,
-          amount: input.amount,
-          method: input.method,
-          paidAt,
-          recordedBy: userId,
-        })
-        .returning({
-          id: schema.payment.id,
-          amount: schema.payment.amount,
-          method: schema.payment.method,
-          paidAt: schema.payment.paidAt,
+    try {
+      return await withRefusals(async () => {
+        const result = await db.transaction(async (tx) => {
+          const due = await lockDue(tx, residenceId, input.chargeDueId);
+          if (!due) throw new ChargeRefusal(CHARGE_ERRORS.notFound);
+          if (input.amount > due.amountDue - due.amountPaid) {
+            throw new ChargeRefusal(CHARGE_ERRORS.amountExceedsRemaining);
+          }
+
+          const [payment] = await tx
+            .insert(schema.payment)
+            .values({
+              residenceId,
+              chargeDueId: due.id,
+              amount: input.amount,
+              method: input.method,
+              paidAt,
+              recordedBy: userId,
+              clientId: input.clientId ?? null,
+            })
+            .returning({
+              id: schema.payment.id,
+              amount: schema.payment.amount,
+              method: schema.payment.method,
+              paidAt: schema.payment.paidAt,
+            });
+
+          const amountPaid = due.amountPaid + input.amount;
+          const status = computeDueStatus(amountPaid, due.amountDue);
+          await tx
+            .update(schema.chargeDue)
+            .set({ amountPaid, status })
+            .where(
+              and(eq(schema.chargeDue.id, due.id), eq(schema.chargeDue.residenceId, residenceId)),
+            );
+
+          const number = await nextReceiptNumber(tx, residenceId, Number(paidOn.slice(0, 4)));
+          const [receipt] = await tx
+            .insert(schema.receipt)
+            .values({ residenceId, paymentId: payment!.id, number })
+            .returning({ id: schema.receipt.id, number: schema.receipt.number });
+
+          // Copropriétaires du lot seulement (jamais le locataire). Texte générique, même transaction :
+          // si l'encaissement est annulé (rollback), la notification l'est aussi.
+          await notify(
+            residenceId,
+            { kind: 'lot_owners', lotId: due.lotId },
+            'payment_received',
+            { itemId: receipt!.id },
+            tx,
+          );
+
+          return {
+            payment: { ...payment!, paidAt: payment!.paidAt.toISOString() },
+            receipt: receipt!,
+            due: {
+              id: due.id,
+              amountDue: due.amountDue,
+              amountPaid,
+              remaining: due.amountDue - amountPaid,
+              status,
+            },
+          };
         });
-
-      const amountPaid = due.amountPaid + input.amount;
-      const status = computeDueStatus(amountPaid, due.amountDue);
-      await tx
-        .update(schema.chargeDue)
-        .set({ amountPaid, status })
-        .where(and(eq(schema.chargeDue.id, due.id), eq(schema.chargeDue.residenceId, residenceId)));
-
-      const number = await nextReceiptNumber(tx, residenceId, Number(paidOn.slice(0, 4)));
-      const [receipt] = await tx
-        .insert(schema.receipt)
-        .values({ residenceId, paymentId: payment!.id, number })
-        .returning({ id: schema.receipt.id, number: schema.receipt.number });
-
-      return {
-        payment: { ...payment!, paidAt: payment!.paidAt.toISOString() },
-        receipt: receipt!,
-        due: {
-          id: due.id,
-          amountDue: due.amountDue,
-          amountPaid,
-          remaining: due.amountDue - amountPaid,
-          status,
-        },
-      };
-    });
-    // Transaction terminée : l'encaissement est acquis. Le PDF est généré et stocké ensuite ;
-    // en cas d'échec, il le sera à la première demande.
-    await storeReceiptPdfSafely(residenceId, result.receipt.id);
-    return c.json(result, 201);
-  });
-});
+        // Transaction terminée : l'encaissement est acquis. Le PDF est généré et stocké ensuite ;
+        // en cas d'échec, il le sera à la première demande.
+        await storeReceiptPdfSafely(residenceId, result.receipt.id);
+        return c.json(result, 201);
+      });
+    } catch (error) {
+      // Deux envois simultanés du même clientId : le second renvoie le paiement du premier.
+      if (isUniqueViolation(error)) {
+        const raced = await existingPayment(residenceId, input.clientId);
+        if (raced) return c.json(raced, 200);
+      }
+      throw error;
+    }
+  },
+);
 
 /**
  * Encaisseurs (payments.write) : annule un paiement, avec un motif obligatoire. Une seule
@@ -188,7 +278,10 @@ payments.post(
           .update(schema.receipt)
           .set({ storageKey: null })
           .where(
-            and(eq(schema.receipt.paymentId, cancelled.id), eq(schema.receipt.residenceId, residenceId)),
+            and(
+              eq(schema.receipt.paymentId, cancelled.id),
+              eq(schema.receipt.residenceId, residenceId),
+            ),
           )
           .returning({ id: schema.receipt.id });
 
