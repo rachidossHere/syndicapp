@@ -24,6 +24,8 @@ const NO_WORDS = [
   'welcome.appName',
   'welcome.logoText',
   'home.residenceLine',
+  'home.date',
+  'profile.language.fr',
   'lots.single.referencePlaceholder',
   // Signalements : gabarits sans mot (« lieu · âge », heure, « titre · acteur », citation).
   'issues.line',

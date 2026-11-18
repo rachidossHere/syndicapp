@@ -5,6 +5,7 @@ import routeSource from '../../app/dev/design-v2.tsx?raw';
 import { ar } from '../../i18n/ar';
 import { fr } from '../../i18n/fr';
 import homeSource from '../home/home-screen.tsx?raw';
+import profileSource from '../profile/profile-screen.tsx?raw';
 import { designV2Copy } from './design-v2-copy';
 import screenSource from './design-v2-screen.tsx?raw';
 
@@ -20,10 +21,13 @@ describe('galerie de développement (plan 02b)', () => {
     expect(routeSource).toContain("from '@/features/dev/design-v2-screen'");
   });
 
-  it('le lien depuis l’accueil n’existe que sous __DEV__', () => {
-    const link = homeSource.match(/\{__DEV__ && \(\s*<Button[\s\S]{0,160}?\/dev\/design-v2/);
-    expect(link, 'bouton de la galerie sous __DEV__').not.toBeNull();
-    expect(homeSource.match(/\/dev\/design-v2/g)).toHaveLength(1);
+  it('le lien depuis le Profil n’existe que sous __DEV__ (plus sur l’accueil)', () => {
+    // Le Profil construit ses lignes avec `isDev: __DEV__` ; la galerie n'y figure que si `has('gallery')`.
+    expect(profileSource).toContain('isDev: __DEV__');
+    const link = profileSource.match(/\{has\('gallery'\) && \(\s*<ListItem[\s\S]{0,200}?\/dev\/design-v2/);
+    expect(link, 'ligne de la galerie sous has(gallery)').not.toBeNull();
+    expect(profileSource.match(/\/dev\/design-v2/g)).toHaveLength(1);
+    expect(homeSource).not.toContain('/dev/design-v2');
   });
 
   it('le titre de l’écran est traduit en français et en arabe', () => {
