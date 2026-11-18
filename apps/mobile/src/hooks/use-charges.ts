@@ -1,6 +1,6 @@
 // Appels de charges, encaissements et reçus (plan 05) : requêtes et mutations TanStack Query.
 // Après un encaissement ou une annulation, tout ce qui dépend des dus est rafraîchi.
-import type { ChargePeriod, DueStatus, PaymentMethod, Role } from '@syndic/shared';
+import type { ChargePeriod, DueStatus, PaymentMethod, ReminderResult, Role } from '@syndic/shared';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import * as WebBrowser from 'expo-web-browser';
 
@@ -47,6 +47,9 @@ export type DueRow = {
   remaining: number;
   status: DueStatus;
   payments: DuePayment[];
+  /** Relance (syndic seulement, charges.write) : dernière relance du lot, et prochaine possible (null si possible maintenant). */
+  lastReminderAt?: string | null;
+  nextReminderAt?: string | null;
 };
 
 /** Détail d'un appel, lot par lot (GET /api/charge-calls/:id). */
@@ -115,6 +118,19 @@ export function useCreatePayment(residenceId: string | undefined) {
     mutationFn: (input: NewPayment) =>
       apiFetch<CreatedPayment>('/api/payments', inResidence(residenceId, { method: 'POST', body: JSON.stringify(input) })),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: chargesQueryKey(residenceId ?? 'none') }),
+  });
+}
+
+/** Relance des impayés : un lot (`lotId`) ou tous (`all`, d'un appel si `chargeCallId`). Rafraîchit les dus. */
+export type ReminderInput = { lotId: string } | { all: true; chargeCallId?: string };
+
+export function useSendReminders(residenceId: string | undefined) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: ReminderInput) =>
+      apiFetch<ReminderResult>('/api/charges/reminders', inResidence(residenceId, { method: 'POST', body: JSON.stringify(input) })),
+    // Succès ou refus (409 : relancé entre-temps) : les dates affichées sont relues.
+    onSettled: () => queryClient.invalidateQueries({ queryKey: chargesQueryKey(residenceId ?? 'none') }),
   });
 }
 

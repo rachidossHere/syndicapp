@@ -1,6 +1,12 @@
 import { db, schema, sql } from '@syndic/db';
-import { CHARGE_ERRORS, createChargeCallSchema, isPeriodLabelFor } from '@syndic/shared';
-import { and, desc, eq } from 'drizzle-orm';
+import {
+  CHARGE_ERRORS,
+  can,
+  createChargeCallSchema,
+  isPeriodLabelFor,
+  nextReminderAt,
+} from '@syndic/shared';
+import { and, desc, eq, inArray, max } from 'drizzle-orm';
 import { Hono } from 'hono';
 import { z } from 'zod';
 
@@ -85,42 +91,50 @@ chargeCalls.post(
 );
 
 /** Lecture des comptes (accounts.read) : appels avec leurs totaux, sans détail par lot. */
-chargeCalls.get('/', requireAuth, requireMembership, requirePermission('accounts.read'), async (c) => {
-  const residenceId = c.get('residenceId');
-  const due = schema.chargeDue;
-  const statusCount = (status: 'paid' | 'partial' | 'unpaid') =>
-    sql`count(${due.id}) filter (where ${due.status} = ${status})`.mapWith(Number);
+chargeCalls.get(
+  '/',
+  requireAuth,
+  requireMembership,
+  requirePermission('accounts.read'),
+  async (c) => {
+    const residenceId = c.get('residenceId');
+    const due = schema.chargeDue;
+    const statusCount = (status: 'paid' | 'partial' | 'unpaid') =>
+      sql`count(${due.id}) filter (where ${due.status} = ${status})`.mapWith(Number);
 
-  const rows = await db
-    .select({
-      id: schema.chargeCall.id,
-      periodLabel: schema.chargeCall.periodLabel,
-      amountPerLot: schema.chargeCall.amountPerLot,
-      dueDate: schema.chargeCall.dueDate,
-      lotCount: sql`count(${due.id})`.mapWith(Number),
-      totalDue: sql`coalesce(sum(${due.amountDue}), 0)`.mapWith(Number),
-      totalPaid: sql`coalesce(sum(${due.amountPaid}), 0)`.mapWith(Number),
-      paidCount: statusCount('paid'),
-      partialCount: statusCount('partial'),
-      unpaidCount: statusCount('unpaid'),
-    })
-    .from(schema.chargeCall)
-    .leftJoin(
-      due,
-      and(eq(due.chargeCallId, schema.chargeCall.id), eq(due.residenceId, residenceId)),
-    )
-    .where(eq(schema.chargeCall.residenceId, residenceId))
-    .groupBy(schema.chargeCall.id)
-    .orderBy(desc(schema.chargeCall.dueDate), desc(schema.chargeCall.createdAt));
+    const rows = await db
+      .select({
+        id: schema.chargeCall.id,
+        periodLabel: schema.chargeCall.periodLabel,
+        amountPerLot: schema.chargeCall.amountPerLot,
+        dueDate: schema.chargeCall.dueDate,
+        lotCount: sql`count(${due.id})`.mapWith(Number),
+        totalDue: sql`coalesce(sum(${due.amountDue}), 0)`.mapWith(Number),
+        totalPaid: sql`coalesce(sum(${due.amountPaid}), 0)`.mapWith(Number),
+        paidCount: statusCount('paid'),
+        partialCount: statusCount('partial'),
+        unpaidCount: statusCount('unpaid'),
+      })
+      .from(schema.chargeCall)
+      .leftJoin(
+        due,
+        and(eq(due.chargeCallId, schema.chargeCall.id), eq(due.residenceId, residenceId)),
+      )
+      .where(eq(schema.chargeCall.residenceId, residenceId))
+      .groupBy(schema.chargeCall.id)
+      .orderBy(desc(schema.chargeCall.dueDate), desc(schema.chargeCall.createdAt));
 
-  return c.json({
-    chargeCalls: rows.map((row) => ({ ...row, remaining: row.totalDue - row.totalPaid })),
-  });
-});
+    return c.json({
+      chargeCalls: rows.map((row) => ({ ...row, remaining: row.totalDue - row.totalPaid })),
+    });
+  },
+);
 
 /**
  * Encaisseurs (payments.write) : détail d'un appel, lot par lot (référence, dû, payé, statut,
  * paiements et numéros de reçu). Aucun nom de personne. Appel d'une autre résidence : 404.
+ * Pour charges.write seulement : date de la dernière relance de chaque lot et de la prochaine
+ * possible (null tant que la limite de 3 jours est passée ou qu'il n'y a jamais eu de relance).
  */
 chargeCalls.get(
   '/:id',
@@ -159,13 +173,45 @@ chargeCalls.get(
         and(eq(schema.lot.id, schema.chargeDue.lotId), eq(schema.lot.residenceId, residenceId)),
       )
       .where(
-        and(eq(schema.chargeDue.chargeCallId, call.id), eq(schema.chargeDue.residenceId, residenceId)),
+        and(
+          eq(schema.chargeDue.chargeCallId, call.id),
+          eq(schema.chargeDue.residenceId, residenceId),
+        ),
       );
 
     const payments = await paymentsByDue(
       residenceId,
       dues.map((d) => d.id),
     );
+
+    const reminders = new Map<string, Date>();
+    if (can(c.get('role'), 'charges.write') && dues.length > 0) {
+      const rows = await db
+        .select({ lotId: schema.chargeReminder.lotId, at: max(schema.chargeReminder.createdAt) })
+        .from(schema.chargeReminder)
+        .where(
+          and(
+            eq(schema.chargeReminder.residenceId, residenceId),
+            inArray(
+              schema.chargeReminder.lotId,
+              dues.map((d) => d.lotId),
+            ),
+          ),
+        )
+        .groupBy(schema.chargeReminder.lotId);
+      for (const row of rows) if (row.at) reminders.set(row.lotId, row.at);
+    }
+    const canSeeReminders = can(c.get('role'), 'charges.write');
+    const now = Date.now();
+    const reminderFields = (lotId: string) => {
+      if (!canSeeReminders) return {};
+      const last = reminders.get(lotId);
+      const next = last ? nextReminderAt(last) : null;
+      return {
+        lastReminderAt: last?.toISOString() ?? null,
+        nextReminderAt: next && next.getTime() > now ? next.toISOString() : null,
+      };
+    };
     return c.json({
       ...call,
       dues: dues
@@ -174,6 +220,7 @@ chargeCalls.get(
           ...d,
           remaining: d.amountDue - d.amountPaid,
           payments: payments.get(d.id) ?? [],
+          ...reminderFields(d.lotId),
         })),
     });
   },

@@ -71,8 +71,8 @@ export const frAnnouncementTexts = {
   'announcements.errors.bodyTooLong': '1 000 caractères au maximum.',
 
   // Bouton de test, visible en développement seulement (écran Notifications).
-  'announcements.simulate.button': 'Simuler une notification d’annonce',
-  'announcements.simulate.hint': 'Test (développement) : une notification locale arrive dans 5 secondes. Touchez-la pour ouvrir l’annonce.',
+  'announcements.simulate.button': 'Simuler une notification',
+  'announcements.simulate.hint': 'Test (développement) : une notification locale arrive dans 5 secondes. Touchez-la pour ouvrir l’écran lié.',
   'announcements.simulate.scheduled': 'Notification programmée : mettez l’appli en arrière-plan, elle arrive dans 5 secondes.',
   'announcements.simulate.noAnnouncement': 'Publiez d’abord une annonce dans cette résidence.',
   'announcements.simulate.denied': 'Autorisez les notifications du téléphone pour tester.',

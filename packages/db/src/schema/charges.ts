@@ -114,9 +114,12 @@ export const payment = pgTable(
     cancelledAt: timestamp('cancelled_at', { withTimezone: true }),
     cancelledBy: text('cancelled_by').references(() => user.id, { onDelete: 'restrict' }),
     cancelReason: text('cancel_reason'),
+    // Identifiant généré par l'appli : rend l'encaissement idempotent (plusieurs lignes sans client_id permises).
+    clientId: uuid('client_id'),
     createdAt: createdAt(),
   },
   (table) => [
+    unique('payment_residence_client_id_unique').on(table.residenceId, table.clientId),
     foreignKey({
       name: 'payment_due_same_residence_fk',
       columns: [table.chargeDueId, table.residenceId],
@@ -181,5 +184,31 @@ export const receiptCounter = pgTable(
   (table) => [
     primaryKey({ name: 'receipt_counter_pk', columns: [table.residenceId, table.year] }),
     check('receipt_counter_last_number_nonneg', sql`${table.lastNumber} >= 0`),
+  ],
+);
+
+/**
+ * Relance d'impayé envoyée pour un lot (plan 08, étape 4). Sert à limiter les relances à une
+ * tous les 3 jours par lot, quel que soit l'appel de charges. Jamais supprimée.
+ */
+export const chargeReminder = pgTable(
+  'charge_reminder',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    residenceId: residenceId(),
+    lotId: uuid('lot_id').notNull(),
+    sentBy: text('sent_by')
+      .notNull()
+      .references(() => user.id, { onDelete: 'restrict' }),
+    createdAt: createdAt(),
+  },
+  (table) => [
+    foreignKey({
+      name: 'charge_reminder_lot_same_residence_fk',
+      columns: [table.lotId, table.residenceId],
+      foreignColumns: [lot.id, lot.residenceId],
+    }).onDelete('restrict'),
+    // Dernière relance d'un lot.
+    index('charge_reminder_lot_idx').on(table.residenceId, table.lotId, table.createdAt),
   ],
 );

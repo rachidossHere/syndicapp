@@ -19,6 +19,7 @@ import {
 } from '@syndic/ui';
 import { Redirect, useRouter } from 'expo-router';
 import Banknote from 'lucide-react-native/icons/banknote';
+import Bell from 'lucide-react-native/icons/bell';
 import FileText from 'lucide-react-native/icons/file-text';
 import { useEffect, useMemo, useState } from 'react';
 import { View } from 'react-native';
@@ -36,6 +37,7 @@ import { useT } from '@/i18n/use-t';
 import { apiErrorKey } from '@/lib/api-errors';
 
 import { canManageCharges } from './access';
+import { canRemind } from './unpaid-screen';
 import { QueryFallback } from './query-fallback';
 import { ReferenceBox } from './reference-box';
 import { useChargeFormat } from './use-charge-format';
@@ -303,6 +305,15 @@ export function ChargeCallScreen({ callId }: { callId: string }) {
     body = (
       <>
         {call.error && <Banner message={t('charges.loadError')} />}
+        {/* Relances : syndic seulement (charges.write), quand il reste des impayés ou des partiels. */}
+        {active !== null && canRemind(active.role) && counts.unpaid + counts.partial > 0 && (
+          <Button
+            variant="secondary"
+            icon={Bell}
+            label={t('charges.detail.unpaidReminders', { count: counts.unpaid + counts.partial })}
+            onPress={() => router.push({ pathname: '/unpaid/[id]', params: { id: callId } })}
+          />
+        )}
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
           {FILTERS.map((value) => (
             <Chip

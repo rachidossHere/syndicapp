@@ -27,7 +27,7 @@ import {
   type IssueStatus,
   type Role,
 } from '@syndic/shared';
-import { and, asc, desc, eq, inArray, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, ne, sql } from 'drizzle-orm';
 import { Hono } from 'hono';
 import { HTTPException } from 'hono/http-exception';
 import { z } from 'zod';
@@ -39,6 +39,7 @@ import {
   requirePermission,
   type MembershipEnv,
 } from '../middleware/require-membership';
+import { notify } from '../notify';
 import { SIGNED_URL_TTL_SECONDS, getStorage } from '../storage/r2';
 import { parseJson } from '../validate';
 
@@ -48,6 +49,9 @@ type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 type PhotoType = (typeof ISSUE_PHOTO_CONTENT_TYPES)[number];
 const isPhotoType = (value: string): value is PhotoType =>
   (ISSUE_PHOTO_CONTENT_TYPES as readonly string[]).includes(value);
+
+/** Rôles prévenus d'un nouveau signalement urgent. */
+const URGENT_ISSUE_ROLES: Role[] = ['manager', 'deputy', 'caretaker'];
 
 const i = schema.issue;
 const ev = schema.issueEvent;
@@ -111,7 +115,10 @@ async function rolesOf(residenceId: string, userIds: string[]): Promise<Map<stri
     .select({ userId: schema.membership.userId, role: schema.membership.role })
     .from(schema.membership)
     .where(
-      and(eq(schema.membership.residenceId, residenceId), inArray(schema.membership.userId, userIds)),
+      and(
+        eq(schema.membership.residenceId, residenceId),
+        inArray(schema.membership.userId, userIds),
+      ),
     )
     .orderBy(desc(schema.membership.active), desc(schema.membership.createdAt));
   for (const row of rows) if (!map.has(row.userId)) map.set(row.userId, row.role);
@@ -195,7 +202,8 @@ function presentEvent(row: EventRow, issueAuthorId: string, viewer: Viewer, dire
   const role = directory.roles.get(row.authorId) ?? null;
   // Habitant : le rôle n'est donné que pour le personnel, jamais pour l'auteur du signalement
   // (le désigner par son rôle révélerait qui c'est).
-  const staffRole = role && can(role, 'issues.manage') && row.authorId !== issueAuthorId ? role : null;
+  const staffRole =
+    role && can(role, 'issues.manage') && row.authorId !== issueAuthorId ? role : null;
   return {
     id: row.id,
     type: row.type,
@@ -265,25 +273,31 @@ async function lockIssue(tx: Tx, residenceId: string, id: string): Promise<Row |
  * URL signée d'envoi (PUT, 5 minutes) d'une photo. Type (JPEG, PNG) et taille (10 Mo maximum)
  * sont contrôlés ici puis inclus dans la signature : R2 refuse un autre fichier.
  */
-issues.post('/upload-url', requireAuth, requireMembership, requirePermission('issues.write'), async (c) => {
-  const input = await parseJson(c, issueUploadRequestSchema);
-  if (!isPhotoType(input.contentType)) return issueRefusal(ISSUE_ERRORS.invalidFileType);
-  if (input.size > MAX_ISSUE_PHOTO_SIZE_BYTES) return issueRefusal(ISSUE_ERRORS.fileTooLarge);
+issues.post(
+  '/upload-url',
+  requireAuth,
+  requireMembership,
+  requirePermission('issues.write'),
+  async (c) => {
+    const input = await parseJson(c, issueUploadRequestSchema);
+    if (!isPhotoType(input.contentType)) return issueRefusal(ISSUE_ERRORS.invalidFileType);
+    if (input.size > MAX_ISSUE_PHOTO_SIZE_BYTES) return issueRefusal(ISSUE_ERRORS.fileTooLarge);
 
-  const key = `${issueKeyPrefix(c.get('residenceId'))}${randomUUID()}.${ISSUE_PHOTO_EXTENSIONS[input.contentType]}`;
-  const uploadUrl = await getStorage().getSignedUploadUrl(key, {
-    contentType: input.contentType,
-    size: input.size,
-  });
-  c.header('Cache-Control', 'no-store');
-  return c.json({
-    uploadUrl,
-    key,
-    method: 'PUT',
-    headers: { 'Content-Type': input.contentType },
-    expiresIn: SIGNED_URL_TTL_SECONDS,
-  });
-});
+    const key = `${issueKeyPrefix(c.get('residenceId'))}${randomUUID()}.${ISSUE_PHOTO_EXTENSIONS[input.contentType]}`;
+    const uploadUrl = await getStorage().getSignedUploadUrl(key, {
+      contentType: input.contentType,
+      size: input.size,
+    });
+    c.header('Cache-Control', 'no-store');
+    return c.json({
+      uploadUrl,
+      key,
+      method: 'PUT',
+      headers: { 'Content-Type': input.contentType },
+      expiresIn: SIGNED_URL_TTL_SECONDS,
+    });
+  },
+);
 
 /**
  * Exécute la création ; une violation de l'index unique des photos (deux créations simultanées avec la
@@ -293,10 +307,15 @@ async function createWithPhotoGuard<T>(run: () => Promise<T>): Promise<T | Respo
   try {
     return await run();
   } catch (error) {
-    const e = error as { code?: unknown; constraint?: unknown; cause?: { code?: unknown; constraint?: unknown } };
+    const e = error as {
+      code?: unknown;
+      constraint?: unknown;
+      cause?: { code?: unknown; constraint?: unknown };
+    };
     const code = e.code ?? e.cause?.code;
     const constraint = e.constraint ?? e.cause?.constraint;
-    if (code === '23505' && constraint === 'issue_photo_key_unique') return issueRefusal(ISSUE_ERRORS.photoAlreadyUsed);
+    if (code === '23505' && constraint === 'issue_photo_key_unique')
+      return issueRefusal(ISSUE_ERRORS.photoAlreadyUsed);
     throw error;
   }
 }
@@ -320,7 +339,8 @@ issues.post('/', requireAuth, requireMembership, requirePermission('issues.write
 
   let photo: { key: string; contentType: PhotoType; size: number } | undefined;
   if (input.photoKey) {
-    if (!isOwnPhotoKey(residenceId, input.photoKey)) return issueRefusal(ISSUE_ERRORS.photoNotFound);
+    if (!isOwnPhotoKey(residenceId, input.photoKey))
+      return issueRefusal(ISSUE_ERRORS.photoNotFound);
     const head = await getStorage().headObject(input.photoKey);
     if (!head || head.size <= 0) return issueRefusal(ISSUE_ERRORS.photoNotFound);
     const contentType = head.contentType ?? '';
@@ -341,36 +361,65 @@ issues.post('/', requireAuth, requireMembership, requirePermission('issues.write
     .select({ lotId: schema.membership.lotId })
     .from(schema.membership)
     .where(
-      and(eq(schema.membership.id, c.get('membershipId')), eq(schema.membership.residenceId, residenceId)),
+      and(
+        eq(schema.membership.id, c.get('membershipId')),
+        eq(schema.membership.residenceId, residenceId),
+      ),
     )
     .limit(1);
 
-  const created = await createWithPhotoGuard(() => db.transaction(async (tx) => {
-    const [row] = await tx
-      .insert(i)
-      .values({
+  const created = await createWithPhotoGuard(() =>
+    db.transaction(async (tx) => {
+      const [row] = await tx
+        .insert(i)
+        .values({
+          residenceId,
+          title: input.title,
+          description: input.description ?? null,
+          location: input.location,
+          urgent: input.urgent,
+          status: 'open',
+          photoKey: photo?.key ?? null,
+          photoContentType: photo?.contentType ?? null,
+          photoSize: photo?.size ?? null,
+          authorId: viewer.userId,
+          authorLotId: membership?.lotId ?? null,
+        })
+        .returning(columns);
+      await tx.insert(ev).values({
         residenceId,
-        title: input.title,
-        description: input.description ?? null,
-        location: input.location,
-        urgent: input.urgent,
-        status: 'open',
-        photoKey: photo?.key ?? null,
-        photoContentType: photo?.contentType ?? null,
-        photoSize: photo?.size ?? null,
+        issueId: row!.id,
+        type: 'created',
+        toStatus: 'open',
         authorId: viewer.userId,
-        authorLotId: membership?.lotId ?? null,
-      })
-      .returning(columns);
-    await tx.insert(ev).values({
-      residenceId,
-      issueId: row!.id,
-      type: 'created',
-      toStatus: 'open',
-      authorId: viewer.userId,
-    });
-    return row!;
-  }));
+      });
+      if (input.urgent) {
+        // Personnel concerné (syndic, adjoint, gardien) sauf l'auteur : même transaction que la création.
+        const staff = await tx
+          .select({ userId: schema.membership.userId })
+          .from(schema.membership)
+          .where(
+            and(
+              eq(schema.membership.residenceId, residenceId),
+              eq(schema.membership.active, true),
+              inArray(schema.membership.role, URGENT_ISSUE_ROLES),
+              ne(schema.membership.userId, viewer.userId),
+            ),
+          );
+        const userIds = [...new Set(staff.map((member) => member.userId))];
+        if (userIds.length > 0) {
+          await notify(
+            residenceId,
+            { kind: 'users', userIds },
+            'issue_urgent',
+            { itemId: row!.id },
+            tx,
+          );
+        }
+      }
+      return row!;
+    }),
+  );
   if (created instanceof Response) return created;
   return c.json(await detail(residenceId, created, viewer), 201);
 });
@@ -420,7 +469,11 @@ issues.get('/', requireAuth, requireMembership, async (c) => {
       .select(columns)
       .from(i)
       .where(where)
-      .orderBy(desc(sql`(${i.urgent} and ${i.status} <> 'resolved')`), desc(i.createdAt), desc(i.id))
+      .orderBy(
+        desc(sql`(${i.urgent} and ${i.status} <> 'resolved')`),
+        desc(i.createdAt),
+        desc(i.id),
+      )
       .limit(limit)
       .offset(offset),
     db
@@ -458,39 +511,59 @@ issues.get('/:id', requireAuth, requireMembership, async (c) => {
  * verrou : statut, `resolved_at` (rempli à « resolved », vidé sinon) et événement ensemble.
  * 409 si le statut demandé est déjà le statut actuel.
  */
-issues.post('/:id/status', requireAuth, requireMembership, requirePermission('issues.manage'), async (c) => {
-  const id = idParam(c.req.param('id'));
-  if (!id.success) return issueRefusal(ISSUE_ERRORS.notFound);
-  const input = await parseJson(c, changeIssueStatusSchema);
-  const residenceId = c.get('residenceId');
-  const viewer = viewerOf(c);
+issues.post(
+  '/:id/status',
+  requireAuth,
+  requireMembership,
+  requirePermission('issues.manage'),
+  async (c) => {
+    const id = idParam(c.req.param('id'));
+    if (!id.success) return issueRefusal(ISSUE_ERRORS.notFound);
+    const input = await parseJson(c, changeIssueStatusSchema);
+    const residenceId = c.get('residenceId');
+    const viewer = viewerOf(c);
 
-  return withIssueRefusals(async () => {
-    const updated = await db.transaction(async (tx) => {
-      const current = await lockIssue(tx, residenceId, id.data);
-      if (!current) throw new IssueRefusal(ISSUE_ERRORS.notFound);
-      if (current.status === input.status) throw new IssueRefusal(ISSUE_ERRORS.statusUnchanged);
-      const now = new Date();
-      const [row] = await tx
-        .update(i)
-        .set({ status: input.status, resolvedAt: input.status === 'resolved' ? now : null, updatedAt: now })
-        .where(and(eq(i.id, current.id), eq(i.residenceId, residenceId)))
-        .returning(columns);
-      await tx.insert(ev).values({
-        residenceId,
-        issueId: current.id,
-        type: 'status_changed',
-        fromStatus: current.status,
-        toStatus: input.status,
-        message: input.message ?? null,
-        authorId: viewer.userId,
-        createdAt: now,
+    return withIssueRefusals(async () => {
+      const updated = await db.transaction(async (tx) => {
+        const current = await lockIssue(tx, residenceId, id.data);
+        if (!current) throw new IssueRefusal(ISSUE_ERRORS.notFound);
+        if (current.status === input.status) throw new IssueRefusal(ISSUE_ERRORS.statusUnchanged);
+        const now = new Date();
+        const [row] = await tx
+          .update(i)
+          .set({
+            status: input.status,
+            resolvedAt: input.status === 'resolved' ? now : null,
+            updatedAt: now,
+          })
+          .where(and(eq(i.id, current.id), eq(i.residenceId, residenceId)))
+          .returning(columns);
+        await tx.insert(ev).values({
+          residenceId,
+          issueId: current.id,
+          type: 'status_changed',
+          fromStatus: current.status,
+          toStatus: input.status,
+          message: input.message ?? null,
+          authorId: viewer.userId,
+          createdAt: now,
+        });
+        // L'auteur est prévenu, sauf s'il est lui-même l'auteur du changement.
+        if (current.authorId !== viewer.userId) {
+          await notify(
+            residenceId,
+            { kind: 'users', userIds: [current.authorId] },
+            'issue_status',
+            { itemId: current.id },
+            tx,
+          );
+        }
+        return row!;
       });
-      return row!;
+      return c.json(await detail(residenceId, updated, viewer));
     });
-    return c.json(await detail(residenceId, updated, viewer));
-  });
-});
+  },
+);
 
 /** Commentaire : l'auteur du signalement ou un rôle avec issues.manage ; 403 pour un autre habitant. */
 issues.post('/:id/comments', requireAuth, requireMembership, async (c) => {
@@ -520,6 +593,16 @@ issues.post('/:id/comments', requireAuth, requireMembership, async (c) => {
       .set({ updatedAt: now })
       .where(and(eq(i.id, current.id), eq(i.residenceId, residenceId)))
       .returning(columns);
+    // Message du personnel : l'auteur est prévenu (jamais lui-même quand il commente son signalement).
+    if (current.authorId !== viewer.userId) {
+      await notify(
+        residenceId,
+        { kind: 'users', userIds: [current.authorId] },
+        'issue_status',
+        { itemId: current.id },
+        tx,
+      );
+    }
     return row!;
   });
   return c.json(await detail(residenceId, updated, viewer), 201);
@@ -546,7 +629,8 @@ issues.post('/:id/reopen', requireAuth, requireMembership, async (c) => {
       if (current.status !== 'resolved' || !current.resolvedAt) {
         throw new IssueRefusal(ISSUE_ERRORS.notResolved);
       }
-      if (!isWithinReopenWindow(current.resolvedAt)) throw new IssueRefusal(ISSUE_ERRORS.reopenExpired);
+      if (!isWithinReopenWindow(current.resolvedAt))
+        throw new IssueRefusal(ISSUE_ERRORS.reopenExpired);
       const now = new Date();
       const [row] = await tx
         .update(i)

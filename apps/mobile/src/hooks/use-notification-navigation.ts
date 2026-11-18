@@ -1,10 +1,10 @@
-// Toucher d'une notification d'annonce (plan 08, étape 3) : ouvre le détail de l'annonce.
-// `useLastNotificationResponse` couvre les trois cas : appli ouverte, appli en arrière-plan et
-// lancement de l'appli depuis la notification (dernière réponse de notification).
+// Toucher d'une notification (plan 08, étapes 3 et 4) : ouvre l'écran lié (annonce, signalement,
+// « Mes charges », reçu). `useLastNotificationResponse` couvre les trois cas : appli ouverte, appli
+// en arrière-plan et lancement de l'appli depuis la notification (dernière réponse de notification).
 //
 // - La notification ne porte que { type, residenceId, itemId } : jamais de titre ni de nom.
-// - Résidence de la notification = résidence active : le détail s'ouvre directement.
-// - Autre résidence dont l'utilisateur est membre : on bascule d'abord sur elle, puis le détail s'ouvre.
+// - Résidence de la notification = résidence active : l'écran s'ouvre directement.
+// - Autre résidence dont l'utilisateur est membre : on bascule d'abord sur elle, puis l'écran s'ouvre.
 // - Résidence inconnue de l'utilisateur (ou liste des résidences illisible) : l'accueil, sans erreur.
 // Chaque réponse n'est traitée qu'une fois (identifiant de la notification).
 import * as Notifications from 'expo-notifications';
@@ -13,11 +13,11 @@ import { useEffect } from 'react';
 
 import { useResidences } from '@/hooks/use-residences';
 import { getActiveResidenceId, setActiveResidenceId } from '@/lib/active-residence';
-import { parseAnnouncementNotification, planAnnouncementNavigation } from '@/lib/announcement-notification';
+import { parseNotificationTarget, planNotificationNavigation } from '@/lib/notification-target';
 
 const handled = new Set<string>();
 
-export function useAnnouncementNotificationNavigation(): void {
+export function useNotificationNavigation(): void {
   const router = useRouter();
   const residences = useResidences();
   const response = Notifications.useLastNotificationResponse();
@@ -26,7 +26,7 @@ export function useAnnouncementNotificationNavigation(): void {
     if (!response || response.actionIdentifier !== Notifications.DEFAULT_ACTION_IDENTIFIER) return;
     const id = response.notification.request.identifier;
     if (handled.has(id)) return;
-    const target = parseAnnouncementNotification(response.notification.request.content.data);
+    const target = parseNotificationTarget(response.notification.request.content.data);
     if (target === null) {
       handled.add(id);
       return;
@@ -35,22 +35,16 @@ export function useAnnouncementNotificationNavigation(): void {
     if (residences.data === undefined && !residences.isError) return;
     handled.add(id);
 
-    const plan = planAnnouncementNavigation(
+    const plan = planNotificationNavigation(
       target,
       getActiveResidenceId(),
       (residences.data ?? []).map((residence) => residence.id),
     );
-    switch (plan.kind) {
-      case 'home':
-        router.navigate('/home');
-        break;
-      case 'open':
-        router.push({ pathname: '/announcement/[id]', params: { id: plan.announcementId } });
-        break;
-      case 'switch_and_open':
-        setActiveResidenceId(plan.residenceId);
-        router.push({ pathname: '/announcement/[id]', params: { id: plan.announcementId } });
-        break;
+    if (plan.kind === 'home') {
+      router.navigate('/home');
+      return;
     }
+    if (plan.kind === 'switch_and_open') setActiveResidenceId(plan.residenceId);
+    for (const route of plan.routes) router.push(route);
   }, [response, residences.data, residences.isError, router]);
 }
