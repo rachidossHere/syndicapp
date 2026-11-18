@@ -95,8 +95,11 @@ export const issuesViewFor = (role: Role | undefined): IssuesView =>
 
 /** Habitant : « En cours » (ouverts et en cours de traitement) et « Résolus ». */
 export const RESIDENT_FILTERS = ['active', 'resolved'] as const;
-/** Syndic, adjoint, gardien : Tous, Ouverts, En cours, Résolus. */
-export const MANAGE_FILTERS = ['all', 'open', 'in_progress', 'resolved'] as const;
+/**
+ * Syndic, adjoint, gardien : Tous, Urgents, Ouverts, En cours, Résolus. « Urgents » (plan 02b, étape 3)
+ * est ouvert par la pastille « signalements urgents » de l'accueil : les urgents non résolus.
+ */
+export const MANAGE_FILTERS = ['all', 'urgent', 'open', 'in_progress', 'resolved'] as const;
 export type IssueFilter = (typeof RESIDENT_FILTERS)[number] | (typeof MANAGE_FILTERS)[number];
 
 export const filtersFor = (view: IssuesView): readonly IssueFilter[] =>
@@ -109,17 +112,36 @@ export function filterStatuses(filter: IssueFilter): readonly IssueStatus[] | un
     case 'all':
       return undefined;
     case 'active':
+    case 'urgent':
+      // « Urgents » : l'API n'a pas de filtre d'urgence ; on lui demande les non résolus (les urgents
+      // viennent en premier) et la liste ne garde que les urgents (`urgentOnly`).
       return ['open', 'in_progress'];
     default:
       return [filter];
   }
 }
 
+/** Valeur lue dans l'adresse (`/issues?filter=urgent`) : un filtre de la vue, sinon celui par défaut. */
+export function parseFilterParam(value: string | undefined, view: IssuesView): IssueFilter {
+  return filtersFor(view).find((filter) => filter === value) ?? defaultFilterFor(view);
+}
+
+/** « Urgents » : la liste garde les signalements urgents non résolus. */
+export const urgentOnly = <T extends Pick<IssueItem, 'urgent'>>(items: readonly T[]): T[] => items.filter((item) => item.urgent);
+
+/**
+ * Faut-il charger la page suivante pour compléter « Urgents » ? L'API trie les urgents non résolus
+ * d'abord : tant que tous les éléments chargés sont urgents et qu'il reste des pages, il peut y en avoir d'autres.
+ */
+export const needsMoreUrgent = (items: readonly Pick<IssueItem, 'urgent'>[], hasNextPage: boolean): boolean =>
+  hasNextPage && items.every((item) => item.urgent);
+
 /** Valeur du paramètre `status` de GET /api/issues (« open,in_progress »), absente pour « Tous ». */
 export const filterStatusParam = (filter: IssueFilter): string | undefined => filterStatuses(filter)?.join(',');
 
 /** Compteur d'un filtre, à partir des compteurs de la résidence. */
 export function filterCount(filter: IssueFilter, counts: IssueCounts): number {
+  if (filter === 'urgent') return counts.urgentUnresolved;
   const statuses = filterStatuses(filter) ?? ISSUE_STATUSES;
   return statuses.reduce((sum, status) => sum + counts[status], 0);
 }

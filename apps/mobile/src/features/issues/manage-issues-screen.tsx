@@ -4,13 +4,12 @@
 // rôles seulement), badge de statut et « Urgent ». Bandeau et compteurs se rafraîchissent après
 // chaque traitement (invalidation de issuesQueryKey) et au retour sur l'écran.
 import { Banner, Button, Chip, EmptyState, Screen, Text, useTheme } from '@syndic/ui';
-import { Redirect, useRouter } from 'expo-router';
+import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
 import Flag from 'lucide-react-native/icons/flag';
 import Plus from 'lucide-react-native/icons/plus';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { FlatList, RefreshControl, ScrollView, View } from 'react-native';
 
-import { AuthHeader } from '@/features/auth/auth-header';
 import { QueryFallback } from '@/features/charges/query-fallback';
 import { useIssueCounts, useIssueList } from '@/hooks/use-issues';
 import { useRefreshOnFocus } from '@/hooks/use-refresh-on-focus';
@@ -18,11 +17,13 @@ import { useActiveResidence } from '@/hooks/use-residences';
 import { useT } from '@/i18n/use-t';
 import {
   MANAGE_FILTERS,
-  defaultFilterFor,
   filterCount,
   issuesResidenceId,
+  needsMoreUrgent,
+  parseFilterParam,
   staffLineParts,
   urgentBannerKey,
+  urgentOnly,
   type IssueFilter,
 } from '@/lib/issues';
 
@@ -77,9 +78,29 @@ export function ManageIssuesScreen() {
   const format = useIssueFormat();
   const { active, query: residencesQuery } = useActiveResidence();
   const residenceId = issuesResidenceId(active);
-  const [filter, setFilter] = useState<IssueFilter>(defaultFilterFor('manage'));
+  // L'accueil ouvre cet écran déjà filtré (`/issues?filter=urgent`) ; le paramètre est consommé ensuite.
+  const params = useLocalSearchParams<{ filter?: string }>();
+  const [filter, setFilter] = useState<IssueFilter>(() => parseFilterParam(params.filter, 'manage'));
   const list = useIssueList(residenceId, filter);
   const counts = useIssueCounts(residenceId);
+
+  useEffect(() => {
+    if (params.filter === undefined) return;
+    setFilter(parseFilterParam(params.filter, 'manage'));
+    router.setParams({ filter: undefined });
+  }, [params.filter, router]);
+
+  // « Urgents » : seuls les urgents non résolus, et la suite se charge tant que la liste n'est pas complète.
+  const shown = useMemo(() => (filter === 'urgent' ? urgentOnly(list.items) : list.items), [filter, list.items]);
+  const loadMoreUrgent =
+    filter === 'urgent' &&
+    list.loaded &&
+    !list.isFetchingNextPage &&
+    !list.isFetchNextPageError &&
+    needsMoreUrgent(list.items, list.hasNextPage);
+  useEffect(() => {
+    if (loadMoreUrgent) void list.fetchNextPage();
+  }, [loadMoreUrgent, list]);
 
   // Rafraîchissement au retour sur l'écran (après un traitement : liste, compteurs et bandeau).
   const refetchAll = useCallback(() => Promise.all([list.refetch(), counts.refetch()]), [list.refetch, counts.refetch]);
@@ -87,14 +108,12 @@ export function ManageIssuesScreen() {
 
   if (residencesQuery.data !== undefined && residenceId === undefined) return <Redirect href="/home" />;
 
-  const goBack = () => (router.canGoBack() ? router.back() : router.replace('/home'));
   const openIssue = (id: string) => router.push({ pathname: '/issue/[id]', params: { id } });
   const urgent = counts.data?.urgentUnresolved ?? 0;
   const roleLabel = active !== null ? t(`roles.${active.role}`) : undefined;
 
   const header = (
     <View style={{ gap: spacing.lg }}>
-      <AuthHeader onBack={goBack} />
       <View style={{ gap: spacing.xs }}>
         {active !== null && (
           <Text variant="small" tone="muted">
@@ -146,7 +165,7 @@ export function ManageIssuesScreen() {
       <FlatList
         style={{ flex: 1 }}
         contentContainerStyle={{ gap: spacing.md, paddingBottom: spacing.lg }}
-        data={list.loaded ? list.items : []}
+        data={list.loaded ? shown : []}
         keyExtractor={(issue) => issue.id}
         renderItem={({ item }) => (
           <IssueRow
@@ -156,7 +175,7 @@ export function ManageIssuesScreen() {
           />
         )}
         ListHeaderComponent={header}
-        ListHeaderComponentStyle={{ marginBottom: list.items.length > 0 ? 0 : spacing.md }}
+        ListHeaderComponentStyle={{ marginBottom: shown.length > 0 ? 0 : spacing.md }}
         ListEmptyComponent={empty}
         ListFooterComponent={<IssueListFooter list={list} />}
         onEndReachedThreshold={0.5}
