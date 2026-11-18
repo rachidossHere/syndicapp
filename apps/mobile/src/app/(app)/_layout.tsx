@@ -2,6 +2,8 @@ import { useRouter } from 'expo-router';
 import { Stack } from 'expo-router/stack';
 import { useEffect } from 'react';
 
+import { useAnnouncementNotificationNavigation } from '@/hooks/use-announcement-notification-navigation';
+import { configureNotificationDisplay } from '@/lib/notification-display';
 import { consumePendingInviteCode } from '@/lib/pending-invite';
 import { introStore, pushDeps } from '@/lib/push-device';
 import { runPushStartup } from '@/lib/push-registration';
@@ -11,6 +13,9 @@ export const unstable_settings = { anchor: 'home' };
 
 export default function AppLayout() {
   const router = useRouter();
+  // Notification touchée (appli ouverte, en arrière-plan ou fermée) : ouvre le détail de l'annonce.
+  configureNotificationDisplay();
+  useAnnouncementNotificationNavigation();
 
   // Lien d'invitation ouvert avant la connexion : une fois connecté, on arrive sur l'écran du code.
   useEffect(() => {

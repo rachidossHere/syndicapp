@@ -52,6 +52,7 @@ type Ids = {
   expense: string;
   invitation: string;
   issue: string;
+  announcement: string;
   /** Appartement qui a un membre, des charges et un paiement : la suppression sondée est refusée (409). */
   lot: string;
 };
@@ -70,6 +71,7 @@ const ALL = ['manager', 'treasurer', 'deputy', 'owner', 'ownerOtherLot', 'tenant
 const ACCOUNTS = ['manager', 'treasurer', 'deputy', 'owner', 'ownerOtherLot'];
 const COLLECTORS = ['manager', 'treasurer'];
 const ISSUE_STAFF = ['manager', 'deputy', 'caretaker'];
+const ANNOUNCERS = ['manager', 'deputy'];
 
 const PROBES: Probe[] = [
   { name: 'GET /residences/current', method: 'GET', path: () => '/api/residences/current', allowed: ALL },
@@ -109,6 +111,13 @@ const PROBES: Probe[] = [
   { name: 'POST /issues/:id/comments', method: 'POST', path: (ids) => `/api/issues/${ids.issue}/comments`, body: {}, allowed: ISSUE_STAFF },
   { name: 'POST /issues/:id/reopen', method: 'POST', path: (ids) => `/api/issues/${ids.issue}/reopen`, body: {}, allowed: ['manager'] },
   { name: 'GET /issues/:id/photo-url', method: 'GET', path: (ids) => `/api/issues/${ids.issue}/photo-url`, allowed: ALL },
+  // Annonces (plan 08) : tous lisent, syndic et adjoint publient et épinglent.
+  { name: 'POST /announcements', method: 'POST', path: () => '/api/announcements', body: {}, allowed: ANNOUNCERS },
+  { name: 'GET /announcements', method: 'GET', path: () => '/api/announcements', allowed: ALL },
+  { name: 'GET /announcements/latest', method: 'GET', path: () => '/api/announcements/latest', allowed: ALL },
+  { name: 'GET /announcements/audience', method: 'GET', path: () => '/api/announcements/audience', allowed: ANNOUNCERS },
+  { name: 'GET /announcements/:id', method: 'GET', path: (ids) => `/api/announcements/${ids.announcement}`, allowed: ALL },
+  { name: 'POST /announcements/:id/pin', method: 'POST', path: (ids) => `/api/announcements/${ids.announcement}/pin`, body: {}, allowed: ANNOUNCERS },
 ];
 
 describe.skipIf(!configured)('Vérification des plans 04 à 06', { timeout: 300_000 }, () => {
@@ -184,6 +193,12 @@ describe.skipIf(!configured)('Vérification des plans 04 à 06', { timeout: 300_
     const issue = await api(manager, 'POST', '/api/issues', residence, { title: 'Ascenseur bloqué au 3e', location: 'elevator' });
     expect(issue.status).toBe(201);
 
+    // Annonce semée directement en base : aucune notification n'est enregistrée par ces sondages.
+    const [announcement] = await getDb()
+      .insert(schema.announcement)
+      .values({ residenceId: residence, authorId: manager, category: 'info', title: 'Coupure d’eau jeudi', body: 'De 9 h à 13 h.' })
+      .returning({ id: schema.announcement.id });
+
     const invitation = await api(manager, 'POST', '/api/invitations', residence, { role: 'caretaker' });
     expect(invitation.status).toBe(201);
     return {
@@ -193,6 +208,7 @@ describe.skipIf(!configured)('Vérification des plans 04 à 06', { timeout: 300_
       expense: expense.json.id,
       invitation: invitation.json.id,
       issue: issue.json.id,
+      announcement: announcement!.id,
       lot: lotId,
     };
   };
@@ -212,6 +228,7 @@ describe.skipIf(!configured)('Vérification des plans 04 à 06', { timeout: 300_
       db.select().from(schema.expense).where(eq(schema.expense.residenceId, resB)),
       db.select().from(schema.issue).where(eq(schema.issue.residenceId, resB)),
       db.select().from(schema.issueEvent).where(eq(schema.issueEvent.residenceId, resB)),
+      db.select().from(schema.announcement).where(eq(schema.announcement.residenceId, resB)),
       db.select().from(schema.openingBalanceChange).where(eq(schema.openingBalanceChange.residenceId, resB)),
     ]);
     const sort = (rows: any[]) => [...rows].sort((a, b) => String(a.id).localeCompare(String(b.id)));
@@ -286,6 +303,7 @@ describe.skipIf(!configured)('Vérification des plans 04 à 06', { timeout: 300_
       ]);
       for (const key of all) await storage.deleteObject(key);
 
+      await db.delete(schema.announcement).where(inArray(schema.announcement.residenceId, residenceIds));
       await db.delete(schema.issueEvent).where(inArray(schema.issueEvent.residenceId, residenceIds));
       await db.delete(schema.issue).where(inArray(schema.issue.residenceId, residenceIds));
       await db.delete(schema.expense).where(inArray(schema.expense.residenceId, residenceIds));
@@ -354,6 +372,8 @@ describe.skipIf(!configured)('Vérification des plans 04 à 06', { timeout: 300_
       ['POST', `/api/issues/${ids.B.issue}/status`, { status: 'resolved' }],
       ['POST', `/api/issues/${ids.B.issue}/comments`, { message: 'test croisé' }],
       ['POST', `/api/issues/${ids.B.issue}/reopen`, {}],
+      ['GET', `/api/announcements/${ids.B.announcement}`],
+      ['POST', `/api/announcements/${ids.B.announcement}/pin`, { pinned: true }],
       ['GET', `/api/issues/${ids.B.issue}/photo-url`],
     ];
     for (const [method, path, body] of attempts) {
@@ -378,7 +398,7 @@ describe.skipIf(!configured)('Vérification des plans 04 à 06', { timeout: 300_
 
   it('isolation : les listes de A ne contiennent aucun identifiant de B', async () => {
     const bValues = [resB, ...Object.values(ids.B)];
-    for (const path of ['/api/residences', '/api/residences/current', '/api/lots', '/api/invitations', '/api/charge-calls', '/api/me/dues', '/api/expenses', '/api/cash']) {
+    for (const path of ['/api/residences', '/api/residences/current', '/api/lots', '/api/invitations', '/api/charge-calls', '/api/me/dues', '/api/expenses', '/api/cash', '/api/announcements', '/api/announcements/latest']) {
       const response = await api(uid('manager'), 'GET', path, resA);
       expect(response.status).toBe(200);
       for (const value of bValues) expect(response.text, path).not.toContain(value);

@@ -85,6 +85,13 @@
       "when": 1794843257599,
       "tag": "0011_sour_thunderbolt",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1794992861077,
+      "tag": "0012_announcements",
+      "breakpoints": true
     }
   ]
 }

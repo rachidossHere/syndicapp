@@ -20,6 +20,7 @@ import { translate } from './translate';
 
 const ARABIC_LETTER = /[؀-ۿ]/;
 const NO_WORDS = [
+  'announcements.meta',
   'welcome.appName',
   'home.residenceLine',
   'lots.single.referencePlaceholder',

@@ -9,6 +9,7 @@ import Building from 'lucide-react-native/icons/building';
 import ChartColumn from 'lucide-react-native/icons/chart-column';
 import Flag from 'lucide-react-native/icons/flag';
 import KeyRound from 'lucide-react-native/icons/key-round';
+import Megaphone from 'lucide-react-native/icons/megaphone';
 import Plus from 'lucide-react-native/icons/plus';
 import Receipt from 'lucide-react-native/icons/receipt';
 import Wallet from 'lucide-react-native/icons/wallet';
@@ -16,6 +17,7 @@ import { useEffect, useState } from 'react';
 import { Pressable, View } from 'react-native';
 
 import { ErrorNotice } from '@/components/network-error';
+import { LatestAnnouncementCard } from '@/features/announcements/latest-announcement-card';
 import { canSeeAccounts } from '@/lib/cash';
 import { canUseIssues, issuesViewFor } from '@/lib/issues';
 import { canManageCharges, myDuesResidenceId } from '@/features/charges/access';
@@ -156,6 +158,27 @@ export function HomeScreen() {
         )}
         {/* Copropriétaire : la carte « Mes charges » est le contenu principal de l'accueil. */}
         {active.role === 'owner' && <MyChargesSummary residenceId={active.id} />}
+        {/* Dernière annonce : tous les rôles, cachée s'il n'y en a aucune. */}
+        <LatestAnnouncementCard residenceId={active.id} />
+        <ListItem
+          title={t('home.announcements')}
+          subtitle={t('home.announcementsBody')}
+          leading={
+            <View
+              style={{
+                width: sizes.iconBox,
+                height: sizes.iconBox,
+                borderRadius: radius.sm,
+                borderCurve: 'continuous',
+                backgroundColor: colors.infoBg,
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}>
+              <Icon icon={Megaphone} color={colors.infoFg} />
+            </View>
+          }
+          onPress={() => router.push('/announcements')}
+        />
         {can(active.role, 'lots.write') && (
           <ListItem
             title={t('home.lots')}

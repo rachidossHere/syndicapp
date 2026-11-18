@@ -1,3 +1,4 @@
+import { arAnnouncementTexts } from './ar-announcements';
 import { arChargeTexts } from './ar-charges';
 import { arAccountTexts } from './ar-accounts';
 import { arExpenseTexts } from './ar-expenses';
@@ -13,6 +14,7 @@ export const ar: Record<TranslationKey, string> = {
   ...arExpenseTexts,
   ...arIssueTexts,
   ...arNotificationTexts,
+  ...arAnnouncementTexts,
   ...arAccountTexts,
   'auth.errors.nameRequired': 'أدخل اسمك.',
   'auth.errors.nameTooShort': 'حرفان على الأقل.',

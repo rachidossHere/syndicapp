@@ -12,6 +12,7 @@ import { isProduction } from './env';
 import { describeError, formatErrorSummary } from './error-log';
 import { loggablePath, requestLogger } from './middleware/request-logger';
 import { cash } from './routes/cash';
+import { announcements } from './routes/announcements';
 import { chargeCalls } from './routes/charge-calls';
 import { expenses } from './routes/expenses';
 import { health } from './routes/health';
@@ -54,6 +55,7 @@ app.route('/api/receipts', receipts);
 app.route('/api/expenses', expenses);
 app.route('/api/issues', issues);
 app.route('/api/cash', cash);
+app.route('/api/announcements', announcements);
 // Liés à l'utilisateur, pas à une résidence : requireAuth seulement (plan 08).
 app.route('/api/push-tokens', pushTokens);
 app.route('/api/notification-preferences', notificationPreferences);

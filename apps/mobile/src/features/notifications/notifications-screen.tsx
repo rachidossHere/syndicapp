@@ -10,6 +10,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { AppState, Linking, Pressable, View } from 'react-native';
 
 import { ErrorNotice } from '@/components/network-error';
+import { SimulateAnnouncementButton } from './simulate-announcement-button';
 import { useNotificationPreferences, useSetNotificationPreference } from '@/hooks/use-notification-preferences';
 import { useActiveResidence } from '@/hooks/use-residences';
 import { useT } from '@/i18n/use-t';
@@ -161,6 +162,9 @@ export function NotificationsScreen() {
           )}
         </View>
       )}
+
+      {/* Développement seulement : jamais affiché dans une version de production. */}
+      {__DEV__ && active !== null && <SimulateAnnouncementButton residenceId={active.id} />}
     </Screen>
   );
 }

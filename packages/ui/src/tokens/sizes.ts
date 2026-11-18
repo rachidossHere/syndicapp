@@ -37,6 +37,8 @@ export type SizeToken = keyof typeof sizes;
 export const borderWidth = {
   /** Cartes, champs, boutons secondaires (le focus d'un champ change la couleur, pas l'épaisseur). */
   thin: 1,
+  /** Carte mise en avant (annonce épinglée) : bordure `primary` plus marquée. */
+  strong: 2,
 } as const;
 
 export type BorderWidthToken = keyof typeof borderWidth;
