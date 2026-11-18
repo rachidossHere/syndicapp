@@ -6,7 +6,7 @@
 import { Badge, Card, Icon, ListItem, Text, useTheme } from '@syndic/ui';
 import Info from 'lucide-react-native/icons/info';
 import Pin from 'lucide-react-native/icons/pin';
-import CircleExclamationPoint from 'lucide-react-native/icons/circle-exclamation-point';
+import TriangleExclamationPoint from 'lucide-react-native/icons/triangle-exclamation-point';
 import Users from 'lucide-react-native/icons/users';
 import Wrench from 'lucide-react-native/icons/wrench';
 import { View } from 'react-native';
@@ -20,7 +20,7 @@ const CATEGORY_ICONS = {
   works: Wrench,
   meeting: Users,
   info: Info,
-  urgent: CircleExclamationPoint,
+  urgent: TriangleExclamationPoint,
 } as const;
 
 /** Nombre de lignes du début du texte dans la carte épinglée. */
