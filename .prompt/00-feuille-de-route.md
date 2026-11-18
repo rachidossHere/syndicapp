@@ -12,6 +12,7 @@ Chaque fichier de ce dossier est un plan à donner à l'agent, **dans l'ordre**,
 | 06 | [Dépenses et caisse](06-depenses-caisse.md) | Dépenses avec facture, solde, comptes transparents | 05 |
 | 07 | [Signalements](07-signalements.md) | Signaler un problème avec photo, suivi des statuts | 04 |
 | 08 | [Annonces et notifications](08-annonces-notifications.md) | Annonces, notifications push, relances d'impayés | 05, 07 |
+| 02b | [Refonte visuelle](02b-refonte-visuelle.md) | Palette élargie, icônes duotone, zellige, illustrations, onglets par rôle, animations | 02, 08 |
 | 09 | [Bureau et passation](09-bureau-passation.md) | Trésorier, adjoint, passation au nouveau syndic | 04 à 08 |
 | 10 | [Mode hors ligne](10-hors-ligne.md) | Encaisser et ajouter une dépense sans réseau | 05, 06 |
 | 11 | [Analyse produit](11-analyse-posthog.md) | PostHog anonyme, feature flags | 04 à 10 |
