@@ -11,6 +11,8 @@ import { useTheme } from '../theme/theme-provider';
 
 export type CardProps = {
   children: ReactNode;
+  /** Carte mise en avant (annonce épinglée) : bordure `primary` de 2 px, sans changer le padding. */
+  highlighted?: boolean;
   /** Rend la carte appuyable : Pressable avec état appuyé et rôle « button ». */
   onPress?: (event: GestureResponderEvent) => void;
   /** Libellé lu par les lecteurs d'écran quand la carte est appuyable. */
@@ -25,6 +27,7 @@ export type CardProps = {
 /** Carte : fond `surface`, bordure `border`, rayon `lg`, padding 16. */
 export function Card({
   children,
+  highlighted = false,
   onPress,
   accessibilityLabel,
   accessibilityHint,
@@ -35,11 +38,12 @@ export function Card({
 
   const base: ViewStyle = {
     backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderWidth: borderWidth.thin,
+    borderColor: highlighted ? colors.primary : colors.border,
+    borderWidth: highlighted ? borderWidth.strong : borderWidth.thin,
     borderRadius: radius.lg,
     borderCurve: 'continuous',
-    padding: spacing.lg,
+    // Bordure plus épaisse : le padding diminue d'autant, la carte garde la même taille de contenu.
+    padding: highlighted ? spacing.lg - (borderWidth.strong - borderWidth.thin) : spacing.lg,
     gap: spacing.sm,
   };
 
@@ -62,7 +66,7 @@ export function Card({
         base,
         { minHeight: sizes.touchTarget },
         // État appuyé visible : fond sable et bordure plus marquée.
-        pressed && { backgroundColor: colors.bg, borderColor: colors.borderStrong },
+        pressed && { backgroundColor: colors.bg, borderColor: highlighted ? colors.primaryPressed : colors.borderStrong },
         style,
       ]}>
       {children}
