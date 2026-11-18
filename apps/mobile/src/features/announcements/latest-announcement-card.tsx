@@ -7,7 +7,7 @@ import { Pressable, View } from 'react-native';
 
 import { useLatestAnnouncement } from '@/hooks/use-announcements';
 import { useT } from '@/i18n/use-t';
-import { categoryLabelKey } from '@/lib/announcements';
+import { categoryLabelKey, latestAnnouncementToShow } from '@/lib/announcements';
 
 import { CategoryBadge } from './announcement-row';
 import { useAnnouncementFormat } from './use-announcement-format';
@@ -18,9 +18,9 @@ export function LatestAnnouncementCard({ residenceId }: { residenceId: string })
   const router = useRouter();
   const { meta } = useAnnouncementFormat();
   const latest = useLatestAnnouncement(residenceId);
-  const item = latest.data;
+  const item = latestAnnouncementToShow(latest.data);
 
-  if (item === undefined || item === null) return null;
+  if (item === null) return null;
 
   const metaText = meta(item);
   return (

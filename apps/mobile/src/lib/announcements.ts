@@ -65,6 +65,13 @@ export function announcementWhen(instant: string, now: Date = new Date()): Annou
   return { kind: 'date', date: casablancaDate(instant) };
 }
 
+/**
+ * Annonce à montrer dans la carte « Dernière annonce » de l'accueil, ou `null` : la carte est cachée
+ * pendant le chargement, en cas d'erreur et quand la résidence n'a aucune annonce.
+ */
+export const latestAnnouncementToShow = (data: AnnouncementItem | null | undefined): AnnouncementItem | null =>
+  data ?? null;
+
 /** Texte sous le formulaire : « Les N membres de la résidence seront prévenus » (singulier, pluriel, aucun). */
 export function audienceNoteKey(count: number | undefined): TranslationKey {
   if (count === undefined) return 'announcements.audience.unknown';
