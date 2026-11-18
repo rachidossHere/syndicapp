@@ -90,5 +90,6 @@ export const ar: Record<TranslationKey, string> = {
   'home.loadError': 'تعذّر تحميل ملفك الشخصي.',
 
   'dev.designSystem': 'نظام التصميم (وضع التطوير)',
+  'dev.gallery': 'المعرض البصري v2 (وضع التطوير)',
   'dev.apiUrl': 'عنوان واجهة API: {url}',
 };

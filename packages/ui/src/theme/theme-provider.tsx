@@ -2,7 +2,18 @@ import { isRtlLanguage, type Language } from '@syndic/shared';
 import { createContext, use, useMemo, type ReactNode } from 'react';
 
 import { uiMessage, type UiMessageKey } from '../i18n/messages';
-import { borderWidth, colors, layout, opacity, radius, sizes, spacing, typography } from '../tokens';
+import {
+  borderWidth,
+  colors,
+  domainColors,
+  layout,
+  motion,
+  opacity,
+  radius,
+  sizes,
+  spacing,
+  typography,
+} from '../tokens';
 import { fontFamily, type FontFamilyName, type FontWeight } from './font';
 
 export type Theme = {
@@ -14,6 +25,10 @@ export type Theme = {
   sizes: typeof sizes;
   borderWidth: typeof borderWidth;
   opacity: typeof opacity;
+  /** Teintes par domaine (fond et icône). */
+  domainColors: typeof domainColors;
+  /** Durées, courbes et échelle d'appui. */
+  motion: typeof motion;
   /** Langue active. */
   language: Language;
   /** Vrai si la langue active s'écrit de droite à gauche. */
@@ -44,6 +59,8 @@ export function ThemeProvider({ language, children }: ThemeProviderProps) {
       sizes,
       borderWidth,
       opacity,
+      domainColors,
+      motion,
       language,
       isRtl: isRtlLanguage(language),
       fontFamily: (weight) => fontFamily(weight, language),

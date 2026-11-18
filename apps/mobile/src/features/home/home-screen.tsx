@@ -337,6 +337,10 @@ export function HomeScreen() {
       footer={
         <>
           {signOutError !== undefined && <ErrorNotice errorKey={signOutError} />}
+          {/* Développement seulement : galerie de la refonte visuelle (plan 02b). */}
+          {__DEV__ && (
+            <Button variant="ghost" label={t('dev.gallery')} onPress={() => router.push('/dev/design-v2')} />
+          )}
           <Button variant="ghost" label={t('home.signOut')} loading={signingOut} onPress={() => void onSignOut()} />
         </>
       }>

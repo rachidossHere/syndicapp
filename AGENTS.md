@@ -112,7 +112,7 @@ Avant de coder, lire le skill correspondant à l'outil concerné et le suivre. E
 | Écrans, styles natifs | `expo-native-ui` |
 | Navigation, Expo Router | `expo-router` |
 | Jetons et composants du design system | `expo-design-system` |
-| Animations, gestes | `expo-animation` |
+| Animations, transitions, Reanimated, gestes | `expo-animation` |
 | Requêtes, TanStack Query, cache | `expo-data-fetching` |
 | Base Neon, Drizzle, branches `dev` / `production` | `neon-postgres` |
 | Authentification, Better Auth | `better-auth-best-practices`, `better-auth-security-best-practices`, `email-and-password-best-practices`, `create-auth` ; pour l'appli : documentation officielle (page « Expo Integration ») |

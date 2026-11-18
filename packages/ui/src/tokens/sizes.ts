@@ -19,6 +19,11 @@ export const sizes = {
   iconBoxSm: 32,
   /** Logo de l'appli sur l'écran d'accueil. */
   logo: 64,
+  /** Pastille teintée d'une icône (plan 02b) : 40, 48 ou 56 px ; l'icône à l'intérieur fait la moitié. */
+  iconTile: { sm: 40, md: 48, lg: 56 },
+  iconTileGlyph: { sm: 20, md: 24, lg: 28 },
+  /** Côté de la cellule répétée du motif zellige. */
+  zelligeCell: 48,
   /** Hauteur minimale d'une tuile d'action de l'accueil syndic. */
   actionTileMinHeight: 112,
   /** Hauteur minimale d'une tuile de choix (grille des appartements à encaisser). */
@@ -49,6 +54,10 @@ export const opacity = {
   pressed: 0.85,
   /** Fond assombri derrière une feuille (couleur `text`). */
   scrim: 0.4,
+  /** Remplissage léger d'une icône duotone (même couleur que le contour). */
+  duotoneFill: 0.18,
+  /** Motif zellige sur un en-tête ou un état vide. */
+  zellige: 0.1,
 } as const;
 
 export type OpacityToken = keyof typeof opacity;
