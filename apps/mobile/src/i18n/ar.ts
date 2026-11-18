@@ -53,10 +53,9 @@ export const ar: Record<TranslationKey, string> = {
 
   'welcome.appName': 'SyndicApp',
   'welcome.logoLabel': 'شعار SyndicApp',
-  'welcome.tagline': 'تدبير إقامتك، بسيط وشفاف لجميع الجيران.',
-  'welcome.benefitCharges': 'المساهمات والوصولات في مكان واحد',
-  'welcome.benefitExpenses': 'مصاريف ظاهرة مع فواتيرها',
-  'welcome.benefitReports': 'البلاغات والإعلانات للجميع',
+  'welcome.logoText': 'SYNDICAPP',
+  'welcome.title': 'إقامتك، بكل شفافية',
+  'welcome.subtitle': 'المساهمات والمصاريف والإعلانات في مكان واحد، للسنديك كما للجيران.',
   'welcome.createAccount': 'إنشاء حساب',
   'welcome.haveAccount': 'لديّ حساب بالفعل',
 
