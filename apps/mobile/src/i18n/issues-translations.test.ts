@@ -59,7 +59,7 @@ describe('traductions des signalements (plan 07, étape 2)', () => {
     expect(fr['issues.status.in_progress']).toBe('En cours');
     expect(fr['issues.status.resolved']).toBe('Résolu');
     expect(fr['issues.visibility']).toContain('Votre nom reste visible seulement par le syndic et le gardien.');
-    expect(fr['issues.empty.title']).toBe('Aucun signalement pour l’instant');
+    expect(fr['issues.empty.title']).toBe('Tout va bien dans la résidence');
     expect(fr['issues.field.title']).toBe('Quel est le problème ?');
     expect(fr['issues.field.location']).toBe('Où ?');
     expect(fr['issues.field.description']).toBe('Détails (facultatif)');

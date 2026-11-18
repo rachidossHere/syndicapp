@@ -22,6 +22,7 @@ const ARABIC_LETTER = /[؀-ۿ]/;
 const NO_WORDS = [
   'announcements.meta',
   'welcome.appName',
+  'welcome.logoText',
   'home.residenceLine',
   'lots.single.referencePlaceholder',
   // Signalements : gabarits sans mot (« lieu · âge », heure, « titre · acteur », citation).
