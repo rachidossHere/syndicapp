@@ -6,6 +6,8 @@
 // - Résidence de la notification = résidence active : l'écran s'ouvre directement.
 // - Autre résidence dont l'utilisateur est membre : on bascule d'abord sur elle, puis l'écran s'ouvre.
 // - Résidence inconnue de l'utilisateur (ou liste des résidences illisible) : l'accueil, sans erreur.
+// - Barre d'onglets (plan 02b) : les écrans de détail s'ouvrent au-dessus des onglets, « Mes charges »
+//   est un onglet du copropriétaire.
 // Chaque réponse n'est traitée qu'une fois (identifiant de la notification).
 import * as Notifications from 'expo-notifications';
 import { useRouter } from 'expo-router';
@@ -13,7 +15,7 @@ import { useEffect } from 'react';
 
 import { useResidences } from '@/hooks/use-residences';
 import { getActiveResidenceId, setActiveResidenceId } from '@/lib/active-residence';
-import { parseNotificationTarget, planNotificationNavigation } from '@/lib/notification-target';
+import { parseNotificationTarget, planNotificationNavigation, routeIsTab } from '@/lib/notification-target';
 
 const handled = new Set<string>();
 
@@ -45,6 +47,10 @@ export function useNotificationNavigation(): void {
       return;
     }
     if (plan.kind === 'switch_and_open') setActiveResidenceId(plan.residenceId);
-    for (const route of plan.routes) router.push(route);
+    // Un onglet (« Mes charges ») s'ouvre sans empiler ; un détail s'ouvre au-dessus des onglets.
+    for (const route of plan.routes) {
+      if (routeIsTab(route)) router.navigate(route);
+      else router.push(route);
+    }
   }, [response, residences.data, residences.isError, router]);
 }
