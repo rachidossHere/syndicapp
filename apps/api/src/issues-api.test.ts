@@ -182,6 +182,9 @@ describe.skipIf(!configured)('API des signalements', { timeout: 120_000 }, () =>
       await db.delete(schema.issueEvent).where(inArray(schema.issueEvent.residenceId, ids));
       await db.delete(schema.issue).where(inArray(schema.issue.residenceId, ids));
       await db.delete(schema.membership).where(inArray(schema.membership.residenceId, ids));
+      // Notifications et relances créées par les routes testées (plan 08, étape 4).
+      await db.delete(schema.notificationJob).where(inArray(schema.notificationJob.residenceId, ids));
+      await db.delete(schema.chargeReminder).where(inArray(schema.chargeReminder.residenceId, ids));
       await db.delete(schema.lot).where(inArray(schema.lot.residenceId, ids));
       await db.delete(schema.residence).where(inArray(schema.residence.id, ids));
     }

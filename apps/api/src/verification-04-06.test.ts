@@ -91,6 +91,7 @@ const PROBES: Probe[] = [
   { name: 'POST /charge-calls', method: 'POST', path: () => '/api/charge-calls', body: {}, allowed: ['manager'] },
   { name: 'POST /payments', method: 'POST', path: () => '/api/payments', body: {}, allowed: COLLECTORS },
   { name: 'POST /payments/:id/cancel', method: 'POST', path: (ids) => `/api/payments/${ids.payment}/cancel`, body: {}, allowed: COLLECTORS },
+  { name: 'POST /charges/reminders', method: 'POST', path: () => '/api/charges/reminders', body: {}, allowed: ['manager'] },
   { name: 'GET /me/dues', method: 'GET', path: () => '/api/me/dues', allowed: ACCOUNTS },
   { name: 'GET /receipts/:id', method: 'GET', path: (ids) => `/api/receipts/${ids.receipt}`, allowed: [...COLLECTORS, 'owner'] },
   { name: 'GET /receipts/:id/url', method: 'GET', path: (ids) => `/api/receipts/${ids.receipt}/url`, allowed: [...COLLECTORS, 'owner'] },
@@ -315,6 +316,9 @@ describe.skipIf(!configured)('Vérification des plans 04 à 06', { timeout: 300_
       await db.delete(schema.receiptCounter).where(inArray(schema.receiptCounter.residenceId, residenceIds));
       await db.delete(schema.invitation).where(inArray(schema.invitation.residenceId, residenceIds));
       await db.delete(schema.membership).where(inArray(schema.membership.residenceId, residenceIds));
+      // Notifications et relances créées par les routes testées (plan 08, étape 4).
+      await db.delete(schema.notificationJob).where(inArray(schema.notificationJob.residenceId, residenceIds));
+      await db.delete(schema.chargeReminder).where(inArray(schema.chargeReminder.residenceId, residenceIds));
       await db.delete(schema.lot).where(inArray(schema.lot.residenceId, residenceIds));
       await db.delete(schema.residence).where(inArray(schema.residence.id, residenceIds));
     }
