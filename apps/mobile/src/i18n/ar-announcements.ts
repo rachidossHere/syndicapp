@@ -24,6 +24,10 @@ export const arAnnouncementTexts: Record<keyof typeof frAnnouncementTexts, strin
 
   'announcements.title': 'الإعلانات',
   'announcements.pinned': 'مثبّت',
+  'announcements.pinnedMeta': 'مثبّت · {meta}',
+  'announcements.filter.all': 'الكل',
+  'announcements.filterEmpty.title': 'لا توجد إعلانات في هذه الفئة',
+  'announcements.filterEmpty.body': 'اختر فئة أخرى لرؤية بقية الإعلانات.',
   'announcements.new': 'إعلان جديد',
   'announcements.loadError': 'تعذّر تحميل الإعلانات.',
   'announcements.loadMoreError': 'تعذّر تحميل باقي الإعلانات.',

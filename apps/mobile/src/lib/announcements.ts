@@ -90,6 +90,37 @@ export function mergeAnnouncementPages(pages: readonly { items: readonly Announc
 }
 
 // ---------------------------------------------------------------------------------------------
+// Filtres par catégorie (écran 3 de docs/design-v2.png)
+
+/** « Toutes », puis une puce par catégorie. */
+export const ANNOUNCEMENT_FILTERS = ['all', ...ANNOUNCEMENT_CATEGORIES] as const;
+export type AnnouncementFilter = (typeof ANNOUNCEMENT_FILTERS)[number];
+
+/** Libellé d'une puce : « Toutes » ou le nom de la catégorie. */
+export const announcementFilterLabelKey = (filter: AnnouncementFilter): TranslationKey =>
+  filter === 'all' ? 'announcements.filter.all' : categoryLabelKey(filter);
+
+/**
+ * Filtre par catégorie, côté appli : l'API des annonces ne filtre pas (curseur seulement). Le filtre
+ * s'applique aux annonces déjà chargées ; l'écran charge les pages suivantes tant qu'il n'y a rien à
+ * montrer (voir `needsMoreForFilter`).
+ */
+export function filterAnnouncements<T extends { category: AnnouncementCategory }>(
+  items: readonly T[],
+  filter: AnnouncementFilter,
+): T[] {
+  return filter === 'all' ? [...items] : items.filter((item) => item.category === filter);
+}
+
+/** Vrai quand un filtre est choisi, que rien ne correspond encore et qu'il reste des pages à charger. */
+export const needsMoreForFilter = (input: {
+  filter: AnnouncementFilter;
+  shown: number;
+  hasNextPage: boolean;
+  busy: boolean;
+}): boolean => input.filter !== 'all' && input.shown === 0 && input.hasNextPage && !input.busy;
+
+// ---------------------------------------------------------------------------------------------
 // Formulaire « Nouvelle annonce »
 
 export type AnnouncementFormValues = {

@@ -26,6 +26,10 @@ export const frAnnouncementTexts = {
   // Liste (écran 3).
   'announcements.title': 'Annonces',
   'announcements.pinned': 'Épinglée',
+  'announcements.pinnedMeta': 'Épinglée · {meta}',
+  'announcements.filter.all': 'Toutes',
+  'announcements.filterEmpty.title': 'Aucune annonce dans cette catégorie',
+  'announcements.filterEmpty.body': 'Choisissez une autre catégorie pour voir les autres annonces.',
   'announcements.new': 'Nouvelle annonce',
   'announcements.loadError': 'Impossible de charger les annonces.',
   'announcements.loadMoreError': 'Impossible de charger la suite des annonces.',
