@@ -65,8 +65,8 @@ export const arAnnouncementTexts: Record<keyof typeof frAnnouncementTexts, strin
   'announcements.errors.bodyRequired': 'اكتب الرسالة.',
   'announcements.errors.bodyTooLong': '1000 حرف على الأكثر.',
 
-  'announcements.simulate.button': 'محاكاة إشعار إعلان',
-  'announcements.simulate.hint': 'اختبار (للتطوير): يصل إشعار محلي خلال 5 ثوانٍ. المسه لفتح الإعلان.',
+  'announcements.simulate.button': 'محاكاة إشعار',
+  'announcements.simulate.hint': 'اختبار (للتطوير): يصل إشعار محلي خلال 5 ثوانٍ. المسه لفتح الشاشة المرتبطة.',
   'announcements.simulate.scheduled': 'تمت برمجة الإشعار: ضع التطبيق في الخلفية، سيصل خلال 5 ثوانٍ.',
   'announcements.simulate.noAnnouncement': 'انشر أولًا إعلانًا في هذه الإقامة.',
   'announcements.simulate.denied': 'اسمح بإشعارات الهاتف لإجراء الاختبار.',

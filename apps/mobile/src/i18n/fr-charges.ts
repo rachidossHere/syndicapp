@@ -11,6 +11,8 @@ const chargeErrors: Record<ChargeErrorKey, string> = {
   'charges.errors.alreadyCancelled': 'Ce paiement est déjà annulé.',
   'charges.errors.cancelReasonRequired': 'Indiquez le motif de l’annulation.',
   'charges.errors.periodLocked': 'Un appel existe déjà pour la période en cours : la périodicité ne peut pas changer.',
+  'charges.errors.reminderTooSoon': 'Ce lot a déjà été relancé il y a moins de 3 jours.',
+  'charges.errors.reminderNothingDue': 'Ce lot n’a plus rien à payer : rien à relancer.',
 };
 
 /**
@@ -201,4 +203,28 @@ export const frChargeTexts = {
   'charges.collect.allPaidBody': 'Tous les appartements ont payé cet appel de charges.',
   'charges.collect.noCallTitle': 'Aucun appel en cours',
   'charges.collect.noCallBody': 'Le syndic doit d’abord lancer un appel de charges.',
+  // Relance des impayés (plan 08, étape 4) : écran « Impayés » du syndic.
+  'charges.detail.unpaidReminders': 'Impayés et relances ({count})',
+  'charges.unpaid.title': 'Impayés',
+  'charges.unpaid.kicker': 'Charges · {period}',
+  'charges.unpaid.remindAll': 'Relancer tous les impayés ({count})',
+  'charges.unpaid.remind': 'Relancer',
+  'charges.unpaid.reminded': 'Relancé',
+  'charges.unpaid.remindLabel': 'Relancer le lot {lot}',
+  'charges.unpaid.remindedLabel': 'Lot {lot} déjà relancé récemment',
+  'charges.unpaid.remaining': 'restants',
+  'charges.unpaid.agoToday': 'Relancé aujourd’hui',
+  'charges.unpaid.agoYesterday': 'Relancé hier',
+  'charges.unpaid.agoDays': 'Relancé il y a {count} jours',
+  'charges.unpaid.remindedLine': '{ago} · nouvelle relance possible le {date}',
+  'charges.unpaid.note': 'Une relance par lot tous les 3 jours au maximum. Seuls les copropriétaires du lot la reçoivent.',
+  'charges.unpaid.confirmTitle': 'Relancer tous les impayés ?',
+  'charges.unpaid.confirmBodyOne': 'Les copropriétaires de {count} lot recevront un rappel. Les lots relancés il y a moins de 3 jours sont ignorés.',
+  'charges.unpaid.confirmBodyMany': 'Les copropriétaires de {count} lots recevront un rappel. Les lots relancés il y a moins de 3 jours sont ignorés.',
+  'charges.unpaid.confirm': 'Envoyer le rappel ({count})',
+  'charges.unpaid.toastOne': 'Rappel envoyé à 1 lot',
+  'charges.unpaid.toastMany': 'Rappel envoyé à {count} lots',
+  'charges.unpaid.toastNone': 'Aucun lot à relancer pour le moment',
+  'charges.unpaid.emptyTitle': 'Aucun impayé',
+  'charges.unpaid.emptyBody': 'Tous les lots ont payé cet appel de charges.',
 };

@@ -12,6 +12,8 @@ const chargeErrors: Record<ChargeErrorKey, string> = {
   'charges.errors.alreadyCancelled': 'تم إلغاء هذا الأداء من قبل.',
   'charges.errors.cancelReasonRequired': 'اذكر سبب الإلغاء.',
   'charges.errors.periodLocked': 'يوجد طلب للفترة الحالية: لا يمكن تغيير الدورية.',
+  'charges.errors.reminderTooSoon': 'سبق تذكير هذه الشقة منذ أقل من 3 أيام.',
+  'charges.errors.reminderNothingDue': 'لا شيء مستحق على هذه الشقة: لا داعي للتذكير.',
 };
 
 const sharedLabels = {
@@ -201,4 +203,28 @@ export const arChargeTexts: Record<keyof typeof frChargeTexts, string> = {
   'charges.collect.allPaidBody': 'أدّت كل الشقق طلب المصاريف هذا.',
   'charges.collect.noCallTitle': 'لا يوجد طلب جارٍ',
   'charges.collect.noCallBody': 'يجب على السنديك أولًا إطلاق طلب مصاريف.',
+  // Relance des impayés (plan 08, étape 4) : écran « Impayés » du syndic.
+  'charges.detail.unpaidReminders': 'المتأخرات والتذكيرات ({count})',
+  'charges.unpaid.title': 'المتأخرات',
+  'charges.unpaid.kicker': 'التكاليف · {period}',
+  'charges.unpaid.remindAll': 'تذكير جميع المتأخرين ({count})',
+  'charges.unpaid.remind': 'تذكير',
+  'charges.unpaid.reminded': 'تم التذكير',
+  'charges.unpaid.remindLabel': 'تذكير الشقة {lot}',
+  'charges.unpaid.remindedLabel': 'تم تذكير الشقة {lot} مؤخرًا',
+  'charges.unpaid.remaining': 'متبقية',
+  'charges.unpaid.agoToday': 'تم التذكير اليوم',
+  'charges.unpaid.agoYesterday': 'تم التذكير أمس',
+  'charges.unpaid.agoDays': 'تم التذكير منذ {count} أيام',
+  'charges.unpaid.remindedLine': '{ago} · يمكن التذكير من جديد يوم {date}',
+  'charges.unpaid.note': 'تذكير واحد لكل شقة كل 3 أيام على الأكثر. لا يصل التذكير إلا إلى مالكي الشقة.',
+  'charges.unpaid.confirmTitle': 'تذكير جميع المتأخرين؟',
+  'charges.unpaid.confirmBodyOne': 'سيصل تذكير إلى مالكي شقة واحدة ({count}). تُتجاهل الشقق التي ذُكّرت منذ أقل من 3 أيام.',
+  'charges.unpaid.confirmBodyMany': 'سيصل تذكير إلى مالكي {count} شقة. تُتجاهل الشقق التي ذُكّرت منذ أقل من 3 أيام.',
+  'charges.unpaid.confirm': 'إرسال التذكير ({count})',
+  'charges.unpaid.toastOne': 'تم إرسال التذكير إلى شقة واحدة',
+  'charges.unpaid.toastMany': 'تم إرسال التذكير إلى {count} شقة',
+  'charges.unpaid.toastNone': 'لا توجد شقة للتذكير حاليًا',
+  'charges.unpaid.emptyTitle': 'لا متأخرات',
+  'charges.unpaid.emptyBody': 'جميع الشقق دفعت هذا الطلب.',
 };

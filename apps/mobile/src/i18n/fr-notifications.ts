@@ -44,6 +44,12 @@ export const frNotificationTexts = {
   'notifications.denied.title': 'Notifications coupées sur ce téléphone ?',
   'notifications.denied.action': 'Ouvrir les réglages',
   'notifications.saveError': 'Le réglage n’a pas été enregistré. Réessayez.',
+  // Bouton de test (développement) : mêmes textes génériques que l'API (apps/api/src/notify/texts.ts).
+  'notifications.simulate.body.issue_status': 'Votre signalement a été mis à jour',
+  'notifications.simulate.body.issue_urgent': 'Nouveau signalement urgent dans votre résidence',
+  'notifications.simulate.body.charge_reminder': 'Un rappel de charges vous attend dans SyndicApp',
+  'notifications.simulate.body.payment_received': 'Votre paiement a bien été enregistré',
+  'notifications.simulate.noIssue': 'Créez d’abord un signalement dans cette résidence.',
   'home.notifications': 'Notifications',
   'home.notificationsBody': 'Choisissez ce que vous recevez',
 } as const;

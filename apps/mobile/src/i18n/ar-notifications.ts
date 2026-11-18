@@ -35,6 +35,11 @@ export const arNotificationTexts: Record<keyof typeof frNotificationTexts, strin
   'notifications.denied.title': 'الإشعارات متوقفة على هذا الهاتف؟',
   'notifications.denied.action': 'فتح الإعدادات',
   'notifications.saveError': 'لم يتم حفظ الإعداد. أعد المحاولة.',
+  'notifications.simulate.body.issue_status': 'تم تحديث بلاغك',
+  'notifications.simulate.body.issue_urgent': 'بلاغ عاجل جديد في إقامتك',
+  'notifications.simulate.body.charge_reminder': 'تذكير بالتكاليف ينتظرك في SyndicApp',
+  'notifications.simulate.body.payment_received': 'تم تسجيل دفعتك',
+  'notifications.simulate.noIssue': 'أنشئ أولًا بلاغًا في هذه الإقامة.',
   'home.notifications': 'الإشعارات',
   'home.notificationsBody': 'اختر ما تريد تلقيه',
 };
