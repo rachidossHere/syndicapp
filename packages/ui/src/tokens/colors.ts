@@ -51,6 +51,17 @@ export const colors = {
   infoBg: '#E3E8F4',
   infoFg: '#2E4A86',
 
+  // Palette élargie (plan 02b) : décor, fonds d'en-tête, pastilles. Jamais de texte courant dessus
+  // sauf `tealDeep`, `palm` et `saffron` (voir contrast.test.ts).
+  /** Fond d'en-tête profond (carte de la résidence), motif zellige dessus. */
+  tealDeep: '#0A3A3E',
+  /** Accent chaud : décor, illustrations, grands textes (3:1 seulement avec le blanc). */
+  terracotta: '#C2603A',
+  /** Accent doré : décor, illustrations ; texte dessus : `text`. */
+  saffron: '#E0A33B',
+  /** Vert palmier : illustrations, graphiques, entrées d'argent en décor. */
+  palm: '#2F7A5F',
+
   /** Sorties d'argent. */
   moneyOut: '#A8461B',
 } as const;
