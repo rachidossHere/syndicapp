@@ -326,6 +326,7 @@ export function ChargeCallScreen({ callId }: { callId: string }) {
         </View>
         {visible.length === 0 ? (
           <EmptyState
+            domain="charges"
             title={t('charges.detail.noResultsTitle')}
             description={t('charges.detail.noResultsBody')}
             action={

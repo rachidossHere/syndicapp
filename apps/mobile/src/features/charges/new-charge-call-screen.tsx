@@ -89,7 +89,7 @@ export function NewChargeCallScreen() {
   } else if (lotCount === 0) {
     body = (
       <EmptyState
-        icon={Building}
+        domain="apartments"
         title={t('charges.new.noLotsTitle')}
         description={t('charges.new.noLotsBody')}
         action={<Button label={t('charges.new.addLots')} onPress={() => router.push('/add-lots')} />}

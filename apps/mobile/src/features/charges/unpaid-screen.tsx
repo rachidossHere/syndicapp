@@ -119,6 +119,7 @@ export function UnpaidScreen({ callId }: { callId: string }) {
   } else if (unpaid.length === 0) {
     body = (
       <EmptyState
+        domain="charges"
         title={t('charges.unpaid.emptyTitle')}
         description={t('charges.unpaid.emptyBody')}
         action={<Button variant="secondary" label={t('common.back')} onPress={goBack} />}

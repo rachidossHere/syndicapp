@@ -137,7 +137,7 @@ export function ChargesScreen() {
   } else if (current === undefined) {
     body = (
       <EmptyState
-        icon={Wallet}
+        domain="charges"
         title={t('charges.list.emptyTitle')}
         description={t(canCreate ? 'charges.list.emptyManager' : 'charges.list.emptyTreasurer')}
       />

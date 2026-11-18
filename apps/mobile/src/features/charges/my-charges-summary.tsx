@@ -24,7 +24,7 @@ export function MyChargesSummary({ residenceId }: { residenceId: string }) {
 
   if (dues.data === undefined) return <QueryFallback query={dues} message={t('mine.loadError')} />;
   if (dues.data.length === 0) {
-    return <EmptyState icon={Wallet} title={t('mine.emptyTitle')} description={t('mine.emptyBody')} />;
+    return <EmptyState domain="charges" title={t('mine.emptyTitle')} description={t('mine.emptyBody')} />;
   }
 
   const current = currentDuePerLot(dues.data);
