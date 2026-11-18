@@ -112,9 +112,10 @@ export function AddLotsScreen() {
   const busy = createBulk.isPending || createLot.isPending;
 
   const goBack = () => {
-    if (isOnboarding) router.replace('/home');
+    // Accueil = onglet : `navigate` revient sur les onglets déjà ouverts au lieu d'en empiler un second.
+    if (isOnboarding) router.navigate('/home');
     else if (router.canGoBack()) router.back();
-    else router.replace('/home');
+    else router.navigate('/home');
   };
   const finish = () => router.replace('/lots');
 

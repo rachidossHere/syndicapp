@@ -113,7 +113,14 @@ export function ChargesScreen() {
   const role: Role | undefined = active?.role;
   const allowed = role !== undefined && canManageCharges(role);
   const calls = useChargeCalls(allowed ? active?.id : undefined);
-  const [toast, setToast] = useState<string | undefined>(created === '1' ? t('charges.new.created') : undefined);
+  const [toast, setToast] = useState<string | undefined>();
+
+  // L'écran de création revient ici avec `created=1` : l'onglet est déjà ouvert, le paramètre est consommé.
+  useEffect(() => {
+    if (created !== '1') return;
+    setToast(t('charges.new.created'));
+    router.setParams({ created: undefined });
+  }, [created, router, t]);
 
   useEffect(() => {
     if (toast === undefined) return;

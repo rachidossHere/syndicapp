@@ -58,7 +58,7 @@ export function LatestAnnouncementCard({ residenceId }: { residenceId: string })
       <Pressable
         accessibilityRole="link"
         accessibilityLabel={t('announcements.latest.seeAll')}
-        onPress={() => router.push('/announcements')}
+        onPress={() => router.navigate('/announcements')}
         style={{ minHeight: sizes.touchTarget, justifyContent: 'center' }}>
         <Text variant="bodyStrong" tone="primary">
           {t('announcements.latest.seeAll')}

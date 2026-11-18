@@ -12,7 +12,12 @@ import notificationHookSource from '../hooks/use-notification-navigation.ts?raw'
 import sessionHookSource from '../hooks/use-session.ts?raw';
 import { TAB_ROUTES } from '../lib/tabs';
 import { notificationRoutes, routeIsTab, type NotificationRoute } from '../lib/notification-target';
+import latestAnnouncementSource from './announcements/latest-announcement-card.tsx?raw';
+import chargesScreenSource from './charges/charges-screen.tsx?raw';
+import newChargeCallSource from './charges/new-charge-call-screen.tsx?raw';
 import homeScreenSource from './home/home-screen.tsx?raw';
+import addLotsSource from './residences/add-lots-screen.tsx?raw';
+import joinSource from './residences/join-screen.tsx?raw';
 import residentHomeSource from './home/resident-home.tsx?raw';
 import staffHomeSource from './home/staff-home.tsx?raw';
 import attentionSource from './home/attention-pills.tsx?raw';
@@ -338,5 +343,26 @@ describe('traductions FR et AR des nouveaux textes', () => {
       'Annonces',
       'Profil',
     ]);
+  });
+});
+
+describe('parcours qui reviennent sur un onglet : navigate, jamais un second jeu d’onglets empilé', () => {
+  it('créer un appel de charges revient sur l’onglet Charges avec le message de confirmation', () => {
+    expect(newChargeCallSource).toContain("router.navigate({ pathname: '/charges', params: { created: '1' } })");
+    expect(newChargeCallSource).not.toContain("router.replace({ pathname: '/charges'");
+    // L'onglet est déjà ouvert : le message se lit dans un effet, puis le paramètre est consommé.
+    expect(chargesScreenSource).toContain("if (created !== '1') return;");
+    expect(chargesScreenSource).toContain('router.setParams({ created: undefined })');
+  });
+
+  it('rejoindre une résidence et finir l’ajout des appartements reviennent sur l’accueil', () => {
+    // Après l'acceptation du code (le retour de secours, sans historique, garde `replace`).
+    expect(joinSource).toMatch(/mutateAsync\(complete\);[\s\S]{0,200}router\.navigate\('\/home'\)/);
+    expect(addLotsSource).toContain("router.navigate('/home')");
+    expect(addLotsSource).not.toContain("router.replace('/home')");
+  });
+
+  it('« Voir toutes les annonces » ouvre l’onglet Annonces', () => {
+    expect(latestAnnouncementSource).toContain("router.navigate('/announcements')");
   });
 });
