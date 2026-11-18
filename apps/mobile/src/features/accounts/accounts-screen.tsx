@@ -178,7 +178,7 @@ export function AccountsScreen() {
     cash.data === undefined ? (
       <QueryFallback query={cash} message={t('accounts.loadError')} />
     ) : (
-      <EmptyState icon={Wallet} title={t('accounts.ledger.emptyTitle')} description={t('accounts.ledger.emptyBody')} />
+      <EmptyState domain="expenses" title={t('accounts.ledger.emptyTitle')} description={t('accounts.ledger.emptyBody')} />
     );
 
   const footer = cash.isFetchNextPageError ? (

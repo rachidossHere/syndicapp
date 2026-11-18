@@ -262,7 +262,7 @@ export function LotsScreen() {
   } else if (lots.data.length === 0) {
     message = (
       <EmptyState
-        icon={Building}
+        domain="apartments"
         title={t('lots.empty.title')}
         description={t('lots.empty.body')}
         action={<Button label={t('lots.add')} icon={Plus} onPress={() => router.push('/add-lots')} />}

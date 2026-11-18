@@ -62,3 +62,4 @@ export {
   type AccordionProps,
 } from './accordion';
 export { accordionA11y, accordionChevron, type AccordionA11yInput } from './accordion-state';
+export { ResidenceHero, type ResidenceHeroProps } from './residence-hero';

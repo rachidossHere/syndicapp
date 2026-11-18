@@ -135,7 +135,7 @@ export function ManageIssuesScreen() {
     />
   ) : (
     <EmptyState
-      icon={Flag}
+      domain="issues"
       title={t(filter === 'all' ? 'issues.manage.empty.title' : 'issues.manage.emptyFiltered.title')}
       description={t(filter === 'all' ? 'issues.manage.empty.body' : 'issues.manage.emptyFiltered.body')}
     />

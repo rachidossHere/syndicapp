@@ -3,12 +3,11 @@
 // chargement de la suite en faisant défiler (curseur), « tirer pour actualiser », rafraîchissement au
 // retour sur l'écran, états chargement, erreur réseau et vide. Seuls announcements.write (syndic,
 // adjoint) voient le bouton « Nouvelle annonce » : l'API refuse de toute façon les autres rôles.
-import { Banner, Button, EmptyState, Screen, Text, Toast, useTheme } from '@syndic/ui';
+import { Banner, Button, Chip, EmptyState, Screen, Text, Toast, useTheme } from '@syndic/ui';
 import { Redirect, useRouter } from 'expo-router';
-import Megaphone from 'lucide-react-native/icons/megaphone';
 import Plus from 'lucide-react-native/icons/plus';
-import { useEffect } from 'react';
-import { FlatList, RefreshControl, View } from 'react-native';
+import { useEffect, useMemo, useState } from 'react';
+import { FlatList, RefreshControl, ScrollView, View } from 'react-native';
 
 import { AuthHeader } from '@/features/auth/auth-header';
 import { QueryFallback } from '@/features/charges/query-fallback';
@@ -16,7 +15,15 @@ import { useAnnouncementList } from '@/hooks/use-announcements';
 import { useRefreshOnFocus } from '@/hooks/use-refresh-on-focus';
 import { useActiveResidence } from '@/hooks/use-residences';
 import { useT } from '@/i18n/use-t';
-import { announcementsResidenceId, canPublishAnnouncement } from '@/lib/announcements';
+import {
+  ANNOUNCEMENT_FILTERS,
+  announcementFilterLabelKey,
+  announcementsResidenceId,
+  canPublishAnnouncement,
+  filterAnnouncements,
+  needsMoreForFilter,
+  type AnnouncementFilter,
+} from '@/lib/announcements';
 import { setFlashMessage, useFlashMessage } from '@/lib/flash-message';
 
 import { AnnouncementListFooter } from './announcement-list-footer';
@@ -34,6 +41,8 @@ export function AnnouncementsScreen() {
   const canPublish = canPublishAnnouncement(active?.role);
   const list = useAnnouncementList(residenceId);
   const flash = useFlashMessage();
+  const [filter, setFilter] = useState<AnnouncementFilter>('all');
+  const shown = useMemo(() => filterAnnouncements(list.items, filter), [list.items, filter]);
 
   // Rafraîchissement au retour sur l'écran (après une publication, un épinglage).
   useRefreshOnFocus(list.refetch);
@@ -43,6 +52,17 @@ export function AnnouncementsScreen() {
     const timer = setTimeout(() => setFlashMessage(undefined), TOAST_MS);
     return () => clearTimeout(timer);
   }, [flash]);
+
+  // Le filtre se fait côté appli (l'API n'en a pas) : tant qu'il n'y a rien à montrer, on charge la suite.
+  const loadMoreForFilter = needsMoreForFilter({
+    filter,
+    shown: shown.length,
+    hasNextPage: list.hasNextPage,
+    busy: list.isFetchingNextPage || list.isFetchNextPageError,
+  });
+  useEffect(() => {
+    if (loadMoreForFilter) void list.fetchNextPage();
+  }, [loadMoreForFilter, list]);
 
   if (residencesQuery.data !== undefined && residenceId === undefined) return <Redirect href="/home" />;
 
@@ -61,6 +81,22 @@ export function AnnouncementsScreen() {
         )}
         <Text variant="h2">{t('announcements.title')}</Text>
       </View>
+      {list.loaded && list.items.length > 0 && (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          accessibilityRole="tablist"
+          contentContainerStyle={{ gap: spacing.sm }}>
+          {ANNOUNCEMENT_FILTERS.map((value) => (
+            <Chip
+              key={value}
+              label={t(announcementFilterLabelKey(value))}
+              selected={filter === value}
+              onPress={() => setFilter(value)}
+            />
+          ))}
+        </ScrollView>
+      )}
       {canPublish && <Button icon={Plus} label={t('announcements.new')} onPress={() => router.push('/new-announcement')} />}
       {/* Un échec d'actualisation garde la liste affichée, avec un message non bloquant. */}
       {list.loaded && list.isRefetchError && <Banner message={t('announcements.loadError')} />}
@@ -73,9 +109,17 @@ export function AnnouncementsScreen() {
       query={{ error: list.error, isFetching: list.isFetching, refetch: list.refetch }}
       message={t('announcements.loadError')}
     />
+  ) : filter !== 'all' && list.items.length > 0 ? (
+    loadMoreForFilter || list.isFetchingNextPage ? undefined : (
+      <EmptyState
+        domain="announcements"
+        title={t('announcements.filterEmpty.title')}
+        description={t('announcements.filterEmpty.body')}
+      />
+    )
   ) : (
     <EmptyState
-      icon={Megaphone}
+      domain="announcements"
       title={t('announcements.empty.title')}
       description={t(canPublish ? 'announcements.empty.bodyManager' : 'announcements.empty.body')}
     />
@@ -86,7 +130,7 @@ export function AnnouncementsScreen() {
       <FlatList
         style={{ flex: 1 }}
         contentContainerStyle={{ gap: spacing.md, paddingBottom: spacing.lg }}
-        data={list.loaded ? list.items : []}
+        data={list.loaded ? shown : []}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => <AnnouncementRow item={item} onOpen={openAnnouncement} />}
         ListHeaderComponent={header}

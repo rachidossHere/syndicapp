@@ -59,10 +59,9 @@ export const fr = {
 
   'welcome.appName': 'SyndicApp',
   'welcome.logoLabel': 'Logo de SyndicApp',
-  'welcome.tagline': 'La gestion de votre résidence, simple et transparente pour tous les voisins.',
-  'welcome.benefitCharges': 'Charges et reçus au même endroit',
-  'welcome.benefitExpenses': 'Dépenses visibles avec leurs factures',
-  'welcome.benefitReports': 'Signalements et annonces pour tous',
+  'welcome.logoText': 'SYNDICAPP',
+  'welcome.title': 'Votre résidence, en toute transparence',
+  'welcome.subtitle': 'Charges, dépenses et annonces au même endroit, pour le syndic comme pour les voisins.',
   'welcome.createAccount': 'Créer un compte',
   'welcome.haveAccount': 'J’ai déjà un compte',
 

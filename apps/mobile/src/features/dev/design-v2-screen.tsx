@@ -4,12 +4,18 @@
 // PressableScale, pour les vérifier sur l'iPhone en français et en arabe (et avec « Réduire les
 // animations »).
 import {
+  CATEGORY_ART_CATEGORIES,
+  CategoryArt,
   Card,
   DOMAINS,
+  EMPTY_DOMAINS,
+  EmptyState,
   Icon,
   PressableScale,
+  ResidenceHero,
   Screen,
   Text,
+  WelcomeScene,
   ZelligePattern,
   useReducedMotion,
   useTheme,
@@ -44,6 +50,22 @@ const GALLERY_ICONS: readonly GalleryIcon[] = [
   { icon: Users, domain: 'members', label: 'members' },
   { icon: Bell, domain: 'notifications', label: 'notifications' },
 ];
+
+const EMPTY_LABELS = {
+  issues: 'domainIssues',
+  announcements: 'domainAnnouncements',
+  charges: 'domainCharges',
+  expenses: 'domainExpenses',
+  apartments: 'domainApartments',
+  generic: 'domainGeneric',
+} as const satisfies Record<(typeof EMPTY_DOMAINS)[number], keyof DesignV2Copy>;
+
+const CATEGORY_LABELS = {
+  works: 'catWorks',
+  meeting: 'catMeeting',
+  info: 'catInfo',
+  urgent: 'catUrgent',
+} as const satisfies Record<(typeof CATEGORY_ART_CATEGORIES)[number], keyof DesignV2Copy>;
 
 const BRAND_COLORS = [
   { token: 'tealDeep', label: 'brandTealDeep' },
@@ -168,6 +190,46 @@ export function DesignV2Screen() {
             <Text tone="muted">{t.lightBody}</Text>
           </View>
         </Card>
+      </Section>
+
+      <Section title={t.illustrations}>
+        <Text variant="bodyStrong">{t.hero}</Text>
+        <ResidenceHero name={t.headerTitle} roleLabel={t.headerKicker} />
+        <ResidenceHero name={t.heroLong} roleLabel={t.headerKicker} />
+        <Text variant="bodyStrong">{t.emptyStates}</Text>
+        {EMPTY_DOMAINS.map((domain) => (
+          <Card key={domain}>
+            <EmptyState domain={domain} title={t[EMPTY_LABELS[domain]]} description={t.lightBody} />
+          </Card>
+        ))}
+        <Text variant="bodyStrong">{t.categoryArt}</Text>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md }}>
+          {CATEGORY_ART_CATEGORIES.map((category) => (
+            <View key={category} style={{ alignItems: 'center', gap: spacing.xs }}>
+              <View
+                style={{
+                  width: sizes.categoryBand,
+                  height: sizes.categoryBanner,
+                  overflow: 'hidden',
+                  borderRadius: radius.md,
+                  borderCurve: 'continuous',
+                }}>
+                <CategoryArt category={category} />
+              </View>
+              <Text variant="caption">{t[CATEGORY_LABELS[category]]}</Text>
+            </View>
+          ))}
+        </View>
+        <Text variant="bodyStrong">{t.welcomeScene}</Text>
+        <View
+          style={{
+            height: sizes.emptyCircle * 2,
+            overflow: 'hidden',
+            borderRadius: radius.lg,
+            borderCurve: 'continuous',
+          }}>
+          <WelcomeScene />
+        </View>
       </Section>
 
       <Section title={t.pressable}>

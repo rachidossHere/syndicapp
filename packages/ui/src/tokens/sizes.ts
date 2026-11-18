@@ -24,6 +24,19 @@ export const sizes = {
   iconTileGlyph: { sm: 20, md: 24, lg: 28 },
   /** Côté de la cellule répétée du motif zellige. */
   zelligeCell: 48,
+  /** Illustration d'un état vide (plan 02b, étape 2) et cercle à motif zellige qui la porte. */
+  emptyIllustration: 120,
+  emptyCircle: 168,
+  /** En-tête de résidence : hauteur minimale et largeur de l'illustration. */
+  residenceHeroMinHeight: 168,
+  residenceHeroArt: 136,
+  /** Bande illustrée d'une carte d'annonce : largeur, côté du pictogramme, hauteur du bandeau. */
+  categoryBand: 88,
+  categoryGlyph: 32,
+  categoryBanner: 72,
+  /** Écran de bienvenue : part de la hauteur de l'écran prise par l'image (0 à 1) et hauteur du fondu. */
+  welcomeImageShare: 0.5,
+  welcomeFade: 96,
   /** Hauteur minimale d'une tuile d'action de l'accueil syndic. */
   actionTileMinHeight: 112,
   /** Hauteur minimale d'une tuile de choix (grille des appartements à encaisser). */

@@ -117,7 +117,7 @@ export function CollectScreen() {
   } else if (callId === undefined) {
     body = (
       <EmptyState
-        icon={Wallet}
+        domain="charges"
         title={t('charges.collect.noCallTitle')}
         description={t('charges.collect.noCallBody')}
       />
@@ -127,7 +127,7 @@ export function CollectScreen() {
   } else if (open.length === 0) {
     body = (
       <EmptyState
-        icon={CircleCheck}
+        domain="charges"
         title={t('charges.collect.allPaidTitle')}
         description={t('charges.collect.allPaidBody')}
       />

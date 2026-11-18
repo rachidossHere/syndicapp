@@ -3,6 +3,10 @@ import { describe, expect, it } from 'vitest';
 
 import {
   ANNOUNCEMENT_CATEGORIES,
+  ANNOUNCEMENT_FILTERS,
+  announcementFilterLabelKey,
+  filterAnnouncements,
+  needsMoreForFilter,
   ANNOUNCEMENT_FORM_ERRORS,
   CATEGORY_TONES,
   DEFAULT_ANNOUNCEMENT_FORM,
@@ -143,5 +147,34 @@ describe('pagination', () => {
       { items: [] },
     ]);
     expect(merged.map((entry) => entry.id)).toEqual(['a', 'b', 'c']);
+  });
+});
+
+describe('filtres par catégorie', () => {
+  const items = [
+    { ...item('a1'), category: 'works' as const },
+    { ...item('a2'), category: 'urgent' as const },
+    { ...item('a3'), category: 'works' as const },
+  ];
+
+  it('Toutes, puis une puce par catégorie, avec leurs libellés', () => {
+    expect([...ANNOUNCEMENT_FILTERS]).toEqual(['all', 'works', 'meeting', 'info', 'urgent']);
+    expect(announcementFilterLabelKey('all')).toBe('announcements.filter.all');
+    expect(announcementFilterLabelKey('meeting')).toBe('announcements.category.meeting');
+  });
+
+  it('Toutes garde tout dans l’ordre ; une catégorie ne garde que ses annonces', () => {
+    expect(filterAnnouncements(items, 'all').map((i) => i.id)).toEqual(['a1', 'a2', 'a3']);
+    expect(filterAnnouncements(items, 'works').map((i) => i.id)).toEqual(['a1', 'a3']);
+    expect(filterAnnouncements(items, 'info')).toEqual([]);
+  });
+
+  it('charge la suite seulement si un filtre est choisi, que rien ne correspond et qu’il reste des pages', () => {
+    const base = { filter: 'info' as const, shown: 0, hasNextPage: true, busy: false };
+    expect(needsMoreForFilter(base)).toBe(true);
+    expect(needsMoreForFilter({ ...base, filter: 'all' })).toBe(false);
+    expect(needsMoreForFilter({ ...base, shown: 2 })).toBe(false);
+    expect(needsMoreForFilter({ ...base, hasNextPage: false })).toBe(false);
+    expect(needsMoreForFilter({ ...base, busy: true })).toBe(false);
   });
 });

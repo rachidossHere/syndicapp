@@ -1,79 +1,93 @@
-// Écran 1 de docs/auth.png : accueil.
-import { Button, Icon, Screen, Text, useTheme } from '@syndic/ui';
+// Écran 5 de docs/design-v2.png : bienvenue, avant la connexion. Grande image en haut (l'image IA
+// `welcome.webp` si elle existe, sinon une illustration SVG dans le même cadre) qui se fond vers le
+// fond sable, logo texte, titre, sous-titre, puis « Créer un compte » et « J'ai déjà un compte ».
+// Affiché seulement sans session (groupe (auth)) ; une invitation (`invite/[code]`) garde son parcours.
+import { Button, GradientFill, Text, WelcomeScene, useTheme } from '@syndic/ui';
+import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
-import Building from 'lucide-react-native/icons/building';
-import Check from 'lucide-react-native/icons/check';
-import { Pressable, View } from 'react-native';
+import { Pressable, ScrollView, View, useWindowDimensions } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { LanguageToggle } from '@/components/language-toggle';
 import { useT } from '@/i18n/use-t';
-
-import { AuthHeader } from './auth-header';
-
-const BENEFITS = ['welcome.benefitCharges', 'welcome.benefitExpenses', 'welcome.benefitReports'] as const;
+import { welcomeArtFor } from '@/lib/welcome-art';
+import { WELCOME_IMAGE } from '@/lib/welcome-image';
 
 export function WelcomeScreen() {
-  const { colors, radius, spacing, sizes } = useTheme();
+  const { colors, spacing, layout, sizes } = useTheme();
   const t = useT();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const { height } = useWindowDimensions();
+  const art = welcomeArtFor(WELCOME_IMAGE);
+  const artHeight = Math.round(height * sizes.welcomeImageShare);
 
   return (
-    <Screen
-      scroll
-      contentStyle={{ flexGrow: 1 }}
-      footer={
-        <>
-          <Button label={t('welcome.createAccount')} onPress={() => router.push('/sign-up')} />
-          <Button variant="secondary" label={t('welcome.haveAccount')} onPress={() => router.push('/sign-in')} />
-        </>
-      }>
-      <AuthHeader />
+    <View style={{ flex: 1, backgroundColor: colors.bg }}>
+      <ScrollView
+        bounces={false}
+        contentContainerStyle={{ flexGrow: 1 }}
+        showsVerticalScrollIndicator={false}>
+        <View testID="welcome-art" style={{ height: artHeight, overflow: 'hidden' }}>
+          {art.kind === 'image' ? (
+            <Image
+              testID="welcome-image"
+              source={art.source}
+              contentFit="cover"
+              accessible={false}
+              style={{ width: '100%', height: '100%' }}
+            />
+          ) : (
+            <WelcomeScene testID="welcome-scene" />
+          )}
+          {/* Fondu vers le fond sable, au bas de l'image. */}
+          <GradientFill
+            from={colors.bg}
+            to={colors.bg}
+            fromOpacity={0}
+            toOpacity={1}
+            style={{ top: undefined, height: sizes.welcomeFade }}
+          />
+        </View>
 
-      <View style={{ flex: 1, justifyContent: 'center', gap: spacing.xl }}>
-        {/* En développement, un appui long sur le logo ouvre l'écran du design system. */}
-        <Pressable
-          accessible
-          accessibilityRole="image"
-          accessibilityLabel={t('welcome.logoLabel')}
-          onLongPress={__DEV__ ? () => router.push('/dev/design-system') : undefined}
+        <View
           style={{
-            width: sizes.logo,
-            height: sizes.logo,
-            borderRadius: radius.lg,
-            borderCurve: 'continuous',
-            backgroundColor: colors.primary,
-            alignItems: 'center',
-            justifyContent: 'center',
+            flex: 1,
+            justifyContent: 'space-between',
+            gap: spacing.xxl,
+            paddingHorizontal: layout.screenPadding,
+            paddingBottom: insets.bottom + spacing.xl,
           }}>
-          <Icon icon={Building} color={colors.textInverse} size={sizes.tabIcon} />
-        </Pressable>
-
-        <View style={{ gap: spacing.sm }}>
-          <Text variant="display">{t('welcome.appName')}</Text>
-          <Text tone="muted">{t('welcome.tagline')}</Text>
-        </View>
-
-        <View style={{ gap: spacing.md }}>
-          {BENEFITS.map((key) => (
-            <View key={key} style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
-              <View
-                style={{
-                  width: sizes.iconBoxSm,
-                  height: sizes.iconBoxSm,
-                  borderRadius: radius.sm,
-                  borderCurve: 'continuous',
-                  backgroundColor: colors.primarySoft,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}>
-                <Icon icon={Check} color={colors.primary} />
-              </View>
-              <Text variant="bodyStrong" style={{ flex: 1 }}>
-                {t(key)}
+          <View style={{ gap: spacing.sm }}>
+            {/* En développement, un appui long sur le logo ouvre l'écran du design system. */}
+            <Pressable
+              accessibilityRole="header"
+              accessibilityLabel={t('welcome.logoLabel')}
+              onLongPress={__DEV__ ? () => router.push('/dev/design-system') : undefined}
+              style={{ alignSelf: 'flex-start', minHeight: sizes.touchTarget, justifyContent: 'center' }}>
+              <Text variant="caption" tone="primary">
+                {t('welcome.logoText')}
               </Text>
-            </View>
-          ))}
+            </Pressable>
+            <Text variant="h1">{t('welcome.title')}</Text>
+            <Text tone="muted">{t('welcome.subtitle')}</Text>
+          </View>
+
+          <View style={{ gap: spacing.sm }}>
+            <Button label={t('welcome.createAccount')} onPress={() => router.push('/sign-up')} />
+            <Button variant="ghost" label={t('welcome.haveAccount')} onPress={() => router.push('/sign-in')} />
+          </View>
         </View>
+      </ScrollView>
+
+      <View
+        style={{
+          position: 'absolute',
+          top: insets.top + spacing.sm,
+          end: layout.screenPadding,
+        }}>
+        <LanguageToggle />
       </View>
-    </Screen>
+    </View>
   );
 }

@@ -91,7 +91,7 @@ export function ResidentIssuesScreen() {
     />
   ) : (
     <EmptyState
-      icon={Flag}
+      domain="issues"
       title={t(filter === 'active' ? 'issues.empty.title' : 'issues.emptyResolved.title')}
       description={t(filter === 'active' ? 'issues.empty.body' : 'issues.emptyResolved.body')}
     />

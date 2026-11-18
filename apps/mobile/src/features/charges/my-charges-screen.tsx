@@ -96,7 +96,7 @@ export function MyChargesScreen() {
   if (dues.data === undefined) {
     body = <QueryFallback query={dues} message={t('mine.loadError')} />;
   } else if (dues.data.length === 0) {
-    body = <EmptyState icon={Wallet} title={t('mine.emptyTitle')} description={t('mine.emptyBody')} />;
+    body = <EmptyState domain="charges" title={t('mine.emptyTitle')} description={t('mine.emptyBody')} />;
   } else {
     const current = currentDuePerLot(dues.data);
     body = (
