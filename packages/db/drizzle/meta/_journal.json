@@ -92,6 +92,13 @@
       "when": 1794992861077,
       "tag": "0012_announcements",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1794998539505,
+      "tag": "0013_charge_reminders",
+      "breakpoints": true
     }
   ]
 }

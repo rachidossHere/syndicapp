@@ -89,6 +89,8 @@ export const CHARGE_ERRORS = {
   alreadyCancelled: 'charges.errors.alreadyCancelled',
   cancelReasonRequired: 'charges.errors.cancelReasonRequired',
   periodLocked: 'charges.errors.periodLocked',
+  reminderTooSoon: 'charges.errors.reminderTooSoon',
+  reminderNothingDue: 'charges.errors.reminderNothingDue',
 } as const;
 export type ChargeErrorKey = (typeof CHARGE_ERRORS)[keyof typeof CHARGE_ERRORS];
 
@@ -111,6 +113,8 @@ export const createPaymentSchema = z
     // Date du paiement (AAAA-MM-JJ, fuseau Africa/Casablanca) ; aujourd'hui par défaut.
     // Une date future est refusée par l'API.
     paidOn: isoDateSchema.optional(),
+    // Identifiant généré par l'appli : un renvoi avec le même `clientId` ne crée pas de second paiement.
+    clientId: z.uuid().optional(),
   })
   .strict();
 export type CreatePaymentInput = z.infer<typeof createPaymentSchema>;
@@ -132,3 +136,29 @@ export function computeDueStatus(amountPaid: number, amountDue: number): DueStat
   if (amountPaid <= 0) return 'unpaid';
   return amountPaid >= amountDue ? 'paid' : 'partial';
 }
+
+// --- Relance des impayés (plan 08, étape 4) ---------------------------------------------------
+
+/** Un lot ne peut être relancé qu'une fois tous les 3 jours, quel que soit l'appel de charges. */
+export const REMINDER_COOLDOWN_DAYS = 3;
+export const REMINDER_COOLDOWN_MS = REMINDER_COOLDOWN_DAYS * 24 * 60 * 60 * 1000;
+
+/** Instant de la prochaine relance possible d'un lot relancé à `lastReminderAt`. */
+export function nextReminderAt(lastReminderAt: Date | string): Date {
+  return new Date(new Date(lastReminderAt).getTime() + REMINDER_COOLDOWN_MS);
+}
+
+/** Relance d'un lot, ou de tous les lots impayés ou partiels (permission `charges.write`). */
+export const createReminderSchema = z.union([
+  z.object({ lotId: z.uuid() }).strict(),
+  z.object({ all: z.literal(true), chargeCallId: z.uuid().optional() }).strict(),
+]);
+export type CreateReminderInput = z.infer<typeof createReminderSchema>;
+
+/** Réponse de `POST /api/charges/reminders`. Les dates sont des instants ISO. */
+export type ReminderResult = {
+  reminded: number;
+  skipped: number;
+  /** Pour chaque lot ignoré : la date de sa prochaine relance possible. */
+  skippedLots: { lotId: string; nextReminderAt: string }[];
+};

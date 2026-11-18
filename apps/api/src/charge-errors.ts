@@ -11,6 +11,8 @@ export const CHARGE_ERROR_STATUS = {
   [CHARGE_ERRORS.alreadyCancelled]: 409,
   [CHARGE_ERRORS.cancelReasonRequired]: 400,
   [CHARGE_ERRORS.periodLocked]: 409,
+  [CHARGE_ERRORS.reminderTooSoon]: 409,
+  [CHARGE_ERRORS.reminderNothingDue]: 409,
 } as const satisfies Record<ChargeErrorKey, 400 | 404 | 409>;
 
 /** Réponse de refus `{ error: <clé de traduction> }`. */
