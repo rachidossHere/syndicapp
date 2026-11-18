@@ -96,6 +96,7 @@ export const fr = {
   'home.loadError': 'Impossible de charger votre profil.',
 
   'dev.designSystem': 'Design system (développement)',
+  'dev.gallery': 'Galerie visuelle v2 (développement)',
   'dev.apiUrl': 'Adresse de l’API : {url}',
 };
 

@@ -116,6 +116,7 @@ function RootStack() {
       {/* Inaccessible hors du mode développement, y compris par lien profond. */}
       <Stack.Protected guard={__DEV__}>
         <Stack.Screen name="dev/design-system" options={{ title: t('dev.designSystem') }} />
+        <Stack.Screen name="dev/design-v2" options={{ title: t('dev.gallery') }} />
       </Stack.Protected>
     </Stack>
   );
