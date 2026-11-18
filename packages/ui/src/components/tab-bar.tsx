@@ -6,8 +6,8 @@ import { useTheme } from '../theme/theme-provider';
 import { Icon } from './icon';
 import { Text } from './text';
 
-/** Nombre maximal d'onglets (plan 02). */
-export const TAB_BAR_MAX_ITEMS = 4;
+/** Nombre maximal d'onglets : 4 au plan 02, 5 depuis le plan 02b (Accueil, Charges, Signalements, Annonces, Profil). */
+export const TAB_BAR_MAX_ITEMS = 5;
 
 export type TabBarItem<Key extends string = string> = {
   key: Key;
@@ -16,7 +16,7 @@ export type TabBarItem<Key extends string = string> = {
 };
 
 export type TabBarProps<Key extends string = string> = {
-  /** Onglets à afficher : 4 au maximum (les suivants sont ignorés). */
+  /** Onglets à afficher : 5 au maximum (les suivants sont ignorés). */
   items: readonly TabBarItem<Key>[];
   activeKey: Key;
   onChange: (key: Key) => void;
@@ -26,7 +26,11 @@ export type TabBarProps<Key extends string = string> = {
   testID?: string;
 };
 
-/** Barre d'onglets : icône 22 et libellé `caption`, `primary` si actif, `iconInactive` sinon. */
+/**
+ * Barre d'onglets : icône 22 et libellé `caption`, `primary` si actif, `iconInactive` sinon.
+ * L'onglet actif est en duotone et son libellé reste affiché : jamais la couleur seule. Aucune
+ * animation au changement d'onglet (plan 02b).
+ */
 export function TabBar<Key extends string>({
   items,
   activeKey,
@@ -75,8 +79,14 @@ export function TabBar<Key extends string>({
               paddingVertical: spacing.sm,
               backgroundColor: pressed ? colors.surfaceMuted : colors.surface,
             })}>
-            <Icon icon={item.icon} color={color} size={sizes.tabIcon} />
-            <Text variant="caption" style={{ color, textAlign: 'center' }}>
+            <Icon icon={item.icon} color={color} size={sizes.tabIcon} variant={active ? 'duotone' : 'line'} />
+            {/* Cinq libellés sur une ligne : le texte se réduit un peu plutôt que de passer à la ligne. */}
+            <Text
+              variant="caption"
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.8}
+              style={{ color, textAlign: 'center', paddingHorizontal: spacing.xs }}>
               {item.label}
             </Text>
           </Pressable>
