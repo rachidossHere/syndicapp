@@ -143,6 +143,20 @@ describe('traductions', () => {
     expect(fr['lots.building.existing']).toBe('déjà créé');
   });
 
+  it('traduit les textes de la liste groupée par bâtiment (titres, compteurs, singulier et pluriel)', () => {
+    const keys = Object.keys(fr).filter((key) => key.startsWith('lots.count.') || key === 'lots.building.title' || key === 'lots.building.none' || key === 'lots.single.noBuilding');
+    expect(keys.length).toBe(17);
+    for (const key of keys) {
+      expect(fr[key as keyof typeof fr], `fr : ${key}`).toBeTruthy();
+      expect(ar[key as keyof typeof ar], `ar : ${key}`).toMatch(ARABIC_LETTER);
+    }
+    // Chaque pluriel a son singulier.
+    for (const key of keys.filter((k) => k.endsWith('One'))) {
+      expect(fr[key as keyof typeof fr]).not.toContain('{count}');
+      expect(fr[key.slice(0, -3) as keyof typeof fr], key).toContain('{count}');
+    }
+  });
+
   it('a exactement les mêmes clés en français et en arabe', () => {
     expect(Object.keys(ar).sort()).toEqual(Object.keys(fr).sort());
   });

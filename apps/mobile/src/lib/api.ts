@@ -2,6 +2,7 @@ import { authClient } from './auth-client';
 import { getActiveResidenceId, setActiveResidenceId } from './active-residence';
 import { ApiError } from './api-error';
 import { API_URL } from './config';
+import { clearExpansion } from './lot-groups';
 import { queryClient } from './query-client';
 import { expireSession } from './session-expired';
 
@@ -39,7 +40,10 @@ export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise
     // résidence active, pour que rien de cet utilisateur ne reste en mémoire (voir session-expired.ts).
     await expireSession({
       signOut: () => authClient.signOut(),
-      clearCache: () => queryClient.clear(),
+      clearCache: () => {
+        queryClient.clear();
+        clearExpansion();
+      },
       clearResidence: () => setActiveResidenceId(null),
     });
     throw new ApiError(401, 'unauthorized');

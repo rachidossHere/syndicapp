@@ -409,6 +409,55 @@ describe.skipIf(!hasDatabase)('API appartements : création en lot, renommage, s
     });
   });
 
+  describe('bâtiment de l’appartement', () => {
+    const buildingsOf = async (residence: string, user = 'mgrA') => {
+      const list = (await (await api(uid(user), 'GET', '/api/lots', residence)).json()) as any;
+      return Object.fromEntries(list.lots.map((l: any) => [l.reference, l.building]));
+    };
+
+    it('la génération rapide enregistre le bâtiment et l’étage, et la liste les renvoie', async () => {
+      const res = await addResidence('building-bulk', [[uid('mgrA'), 'manager']]);
+      const response = await api(uid('mgrA'), 'POST', '/api/lots/bulk', res, {
+        buildings: ['a', 'B'],
+        floorFrom: 1,
+        floorTo: 2,
+        perFloor: 1,
+      });
+      expect(response.status).toBe(201);
+      expect(await buildingsOf(res)).toEqual({ A11: 'A', A21: 'A', B11: 'B', B21: 'B' });
+      const list = (await (await api(uid('mgrA'), 'GET', '/api/lots', res)).json()) as any;
+      expect(list.lots.find((l: any) => l.reference === 'B21')).toMatchObject({ building: 'B', floor: 2 });
+    });
+
+    it('« Un par un » enregistre le bâtiment choisi (en majuscules) ou aucun', async () => {
+      const res = await addResidence('building-single', [[uid('mgrA'), 'manager']]);
+      expect((await api(uid('mgrA'), 'POST', '/api/lots', res, { reference: 'X1', building: 'b2' })).status).toBe(201);
+      expect((await api(uid('mgrA'), 'POST', '/api/lots', res, { reference: 'X2' })).status).toBe(201);
+      expect((await api(uid('mgrA'), 'POST', '/api/lots', res, { reference: 'X3', building: '  ' })).status).toBe(201);
+      expect(await buildingsOf(res)).toEqual({ X1: 'B2', X2: null, X3: null });
+    });
+
+    it('renommer garde le bâtiment et l’étage', async () => {
+      const res = await addResidence('building-rename', [[uid('mgrA'), 'manager']]);
+      await api(uid('mgrA'), 'POST', '/api/lots/bulk', res, { buildings: ['A'], floorFrom: 1, floorTo: 1, perFloor: 1 });
+      const [lot] = await getDb().select().from(schema.lot).where(eq(schema.lot.residenceId, res));
+      const response = await api(uid('mgrA'), 'PATCH', `/api/lots/${lot!.id}`, res, { reference: 'Z99' });
+      expect(response.status).toBe(200);
+      expect(await response.json()).toMatchObject({ reference: 'Z99', building: 'A', floor: 1 });
+    });
+
+    it('isolation : la liste de B ne contient jamais les bâtiments de A', async () => {
+      const resC = await addResidence('building-iso-a', [[uid('mgrA'), 'manager']]);
+      const resD = await addResidence('building-iso-b', [[uid('mgrB'), 'manager']]);
+      await api(uid('mgrA'), 'POST', '/api/lots', resC, { reference: 'SECRET1', building: 'ZZ' });
+      await api(uid('mgrB'), 'POST', '/api/lots', resD, { reference: 'OTHER1', building: 'YY' });
+      expect(await buildingsOf(resD, 'mgrB')).toEqual({ OTHER1: 'YY' });
+      expect(await buildingsOf(resC)).toEqual({ SECRET1: 'ZZ' });
+      // Lire la liste de A avec l'en-tête de B est refusé.
+      expect((await api(uid('mgrB'), 'GET', '/api/lots', resC)).status).toBe(403);
+    });
+  });
+
   describe('isolation et permissions', () => {
     it('le syndic de A ne peut ni renommer ni supprimer un lot de B (403 avec B, 404 avec A)', async () => {
       const lotB = await addLot(resB, 'ISO1');

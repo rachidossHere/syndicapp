@@ -26,7 +26,8 @@ export const lotReferenceSchema = requiredText(20);
 
 export const createLotSchema = z.object({
   reference: lotReferenceSchema,
-  building: optionalText(20),
+  // Bâtiment en majuscules (« b » et « B » forment un seul groupe dans la liste des appartements).
+  building: optionalText(20).transform((value) => value?.toUpperCase()),
   floor: z.number().int().min(-5).max(200).optional(),
   type: z.enum(LOT_TYPES).default('apartment'),
 });

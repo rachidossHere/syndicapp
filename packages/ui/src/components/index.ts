@@ -42,3 +42,12 @@ export {
   type CalendarMonth,
 } from './calendar-grid';
 export { SwitchRow, type SwitchRowProps } from './switch-row';
+export {
+  Accordion,
+  AccordionContent,
+  AccordionHeader,
+  type AccordionContentProps,
+  type AccordionHeaderProps,
+  type AccordionProps,
+} from './accordion';
+export { accordionA11y, accordionChevron, type AccordionA11yInput } from './accordion-state';
