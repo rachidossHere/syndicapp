@@ -233,6 +233,8 @@ syndicapp/
 - Toute image est compressée avant envoi (1600 px de large, JPEG 0,7). Les fichiers partent directement vers R2 avec une URL signée.
 - Encaissements et dépenses passent par la file d'attente hors ligne ; le cache persisté ne contient jamais de jeton.
 - Les événements PostHog passent uniquement par le helper `track`.
+- Toute animation utilise les jetons de mouvement de `@syndic/ui` (durées, courbes) et `useReducedMotion` : elle est coupée ou réduite quand « Réduire les animations » est activé, et ne retarde jamais une action.
+- Les icônes ne s'affichent que par le composant `Icon` de `@syndic/ui` (variantes `line`, `duotone`, `tile`).
 
 ---
 

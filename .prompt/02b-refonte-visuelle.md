@@ -10,8 +10,8 @@ Rendre l'appli plus chaleureuse et plus professionnelle, comme sur [docs/design-
 
 - **Palette élargie** (en plus des jetons du plan 02, qui ne changent pas) :
   - `tealDeep` `#0A3A3E`, `terracotta` `#C2603A`, `saffron` `#E0A33B`, `palm` `#2F7A5F` ;
-  - fonds teintés par domaine (charges, dépenses, signalements, annonces, comptes), chacun avec sa couleur d'icône ; les autres icônes de la maquette (appartements, membres, notifications) reçoivent leur teinte propre ;
-  - contraste de texte d'au moins 4,5:1 pour toute paire fond/texte réellement utilisée ; `terracotta` seule ne porte jamais de texte courant (3:1 seulement : décor, grands textes, icônes) ;
+  - fonds teintés par domaine, chacun avec sa couleur d'icône : charges, dépenses, signalements, annonces, comptes, et les 3 domaines ajoutés à l'étape 1 (appartements, membres, notifications) ;
+  - contraste de texte d'au moins 4,5:1 pour toute paire fond/texte réellement utilisée ; `terracotta` seule ne porte jamais de texte courant (3:1 seulement) : elle est réservée au décor et aux grands textes ;
   - aucun changement de couleur sur les écrans existants avant l'étape qui les concerne.
 - **Icônes lucide en duotone** : contour plein plus remplissage léger de la même couleur, via **un seul composant `Icon`** de `@syndic/ui` (variantes `line`, `duotone`, `tile`). Une icône n'est jamais affichée autrement que par ce composant.
 - **Motif zellige** en SVG (`react-native-svg`), environ 10 % d'opacité, sur les en-têtes et les états vides. Symétrique : identique en français et en arabe.
@@ -26,8 +26,11 @@ Rendre l'appli plus chaleureuse et plus professionnelle, comme sur [docs/design-
   | `owner` | Accueil, Mes charges, Signaler, Annonces, Profil |
   | `tenant`, `caretaker` | Accueil, Signalements, Annonces, Profil |
 
+- **Barre d'onglets : implémentation.** À l'étape 3, essayer d'abord `NativeTabs` d'Expo Router ; il n'est retenu que s'il accepte nos icônes, les libellés FR et AR et des onglets différents selon le rôle. Sinon, barre personnalisée avec le composant `Icon`. **Aucune animation au changement d'onglet.**
 - **Profil** : notifications, langue, changer de résidence, se déconnecter.
 - **Animations** : `react-native-reanimated` ; jetons de durée (`fast` 150 ms, `normal` 250 ms) et de courbe dans `@syndic/ui` ; **toujours coupées ou réduites** quand « Réduire les animations » est activé sur le téléphone ; **jamais d'animation qui bloque une action** (le toucher reste actif pendant le mouvement, aucune attente de fin d'animation).
+- **Toucher** : `PressableScale` pour les cartes ; pour les lignes de liste pleine largeur, pas d'échelle mais un fond qui s'éclaircit.
+- **Mouvement réduit** : opacité immédiate, sans échelle ni transition.
 - **Thème clair seulement**, comme aujourd'hui.
 - **RTL** : motifs et illustrations restent lisibles ; chevrons et flèches sont inversés.
 - Les règles d'AGENTS.md priment : jetons uniquement dans `apps/mobile`, zones tactiles d'au moins 44 px, `start`/`end`, états jamais signalés par la couleur seule.
@@ -51,7 +54,7 @@ Rendre l'appli plus chaleureuse et plus professionnelle, comme sur [docs/design-
 
 ### 1. Jetons, icônes duotone, motif zellige, jetons d'animation, galerie
 
-Ajoute dans `@syndic/ui` : les nouvelles couleurs et teintes par domaine (avec test de contraste), les jetons de mouvement (durées, courbes, échelle d'appui), le composant `Icon` à variantes `line`, `duotone` et `tile` (pastille teintée de 40 à 56 px), le composant `ZelligePattern`, le hook `useReducedMotion` et le composant `PressableScale` (léger enfoncement au toucher, zone tactile d'au moins 44 px, sans animation quand le mouvement est réduit). Vérifie que `react-native-reanimated` et `react-native-svg` sont installés et configurés. Ajoute une galerie de développement (`__DEV__` seulement, accessible depuis l'accueil). Les écrans existants ne changent pas.
+Ajoute dans `@syndic/ui` : les nouvelles couleurs et teintes par domaine (avec test de contraste), les jetons de mouvement (durées, courbes, échelle d'appui), le composant `Icon` à variantes `line`, `duotone` et `tile` (pastille teintée de 40 à 56 px), le composant `ZelligePattern`, le hook `useReducedMotion` et le composant `PressableScale` (léger enfoncement au toucher pour les cartes, zone tactile d'au moins 44 px, opacité immédiate sans échelle ni transition quand le mouvement est réduit). Vérifie que `react-native-reanimated` et `react-native-svg` sont installés et configurés. Ajoute une galerie de développement (`__DEV__` seulement, accessible depuis l'accueil). Les écrans existants ne changent pas.
 
 Terminé quand : la galerie affiche sur l'iPhone, en français et en arabe, les nouvelles couleurs, les huit icônes en pastille, le motif zellige et `PressableScale`, conformes à la maquette ; `PressableScale` ne s'anime plus quand « Réduire les animations » est activé ; les écrans existants sont inchangés ; `pnpm typecheck`, `pnpm test` et `expo export` iOS passent.
 
@@ -63,15 +66,15 @@ Terminé quand : chaque état vide existant affiche une illustration adaptée, l
 
 ### 3. Barre d'onglets selon le rôle, accueils, Profil
 
-Remplace la navigation actuelle par la barre d'onglets du tableau ci-dessus (Expo Router, onglets de la résidence active), crée l'onglet **Profil** (notifications, langue, changer de résidence, se déconnecter), et refais les accueils syndic et habitant (écrans 1 et 2 de la maquette) avec les composants de `@syndic/ui`. Aucune règle métier ni route d'API ne change.
+Remplace la navigation actuelle par la barre d'onglets du tableau ci-dessus (Expo Router, onglets de la résidence active ; essaie d'abord `NativeTabs`, sinon barre personnalisée avec `Icon`, voir Décisions ; aucune animation au changement d'onglet), crée l'onglet **Profil** (notifications, langue, changer de résidence, se déconnecter), et refais les accueils syndic et habitant (écrans 1 et 2 de la maquette) avec les composants de `@syndic/ui`. Aucune règle métier ni route d'API ne change.
 
 Terminé quand : pour chacun des six rôles, la barre affiche exactement les onglets du tableau et rien d'autre, le changement de résidence recalcule les onglets, l'API refuse toujours ce que le rôle ne peut pas faire, et le tout est vérifié sur l'iPhone avec un compte par type de rôle disponible.
 
 ### 4. Animations et transitions
 
-Branche les animations sur les écrans : transitions d'écrans, onglets, toucher des boutons et cartes (`PressableScale`), apparition des listes, accordéon, toast, squelettes de chargement. Durées `fast` 150 ms et `normal` 250 ms, courbes des jetons, `useReducedMotion` partout, aucune animation qui retarde une action.
+Branche les animations sur les écrans : transitions d'écrans (pas d'animation au changement d'onglet), toucher des cartes (`PressableScale`) et des lignes de liste pleine largeur (fond qui s'éclaircit), apparition des listes, accordéon, toast, squelettes de chargement. Durées `fast` 150 ms et `normal` 250 ms, courbes des jetons, `useReducedMotion` partout, aucune animation qui retarde une action.
 
-Terminé quand : chaque animation a une version réduite (fondu ou rien) quand « Réduire les animations » est activé, aucun toucher n'est retardé ou ignoré pendant un mouvement, et le tout est vérifié sur l'iPhone avec et sans « Réduire les animations ».
+Terminé quand : chaque animation a une version réduite (opacité immédiate, sans échelle ni transition) quand « Réduire les animations » est activé, aucun toucher n'est retardé ou ignoré pendant un mouvement, et le tout est vérifié sur l'iPhone avec et sans « Réduire les animations ».
 
 ## Vérification
 
@@ -83,7 +86,7 @@ Terminé quand : chaque animation a une version réduite (fondu ou rien) quand �
 
 ## Mises à jour d'[AGENTS.md](../AGENTS.md)
 
-À proposer à la fin du plan, sans les appliquer sans validation :
+Appliquées à l'étape 1, sur validation de Rachid :
 
 - **Section 7 · Mobile** : « Toute animation utilise les jetons de mouvement de `@syndic/ui` (durées, courbes) et `useReducedMotion` : elle est coupée ou réduite quand « Réduire les animations » est activé, et ne retarde jamais une action. »
 - **Section 7 · Mobile** : « Les icônes ne s'affichent que par le composant `Icon` de `@syndic/ui` (variantes `line`, `duotone`, `tile`). »
