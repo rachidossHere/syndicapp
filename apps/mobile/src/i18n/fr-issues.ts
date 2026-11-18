@@ -134,6 +134,7 @@ export const frIssueTexts = {
   'home.issuesManageBody': 'Voir et traiter les signalements.',
   'issues.manage.context': '{residence} · {role}',
   'issues.manage.filter.all': 'Tous · {count}',
+  'issues.manage.filter.urgent': 'Urgents · {count}',
   'issues.manage.filter.open': 'Ouverts · {count}',
   'issues.manage.filter.in_progress': 'En cours · {count}',
   'issues.manage.filter.resolved': 'Résolus · {count}',

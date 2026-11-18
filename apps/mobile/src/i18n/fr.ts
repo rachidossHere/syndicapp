@@ -4,6 +4,7 @@ import { frAnnouncementTexts } from './fr-announcements';
 import { frChargeTexts } from './fr-charges';
 import { frAccountTexts } from './fr-accounts';
 import { frExpenseTexts } from './fr-expenses';
+import { frHomeTexts } from './fr-home';
 import { frIssueTexts } from './fr-issues';
 import { frNotificationTexts } from './fr-notifications';
 import { frResidenceTexts } from './fr-residences';
@@ -34,6 +35,7 @@ export const fr = {
   ...frResidenceTexts,
   ...frChargeTexts,
   ...frExpenseTexts,
+  ...frHomeTexts,
   ...frIssueTexts,
   ...frNotificationTexts,
   ...frAnnouncementTexts,

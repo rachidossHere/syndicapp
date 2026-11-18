@@ -124,6 +124,7 @@ export const arIssueTexts: Record<keyof typeof frIssueTexts, string> = {
   'home.issuesManageBody': 'عرض البلاغات ومعالجتها.',
   'issues.manage.context': '{residence} · {role}',
   'issues.manage.filter.all': '{count} · الكل',
+  'issues.manage.filter.urgent': '{count} · عاجلة',
   'issues.manage.filter.open': '{count} · مفتوحة',
   'issues.manage.filter.in_progress': '{count} · قيد المعالجة',
   'issues.manage.filter.resolved': '{count} · تمت معالجتها',

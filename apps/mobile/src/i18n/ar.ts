@@ -2,6 +2,7 @@ import { arAnnouncementTexts } from './ar-announcements';
 import { arChargeTexts } from './ar-charges';
 import { arAccountTexts } from './ar-accounts';
 import { arExpenseTexts } from './ar-expenses';
+import { arHomeTexts } from './ar-home';
 import { arIssueTexts } from './ar-issues';
 import { arNotificationTexts } from './ar-notifications';
 import { arResidenceTexts } from './ar-residences';
@@ -12,6 +13,7 @@ export const ar: Record<TranslationKey, string> = {
   ...arResidenceTexts,
   ...arChargeTexts,
   ...arExpenseTexts,
+  ...arHomeTexts,
   ...arIssueTexts,
   ...arNotificationTexts,
   ...arAnnouncementTexts,
