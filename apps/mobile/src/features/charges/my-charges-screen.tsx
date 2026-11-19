@@ -1,7 +1,17 @@
 // Écrans 5 et 7 de docs/charges.png : « Mes charges » du copropriétaire. Carte de la période en
 // cours (une par appartement), puis l'historique : période, statut et lien vers chaque reçu.
 // Uniquement les dus de MES appartements (GET /api/me/dues) ; un autre rôle est renvoyé à l'accueil.
-import { Amount, EmptyState, ListItem, Screen, StatusBadge, Text, useTheme } from '@syndic/ui';
+import {
+  Amount,
+  EmptyState,
+  EntranceRow,
+  ListItem,
+  Screen,
+  StatusBadge,
+  Text,
+  useListEntrance,
+  useTheme,
+} from '@syndic/ui';
 import { Redirect, useRouter } from 'expo-router';
 import Wallet from 'lucide-react-native/icons/wallet';
 import { View } from 'react-native';
@@ -20,9 +30,7 @@ import { useChargeFormat } from './use-charge-format';
 
 /** Paiements qui ont un reçu, le plus récent en premier. */
 const receiptsOf = (due: MyDue): (MyPayment & { receiptId: string })[] =>
-  due.payments
-    .filter((payment): payment is MyPayment & { receiptId: string } => payment.receiptId !== null)
-    .reverse();
+  due.payments.filter((payment): payment is MyPayment & { receiptId: string } => payment.receiptId !== null).reverse();
 
 export function MyChargesScreen() {
   const { spacing } = useTheme();
@@ -32,6 +40,8 @@ export function MyChargesScreen() {
   const { active, query: residencesQuery } = useActiveResidence();
   const isOwner = active !== null && active.role === 'owner';
   const dues = useMyDues(myDuesResidenceId(active));
+  // L'historique apparaît en cascade au premier affichage seulement.
+  const entrance = useListEntrance(dues.data !== undefined);
   useRefreshOnFocus(dues.refetch);
 
   if (residencesQuery.data !== undefined && !isOwner) return <Redirect href="/home" />;
@@ -48,13 +58,13 @@ export function MyChargesScreen() {
     return t('charges.list.dueOn', { date: format.date(due.dueDate) });
   };
 
-  const renderDue = (due: MyDue) => {
+  const renderDue = (due: MyDue, index: number) => {
     const receipts = receiptsOf(due);
     const title = severalLots
       ? `${format.period(due.periodLabel)} · ${t('mine.lot', { lot: due.lotReference })}`
       : format.period(due.periodLabel);
     return (
-      <View key={due.id} style={{ gap: spacing.sm }}>
+      <EntranceRow key={due.id} entrance={entrance} index={index} reflow style={{ gap: spacing.sm }}>
         <ListItem
           leading={<ReferenceBox label={format.shortPeriod(due.periodLabel)} />}
           title={title}
@@ -86,7 +96,7 @@ export function MyChargesScreen() {
               onPress={() => openReceipt(payment.receiptId)}
             />
           ))}
-      </View>
+      </EntranceRow>
     );
   };
 

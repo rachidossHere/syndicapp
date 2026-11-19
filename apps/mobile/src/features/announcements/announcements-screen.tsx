@@ -3,11 +3,23 @@
 // chargement de la suite en faisant défiler (curseur), « tirer pour actualiser », rafraîchissement au
 // retour sur l'écran, états chargement, erreur réseau et vide. Seuls announcements.write (syndic,
 // adjoint) voient le bouton « Nouvelle annonce » : l'API refuse de toute façon les autres rôles.
-import { Banner, Button, Chip, EmptyState, Screen, Text, Toast, useTheme } from '@syndic/ui';
+import {
+  AnimatedList,
+  Banner,
+  Button,
+  Chip,
+  EmptyState,
+  EntranceRow,
+  Screen,
+  Text,
+  Toast,
+  useListEntrance,
+  useTheme,
+} from '@syndic/ui';
 import { Redirect, useRouter } from 'expo-router';
 import Plus from 'lucide-react-native/icons/plus';
 import { useEffect, useMemo, useState } from 'react';
-import { FlatList, RefreshControl, ScrollView, View } from 'react-native';
+import { RefreshControl, ScrollView, View } from 'react-native';
 
 import { QueryFallback } from '@/features/charges/query-fallback';
 import { useAnnouncementList } from '@/hooks/use-announcements';
@@ -39,6 +51,8 @@ export function AnnouncementsScreen() {
   const residenceId = announcementsResidenceId(active);
   const canPublish = canPublishAnnouncement(active?.role);
   const list = useAnnouncementList(residenceId);
+  // Les premières annonces apparaissent en cascade au premier affichage seulement.
+  const entrance = useListEntrance(list.loaded);
   const flash = useFlashMessage();
   const [filter, setFilter] = useState<AnnouncementFilter>('all');
   const shown = useMemo(() => filterAnnouncements(list.items, filter), [list.items, filter]);
@@ -94,7 +108,9 @@ export function AnnouncementsScreen() {
           ))}
         </ScrollView>
       )}
-      {canPublish && <Button icon={Plus} label={t('announcements.new')} onPress={() => router.push('/new-announcement')} />}
+      {canPublish && (
+        <Button icon={Plus} label={t('announcements.new')} onPress={() => router.push('/new-announcement')} />
+      )}
       {/* Un échec d'actualisation garde la liste affichée, avec un message non bloquant. */}
       {list.loaded && list.isRefetchError && <Banner message={t('announcements.loadError')} />}
     </View>
@@ -124,12 +140,16 @@ export function AnnouncementsScreen() {
 
   return (
     <Screen>
-      <FlatList
+      <AnimatedList
         style={{ flex: 1 }}
         contentContainerStyle={{ gap: spacing.md, paddingBottom: spacing.lg }}
         data={list.loaded ? shown : []}
         keyExtractor={(item) => item.id}
-        renderItem={({ item }) => <AnnouncementRow item={item} onOpen={openAnnouncement} />}
+        renderItem={({ item, index }) => (
+          <EntranceRow entrance={entrance} index={index}>
+            <AnnouncementRow item={item} onOpen={openAnnouncement} />
+          </EntranceRow>
+        )}
         ListHeaderComponent={header}
         ListHeaderComponentStyle={{ marginBottom: list.items.length > 0 ? 0 : spacing.md }}
         ListEmptyComponent={empty}

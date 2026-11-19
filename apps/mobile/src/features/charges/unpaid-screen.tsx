@@ -9,11 +9,13 @@ import {
   Button,
   Card,
   EmptyState,
+  EntranceRow,
   Screen,
   Sheet,
   StatusBadge,
   Text,
   Toast,
+  useListEntrance,
   useTheme,
 } from '@syndic/ui';
 import { Redirect, useRouter } from 'expo-router';
@@ -22,23 +24,12 @@ import { useEffect, useMemo, useState } from 'react';
 import { View } from 'react-native';
 
 import { AuthHeader } from '@/features/auth/auth-header';
-import {
-  useChargeCall,
-  useSendReminders,
-  type DueRow,
-  type ReminderInput,
-} from '@/hooks/use-charges';
+import { useChargeCall, useSendReminders, type DueRow, type ReminderInput } from '@/hooks/use-charges';
 import { useActiveResidence } from '@/hooks/use-residences';
 import { useT } from '@/i18n/use-t';
 import { useLanguage } from '@/providers/language-provider';
 import { apiErrorKey } from '@/lib/api-errors';
-import {
-  formatReminderLine,
-  isUnpaid,
-  reminderButtonState,
-  reminderToastKey,
-  remindableCount,
-} from '@/lib/reminders';
+import { formatReminderLine, isUnpaid, reminderButtonState, reminderToastKey, remindableCount } from '@/lib/reminders';
 
 import { QueryFallback } from './query-fallback';
 import { ReferenceBox } from './reference-box';
@@ -52,7 +43,7 @@ export const canRemind = (role: Parameters<typeof can>[0]): boolean =>
   can(role, 'charges.write') && can(role, 'payments.write');
 
 export function UnpaidScreen({ callId }: { callId: string }) {
-  const { spacing } = useTheme();
+  const { spacing, motion } = useTheme();
   const t = useT();
   const { language } = useLanguage();
   const router = useRouter();
@@ -61,6 +52,8 @@ export function UnpaidScreen({ callId }: { callId: string }) {
   const allowed = active !== null && canRemind(active.role);
   const residenceId = allowed ? active.id : undefined;
   const call = useChargeCall(residenceId, callId);
+  // Les premiers lots apparaissent en cascade au premier affichage seulement.
+  const entrance = useListEntrance(call.data !== undefined);
   const send = useSendReminders(residenceId);
   const [toast, setToast] = useState<string | undefined>();
   const [confirming, setConfirming] = useState(false);
@@ -79,8 +72,7 @@ export function UnpaidScreen({ callId }: { callId: string }) {
 
   if (residencesQuery.data !== undefined && !allowed) return <Redirect href="/charges" />;
 
-  const goBack = () =>
-    router.canGoBack() ? router.back() : router.replace(`/charge-call/${callId}`);
+  const goBack = () => (router.canGoBack() ? router.back() : router.replace(`/charge-call/${callId}`));
 
   const run = async (input: ReminderInput, lotId?: string) => {
     if (send.isPending) return;
@@ -139,59 +131,52 @@ export function UnpaidScreen({ callId }: { callId: string }) {
           onPress={() => setConfirming(true)}
         />
         <View style={{ gap: spacing.md }}>
-          {unpaid.map((due) => {
+          {unpaid.map((due, index) => {
             const state = reminderButtonState(due, now);
             const line = state === 'reminded' ? lastLine(due) : undefined;
             return (
-              <Card key={due.id}>
-                <View style={{ gap: spacing.sm }}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
-                    <ReferenceBox label={due.lotReference} />
-                    <View style={{ flex: 1, gap: spacing.xs }}>
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          flexWrap: 'wrap',
-                          alignItems: 'center',
-                          gap: spacing.xs,
-                        }}
-                      >
-                        <Amount
-                          centimes={due.status === 'partial' ? due.remaining : due.amountDue}
-                        />
-                        {due.status === 'partial' && (
-                          <Text variant="bodyStrong">{t('charges.unpaid.remaining')}</Text>
+              <EntranceRow key={due.id} entrance={entrance} index={index} reflow={unpaid.length <= motion.reflowMax}>
+                <Card>
+                  <View style={{ gap: spacing.sm }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
+                      <ReferenceBox label={due.lotReference} />
+                      <View style={{ flex: 1, gap: spacing.xs }}>
+                        <View
+                          style={{
+                            flexDirection: 'row',
+                            flexWrap: 'wrap',
+                            alignItems: 'center',
+                            gap: spacing.xs,
+                          }}>
+                          <Amount centimes={due.status === 'partial' ? due.remaining : due.amountDue} />
+                          {due.status === 'partial' && (
+                            <Text variant="bodyStrong">{t('charges.unpaid.remaining')}</Text>
+                          )}
+                        </View>
+                        <View style={{ flexDirection: 'row' }}>
+                          <StatusBadge status={due.status} />
+                        </View>
+                      </View>
+                      <Button
+                        variant="secondary"
+                        label={state === 'reminded' ? t('charges.unpaid.reminded') : t('charges.unpaid.remind')}
+                        accessibilityLabel={t(
+                          state === 'reminded' ? 'charges.unpaid.remindedLabel' : 'charges.unpaid.remindLabel',
+                          { lot: due.lotReference },
                         )}
-                      </View>
-                      <View style={{ flexDirection: 'row' }}>
-                        <StatusBadge status={due.status} />
-                      </View>
+                        disabled={state === 'reminded'}
+                        loading={send.isPending && busyLot === due.lotId}
+                        onPress={() => void run({ lotId: due.lotId }, due.lotId)}
+                      />
                     </View>
-                    <Button
-                      variant="secondary"
-                      label={
-                        state === 'reminded'
-                          ? t('charges.unpaid.reminded')
-                          : t('charges.unpaid.remind')
-                      }
-                      accessibilityLabel={t(
-                        state === 'reminded'
-                          ? 'charges.unpaid.remindedLabel'
-                          : 'charges.unpaid.remindLabel',
-                        { lot: due.lotReference },
-                      )}
-                      disabled={state === 'reminded'}
-                      loading={send.isPending && busyLot === due.lotId}
-                      onPress={() => void run({ lotId: due.lotId }, due.lotId)}
-                    />
+                    {line !== undefined && (
+                      <Text variant="small" tone="muted">
+                        {line}
+                      </Text>
+                    )}
                   </View>
-                  {line !== undefined && (
-                    <Text variant="small" tone="muted">
-                      {line}
-                    </Text>
-                  )}
-                </View>
-              </Card>
+                </Card>
+              </EntranceRow>
             );
           })}
         </View>
@@ -223,18 +208,10 @@ export function UnpaidScreen({ callId }: { callId: string }) {
         onClose={() => setConfirming(false)}
         footer={
           <>
-            <Button
-              label={t('charges.unpaid.confirm', { count: toRemind })}
-              onPress={() => void onConfirmAll()}
-            />
-            <Button
-              variant="ghost"
-              label={t('common.cancel')}
-              onPress={() => setConfirming(false)}
-            />
+            <Button label={t('charges.unpaid.confirm', { count: toRemind })} onPress={() => void onConfirmAll()} />
+            <Button variant="ghost" label={t('common.cancel')} onPress={() => setConfirming(false)} />
           </>
-        }
-      >
+        }>
         <Text>
           {t(toRemind === 1 ? 'charges.unpaid.confirmBodyOne' : 'charges.unpaid.confirmBodyMany', {
             count: toRemind,

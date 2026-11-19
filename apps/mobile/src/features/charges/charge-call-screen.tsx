@@ -10,11 +10,13 @@ import {
   Card,
   Chip,
   EmptyState,
+  EntranceRow,
   Screen,
   StatusBadge,
   Text,
   TextField,
   Toast,
+  useListEntrance,
   useTheme,
 } from '@syndic/ui';
 import { Redirect, useRouter } from 'expo-router';
@@ -25,13 +27,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { View } from 'react-native';
 
 import { AuthHeader } from '@/features/auth/auth-header';
-import {
-  useCancelPayment,
-  useChargeCall,
-  useOpenReceipt,
-  type DuePayment,
-  type DueRow,
-} from '@/hooks/use-charges';
+import { useCancelPayment, useChargeCall, useOpenReceipt, type DuePayment, type DueRow } from '@/hooks/use-charges';
 import { useActiveResidence } from '@/hooks/use-residences';
 import { useT } from '@/i18n/use-t';
 import { apiErrorKey } from '@/lib/api-errors';
@@ -54,8 +50,7 @@ const FILTER_KEYS = {
 const TOAST_MS = 3000;
 
 /** Dernier paiement non annulé (date et reçu affichés sur la ligne d'un appartement payé). */
-const lastValidPayment = (due: DueRow) =>
-  [...due.payments].reverse().find((p) => p.cancelledAt === null);
+const lastValidPayment = (due: DueRow) => [...due.payments].reverse().find((p) => p.cancelledAt === null);
 
 function DueSummary({ due, canCollect }: { due: DueRow; canCollect: boolean }) {
   const t = useT();
@@ -66,9 +61,7 @@ function DueSummary({ due, canCollect }: { due: DueRow; canCollect: boolean }) {
     return (
       <View style={{ flex: 1, gap: spacing.xs }}>
         <Text variant="bodyStrong">
-          {payment
-            ? t('charges.detail.paidOn', { date: format.instant(payment.paidAt) })
-            : t('charges.status.paid')}
+          {payment ? t('charges.detail.paidOn', { date: format.instant(payment.paidAt) }) : t('charges.status.paid')}
         </Text>
         {payment !== undefined && (
           <Text variant="small" tone="muted">
@@ -84,15 +77,11 @@ function DueSummary({ due, canCollect }: { due: DueRow; canCollect: boolean }) {
   if (due.status === 'partial') {
     return (
       <View style={{ flex: 1, gap: spacing.xs }}>
-        <View
-          style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: spacing.xs }}
-        >
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: spacing.xs }}>
           <Amount centimes={due.amountPaid} />
           <Text variant="bodyStrong">{t('charges.detail.received')}</Text>
         </View>
-        <View
-          style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: spacing.xs }}
-        >
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: spacing.xs }}>
           <Text variant="small" tone="muted">
             {t('charges.detail.remaining')}
           </Text>
@@ -176,11 +165,8 @@ function PaymentRow({
           borderTopWidth: borderWidth.thin,
           borderTopColor: colors.border,
         },
-      ]}
-    >
-      <View
-        style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: spacing.xs }}
-      >
+      ]}>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: spacing.xs }}>
         <Amount centimes={payment.amount} tone={cancelled ? 'muted' : 'default'} />
         <Text tone="muted">
           {t('charges.payment.line', {
@@ -212,11 +198,7 @@ function PaymentRow({
         />
       )}
       {canCancel && !cancelled && !cancelling && (
-        <Button
-          variant="ghost"
-          label={t('charges.payment.cancel')}
-          onPress={() => setCancelling(true)}
-        />
+        <Button variant="ghost" label={t('charges.payment.cancel')} onPress={() => setCancelling(true)} />
       )}
       {cancelling && (
         <View style={{ gap: spacing.sm }}>
@@ -252,16 +234,17 @@ function PaymentRow({
 }
 
 export function ChargeCallScreen({ callId }: { callId: string }) {
-  const { spacing } = useTheme();
+  const { spacing, motion } = useTheme();
   const t = useT();
   const router = useRouter();
   const format = useChargeFormat();
   const { active, query: residencesQuery } = useActiveResidence();
   // Détail par appartement : réservé aux encaisseurs (payments.write), comme l'API.
-  const allowed =
-    active !== null && canManageCharges(active.role) && can(active.role, 'payments.write');
+  const allowed = active !== null && canManageCharges(active.role) && can(active.role, 'payments.write');
   const residenceId = allowed ? active.id : undefined;
   const call = useChargeCall(residenceId, callId);
+  // Les premiers appartements apparaissent en cascade au premier affichage seulement.
+  const entrance = useListEntrance(call.data !== undefined);
   const [filter, setFilter] = useState<Filter>('all');
   const [expanded, setExpanded] = useState<string | undefined>();
   const [toast, setToast] = useState<string | undefined>();
@@ -286,9 +269,7 @@ export function ChargeCallScreen({ callId }: { callId: string }) {
   const goBack = () => (router.canGoBack() ? router.back() : router.replace('/charges'));
   const collect = (dueId?: string) =>
     router.push({ pathname: '/collect', params: dueId ? { callId, dueId } : { callId } });
-  const visible = (call.data?.dues ?? []).filter(
-    (due) => filter === 'all' || due.status === filter,
-  );
+  const visible = (call.data?.dues ?? []).filter((due) => filter === 'all' || due.status === filter);
 
   const onDuePress = (due: DueRow) => {
     if (due.payments.length === 0) {
@@ -329,25 +310,23 @@ export function ChargeCallScreen({ callId }: { callId: string }) {
             domain="charges"
             title={t('charges.detail.noResultsTitle')}
             description={t('charges.detail.noResultsBody')}
-            action={
-              <Button
-                variant="secondary"
-                label={t('charges.detail.showAll')}
-                onPress={() => setFilter('all')}
-              />
-            }
+            action={<Button variant="secondary" label={t('charges.detail.showAll')} onPress={() => setFilter('all')} />}
           />
         ) : (
           <View style={{ gap: spacing.md }}>
-            {visible.map((due) => (
-              <View key={due.id} style={{ gap: spacing.sm }}>
+            {visible.map((due, index) => (
+              <EntranceRow
+                key={due.id}
+                entrance={entrance}
+                index={index}
+                reflow={visible.length <= motion.reflowMax}
+                style={{ gap: spacing.sm }}>
                 <Card
                   onPress={() => onDuePress(due)}
                   accessibilityLabel={t('charges.detail.rowLabel', {
                     lot: due.lotReference,
                     status: t(`charges.status.${due.status}`),
-                  })}
-                >
+                  })}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
                     <ReferenceBox label={due.lotReference} />
                     <DueSummary due={due} canCollect={due.payments.length === 0} />
@@ -359,20 +338,22 @@ export function ChargeCallScreen({ callId }: { callId: string }) {
                 </Card>
                 {/* Paiements hors de la carte appuyable : chaque bouton reste atteignable au lecteur d'écran. */}
                 {expanded === due.id && (
-                  <Card>
-                    {due.payments.map((payment, index) => (
-                      <PaymentRow
-                        key={payment.id}
-                        payment={payment}
-                        first={index === 0}
-                        canCancel
-                        residenceId={residenceId}
-                        onCancelled={() => setToast(t('charges.payment.cancelled'))}
-                      />
-                    ))}
-                  </Card>
+                  <EntranceRow entrance={entrance} index={0} reflow>
+                    <Card>
+                      {due.payments.map((payment, paymentIndex) => (
+                        <PaymentRow
+                          key={payment.id}
+                          payment={payment}
+                          first={paymentIndex === 0}
+                          canCancel
+                          residenceId={residenceId}
+                          onCancelled={() => setToast(t('charges.payment.cancelled'))}
+                        />
+                      ))}
+                    </Card>
+                  </EntranceRow>
                 )}
-              </View>
+              </EntranceRow>
             ))}
           </View>
         )}
@@ -387,8 +368,7 @@ export function ChargeCallScreen({ callId }: { callId: string }) {
         call.data !== undefined ? (
           <Button icon={Banknote} label={t('charges.detail.collect')} onPress={() => collect()} />
         ) : undefined
-      }
-    >
+      }>
       {toast !== undefined && <Toast message={toast} />}
       <AuthHeader onBack={goBack} />
       {call.data !== undefined && (
@@ -400,8 +380,7 @@ export function ChargeCallScreen({ callId }: { callId: string }) {
               flexWrap: 'wrap',
               alignItems: 'center',
               gap: spacing.xs,
-            }}
-          >
+            }}>
             <Amount centimes={call.data.amountPerLot} variant="small" tone="muted" />
             <Text variant="small" tone="muted">
               {t('charges.detail.perLotDue', { date: format.date(call.data.dueDate) })}

@@ -7,12 +7,14 @@ import {
   Button,
   Card,
   EmptyState,
+  EntranceRow,
   ListItem,
   ProgressBar,
   Screen,
   StatusBadge,
   Text,
   Toast,
+  useListEntrance,
   useTheme,
   type BusinessStatus,
 } from '@syndic/ui';
@@ -45,10 +47,19 @@ export function callStatus(call: ChargeCallSummary, isCurrent: boolean): Busines
 function CountsLine({ call }: { call: ChargeCallSummary }) {
   const t = useT();
   const { spacing } = useTheme();
-  const part = (count: number, one: 'paidOne' | 'partialOne' | 'unpaidOne', many: 'paidMany' | 'partialMany' | 'unpaidMany') =>
-    t(count === 1 ? `charges.list.${one}` : `charges.list.${many}`, { count });
+  const part = (
+    count: number,
+    one: 'paidOne' | 'partialOne' | 'unpaidOne',
+    many: 'paidMany' | 'partialMany' | 'unpaidMany',
+  ) => t(count === 1 ? `charges.list.${one}` : `charges.list.${many}`, { count });
   return (
-    <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', columnGap: spacing.xs }}>
+    <View
+      style={{
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        alignItems: 'center',
+        columnGap: spacing.xs,
+      }}>
       <Text variant="small" tone="muted">
         {[
           part(call.paidCount, 'paidOne', 'paidMany'),
@@ -69,13 +80,25 @@ function CurrentCallCard({ call, onPress }: { call: ChargeCallSummary; onPress: 
   const progress = call.totalDue === 0 ? 0 : call.totalPaid / call.totalDue;
   return (
     <Card onPress={onPress} accessibilityLabel={format.period(call.periodLabel)} style={{ gap: spacing.md }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md }}>
+      <View
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: spacing.md,
+        }}>
         <Text variant="h3" style={{ flex: 1 }}>
           {format.period(call.periodLabel)}
         </Text>
         <StatusBadge status={callStatus(call, true)} />
       </View>
-      <View style={{ flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: spacing.md }}>
+      <View
+        style={{
+          flexDirection: 'row',
+          alignItems: 'baseline',
+          justifyContent: 'space-between',
+          gap: spacing.md,
+        }}>
         <Text tone="muted">{t('charges.list.collected')}</Text>
         <Amount centimes={call.totalPaid} variant="h2" tone="success" />
       </View>
@@ -87,7 +110,13 @@ function CurrentCallCard({ call, onPress }: { call: ChargeCallSummary; onPress: 
         })}
       />
       <CountsLine call={call} />
-      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md }}>
+      <View
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: spacing.md,
+        }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
           <Text variant="small" tone="danger">
             {t('charges.list.remaining')}
@@ -113,6 +142,8 @@ export function ChargesScreen() {
   const role: Role | undefined = active?.role;
   const allowed = role !== undefined && canManageCharges(role);
   const calls = useChargeCalls(allowed ? active?.id : undefined);
+  // Les appels précédents apparaissent en cascade au premier affichage seulement.
+  const entrance = useListEntrance(calls.data !== undefined);
   const [toast, setToast] = useState<string | undefined>();
 
   // L'écran de création revient ici avec `created=1` : l'onglet est déjà ouvert, le paramètre est consommé.
@@ -156,26 +187,27 @@ export function ChargesScreen() {
         {previous.length > 0 && (
           <View style={{ gap: spacing.md }}>
             <Text variant="h3">{t('charges.list.previous')}</Text>
-            {previous.map((call) => (
-              <ListItem
-                key={call.id}
-                leading={<ReferenceBox label={format.shortPeriod(call.periodLabel)} />}
-                title={format.period(call.periodLabel)}
-                subtitle={
-                  call.unpaidCount > 0
-                    ? t(call.unpaidCount === 1 ? 'charges.list.unpaidOne' : 'charges.list.unpaidMany', {
-                        count: call.unpaidCount,
-                      })
-                    : t('charges.list.dueOn', { date: format.date(call.dueDate) })
-                }
-                trailing={
-                  <View style={{ alignItems: 'flex-end', gap: spacing.xs }}>
-                    <Amount centimes={call.totalDue} variant="small" />
-                    <StatusBadge status={callStatus(call, false)} />
-                  </View>
-                }
-                onPress={() => openCall(call.id)}
-              />
+            {previous.map((call, index) => (
+              <EntranceRow key={call.id} entrance={entrance} index={index} reflow>
+                <ListItem
+                  leading={<ReferenceBox label={format.shortPeriod(call.periodLabel)} />}
+                  title={format.period(call.periodLabel)}
+                  subtitle={
+                    call.unpaidCount > 0
+                      ? t(call.unpaidCount === 1 ? 'charges.list.unpaidOne' : 'charges.list.unpaidMany', {
+                          count: call.unpaidCount,
+                        })
+                      : t('charges.list.dueOn', { date: format.date(call.dueDate) })
+                  }
+                  trailing={
+                    <View style={{ alignItems: 'flex-end', gap: spacing.xs }}>
+                      <Amount centimes={call.totalDue} variant="small" />
+                      <StatusBadge status={callStatus(call, false)} />
+                    </View>
+                  }
+                  onPress={() => openCall(call.id)}
+                />
+              </EntranceRow>
             ))}
           </View>
         )}
@@ -210,7 +242,10 @@ export function ChargesScreen() {
       <View style={{ gap: spacing.xs }}>
         {active !== null && (
           <Text variant="small" tone="muted">
-            {t('charges.list.context', { name: active.name, role: roleLabel(active.role, { lower: true }) })}
+            {t('charges.list.context', {
+              name: active.name,
+              role: roleLabel(active.role, { lower: true }),
+            })}
           </Text>
         )}
         <Text variant="h2">{t('charges.list.title')}</Text>

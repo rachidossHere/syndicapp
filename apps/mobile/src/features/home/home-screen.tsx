@@ -74,7 +74,12 @@ export function HomeScreen() {
       ) : (
         <View style={{ gap: spacing.md }}>
           <Banner message={t('home.loadError')} />
-          <Button variant="secondary" label={t('common.retry')} loading={me.isFetching} onPress={() => void me.refetch()} />
+          <Button
+            variant="secondary"
+            label={t('common.retry')}
+            loading={me.isFetching}
+            onPress={() => void me.refetch()}
+          />
         </View>
       )
     ) : (
@@ -120,7 +125,7 @@ export function HomeScreen() {
   );
 }
 
-/** Squelette de l'accueil : en-tête et deux blocs, sans animation (étape 4 du plan 02b). */
+/** Squelette de l'accueil : en-tête et deux blocs (la pulsation vient de `Skeleton`). */
 function HomeSkeleton() {
   const { layout, sizes } = useTheme();
   return (

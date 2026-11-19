@@ -1,5 +1,8 @@
-import { View, type DimensionValue, type StyleProp, type ViewStyle } from 'react-native';
+import { type DimensionValue, type StyleProp, type ViewStyle } from 'react-native';
+import Animated from 'react-native-reanimated';
 
+import { cssEaseInOut } from '../motion/animations';
+import { useReducedMotion } from '../motion/use-reduced-motion';
 import { useTheme } from '../theme/theme-provider';
 
 export type SkeletonProps = {
@@ -14,18 +17,38 @@ export type SkeletonProps = {
 };
 
 /**
- * Bloc gris qui tient la place d'un contenu en cours de chargement (squelette simple, sans animation :
- * les animations de chargement viennent à l'étape 4 du plan 02b). Masqué aux lecteurs d'écran : c'est
- * l'écran qui annonce le chargement.
+ * Bloc gris qui tient la place d'un contenu en cours de chargement. Son opacité pulse doucement
+ * (animation CSS de Reanimated, sur le fil d'interface, courbe `inOut`) ; fixe quand « Réduire les
+ * animations » est activé. Masqué aux lecteurs d'écran : c'est l'écran qui annonce le chargement.
  */
 export function Skeleton({ width = '100%', height = 16, rounded = 'md', style, testID }: SkeletonProps) {
-  const { colors, radius } = useTheme();
+  const { colors, radius, motion } = useTheme();
+  const reducedMotion = useReducedMotion();
+
   return (
-    <View
+    <Animated.View
       accessibilityElementsHidden
       importantForAccessibility="no-hide-descendants"
       testID={testID}
-      style={[{ width, height, borderRadius: radius[rounded], borderCurve: 'continuous', backgroundColor: colors.border }, style]}
+      style={[
+        {
+          width,
+          height,
+          borderRadius: radius[rounded],
+          borderCurve: 'continuous',
+          backgroundColor: colors.border,
+        },
+        reducedMotion
+          ? null
+          : {
+              animationName: { from: { opacity: 1 }, to: { opacity: motion.pulseMinOpacity } },
+              animationDuration: motion.duration.pulse,
+              animationTimingFunction: cssEaseInOut,
+              animationIterationCount: 'infinite',
+              animationDirection: 'alternate',
+            },
+        style,
+      ]}
     />
   );
 }

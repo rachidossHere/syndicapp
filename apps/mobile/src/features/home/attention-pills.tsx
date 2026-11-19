@@ -2,7 +2,7 @@
 // signalements urgents (ou à traiter pour le gardien). Cachées quand le nombre est 0, et tant que les
 // nombres ne sont pas connus (un échec n'empêche pas l'accueil de s'afficher). Chaque pastille ouvre
 // l'écran qui permet de traiter l'élément. Les nombres viennent des routes existantes.
-import { Text, useTheme } from '@syndic/ui';
+import { Appear, Text, useTheme } from '@syndic/ui';
 import { useRouter, type Href } from 'expo-router';
 import { Pressable, View } from 'react-native';
 
@@ -29,8 +29,9 @@ export function AttentionPills({ role, residenceId }: { role: Role; residenceId:
 
   if (items.length === 0) return null;
 
+  // Les nombres arrivent après l'accueil : le bloc apparaît par fondu (sans glissement, il ne décale rien).
   return (
-    <View style={{ gap: spacing.sm }}>
+    <Appear slide={false} style={{ gap: spacing.sm }}>
       <Text variant="h3">{t('home.attention.title')}</Text>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
         {items.map((item) => {
@@ -43,7 +44,9 @@ export function AttentionPills({ role, residenceId }: { role: Role; residenceId:
               accessibilityLabel={label}
               // Les impayés d'un appel s'ouvrent au-dessus des onglets ; Charges et Signalements sont des onglets.
               onPress={() =>
-                item.href.pathname === '/unpaid/[id]' ? router.push(item.href as Href) : router.navigate(item.href as Href)
+                item.href.pathname === '/unpaid/[id]'
+                  ? router.push(item.href as Href)
+                  : router.navigate(item.href as Href)
               }
               style={({ pressed }) => ({
                 minHeight: sizes.touchTarget,
@@ -60,6 +63,6 @@ export function AttentionPills({ role, residenceId }: { role: Role; residenceId:
           );
         })}
       </View>
-    </View>
+    </Appear>
   );
 }

@@ -1,16 +1,11 @@
 import type { LucideIcon } from 'lucide-react-native';
-import {
-  Pressable,
-  View,
-  type GestureResponderEvent,
-  type StyleProp,
-  type ViewStyle,
-} from 'react-native';
+import { View, type GestureResponderEvent, type StyleProp, type ViewStyle } from 'react-native';
 
 import { useTheme, type Theme } from '../theme/theme-provider';
 import type { Domain } from '../tokens/domains';
 import type { StatusTone } from '../tokens/status';
 import { Icon } from './icon';
+import { PressableSurface } from './pressable-surface';
 import { Text } from './text';
 
 export type ActionTileTone = 'primary' | StatusTone;
@@ -51,20 +46,22 @@ export function ActionTile({
   const box = toneColors(tone, colors);
 
   return (
-    <Pressable
+    <PressableSurface
+      feedback="scale"
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={label}
       accessibilityHint={accessibilityHint}
       testID={testID}
-      style={({ pressed }) => [
+      pressedStyle={{ backgroundColor: colors.bg, borderColor: colors.borderStrong }}
+      style={[
         {
           minHeight: sizes.actionTileMinHeight,
           justifyContent: 'space-between',
           gap: spacing.md,
           padding: spacing.lg,
-          backgroundColor: pressed ? colors.bg : colors.surface,
-          borderColor: pressed ? colors.borderStrong : colors.border,
+          backgroundColor: colors.surface,
+          borderColor: colors.border,
           borderWidth: borderWidth.thin,
           borderRadius: radius.lg,
           borderCurve: 'continuous',
@@ -88,6 +85,6 @@ export function ActionTile({
         </View>
       )}
       <Text variant="bodyStrong">{label}</Text>
-    </Pressable>
+    </PressableSurface>
   );
 }

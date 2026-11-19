@@ -1,15 +1,10 @@
 import ChevronRight from 'lucide-react-native/icons/chevron-right';
 import type { ReactNode } from 'react';
-import {
-  Pressable,
-  View,
-  type GestureResponderEvent,
-  type StyleProp,
-  type ViewStyle,
-} from 'react-native';
+import { View, type GestureResponderEvent, type StyleProp, type ViewStyle } from 'react-native';
 
 import { useTheme } from '../theme/theme-provider';
 import { Icon } from './icon';
+import { PressableSurface } from './pressable-surface';
 import { Text } from './text';
 
 export type ListItemProps = {
@@ -78,18 +73,18 @@ export function ListItem({
     );
   }
 
+  // Ligne pleine largeur : jamais d'échelle (une ligne qui rétrécit donne l'impression que tout
+  // l'écran se tasse), seulement un fond et une bordure qui changent au toucher.
   return (
-    <Pressable
+    <PressableSurface
+      feedback="background"
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel ?? [title, subtitle].filter(Boolean).join(', ')}
       testID={testID}
-      style={({ pressed }) => [
-        base,
-        pressed && { backgroundColor: colors.bg, borderColor: colors.borderStrong },
-        style,
-      ]}>
+      pressedStyle={{ backgroundColor: colors.bg, borderColor: colors.borderStrong }}
+      style={[base, style]}>
       {content}
-    </Pressable>
+    </PressableSurface>
   );
 }

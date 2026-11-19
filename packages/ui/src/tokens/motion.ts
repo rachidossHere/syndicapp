@@ -12,7 +12,24 @@ export const motion = {
     fast: 150,
     /** Apparition et disparition d'un élément. */
     normal: 250,
+    /** Compteur du solde de la caisse au premier affichage (jamais plus long). */
+    count: 600,
+    /** Une descente (ou une remontée) de la pulsation d'un squelette de chargement : mouvement continu, pas une réponse à un geste. */
+    pulse: 1000,
   },
+  /** Décalage entre deux éléments d'une cascade, en ms. */
+  stagger: 40,
+  /** Nombre d'éléments d'une liste qui apparaissent en cascade (les suivants apparaissent sans animation). */
+  staggerMax: 8,
+  /**
+   * Au-delà de ce nombre de lignes, une liste non virtualisée (ScrollView) ne glisse plus quand un
+   * élément est ajouté ou retiré : seule l'apparition en cascade du premier affichage s'anime.
+   */
+  reflowMax: 30,
+  /** Distance du léger glissement d'une apparition, en px. */
+  enterOffset: 8,
+  /** Opacité la plus basse de la pulsation d'un squelette. */
+  pulseMinOpacity: 0.5,
   /** Courbes de Bézier `[x1, y1, x2, y2]`. */
   easing: {
     /** Par défaut : entrée, sortie, retour d'appui. */
