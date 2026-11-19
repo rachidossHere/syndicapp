@@ -203,7 +203,7 @@ chargeCalls.get(
     const residenceId = c.get('residenceId');
 
     const [call] = await db
-      .select({ id: schema.chargeCall.id })
+      .select({ id: schema.chargeCall.id, periodLabel: schema.chargeCall.periodLabel })
       .from(schema.chargeCall)
       .where(and(eq(schema.chargeCall.id, id.data), eq(schema.chargeCall.residenceId, residenceId)))
       .limit(1);
@@ -271,7 +271,7 @@ chargeCalls.get(
       if (b.building === null) return -1;
       return byReference(a.building, b.building);
     });
-    return c.json({ buildings });
+    return c.json({ periodLabel: call.periodLabel, buildings });
   },
 );
 

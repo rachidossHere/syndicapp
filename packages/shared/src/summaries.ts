@@ -54,7 +54,8 @@ export type UnpaidBuildingSummary = {
   /** Lots que « Relancer » relancerait maintenant (syndic seulement : charges.write). */
   remindableCount?: number;
 };
-export type UnpaidSummaryResponse = { buildings: UnpaidBuildingSummary[] };
+/** `periodLabel` : la période de l'appel (« 2026-Q4 »), pour le titre de l'écran sans charger les lots. */
+export type UnpaidSummaryResponse = { periodLabel: string; buildings: UnpaidBuildingSummary[] };
 
 // --- Mes charges (accounts.read) -----------------------------------------------------------------
 

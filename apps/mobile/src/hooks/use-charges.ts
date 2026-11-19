@@ -114,17 +114,15 @@ export function useChargeCallsOfYear(residenceId: string | undefined, year: stri
   });
 }
 
-/** Bâtiments d'un appel qui ont des impayés, avec le nombre de lots et le reste à payer. */
+/** Période de l'appel et bâtiments qui ont des impayés, avec le nombre de lots et le reste à payer. */
 export function useUnpaidBuildings(residenceId: string | undefined, callId: string | undefined) {
   return useQuery({
     queryKey: [...callKey(residenceId ?? 'none', callId ?? 'none'), 'buildings'],
-    queryFn: async () =>
-      (
-        await apiFetch<UnpaidSummaryResponse>(
-          `/api/charge-calls/${encodeURIComponent(callId ?? '')}/summary?groupBy=building`,
-          inResidence(residenceId),
-        )
-      ).buildings,
+    queryFn: () =>
+      apiFetch<UnpaidSummaryResponse>(
+        `/api/charge-calls/${encodeURIComponent(callId ?? '')}/summary?groupBy=building`,
+        inResidence(residenceId),
+      ),
     enabled: residenceId !== undefined && callId !== undefined,
   });
 }
