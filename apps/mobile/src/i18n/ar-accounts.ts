@@ -3,7 +3,6 @@ import type { frAccountTexts } from './fr-accounts';
 /** Textes des comptes en arabe (écran 6 de docs/depenses.png). Le typage refuse une clé manquante. */
 export const arAccountTexts: Record<keyof typeof frAccountTexts, string> = {
   'home.accounts': 'الحسابات',
-  'home.accountsBody': 'رصيد الصندوق والحركات والفواتير.',
 
   'accounts.title': 'الحسابات',
   'accounts.loadError': 'تعذّر تحميل الحسابات.',

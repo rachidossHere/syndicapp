@@ -76,7 +76,6 @@ export const arChargeTexts: Record<keyof typeof frChargeTexts, string> = {
   ...months,
 
   'home.charges': 'المصاريف',
-  'home.chargesBody': 'طلبات المصاريف والاستخلاصات.',
 
   'mine.context': '{name} · الشقة {lots}',
   'mine.title': 'مصاريفي',

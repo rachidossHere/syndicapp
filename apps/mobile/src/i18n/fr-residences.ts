@@ -47,7 +47,6 @@ export const frResidenceTexts = {
 
   'home.residenceLine': '{name} · {role}',
   'home.lots': 'Appartements',
-  'home.lotsBody': 'Ajouter des appartements et inviter vos voisins.',
   'home.residenceError': 'Impossible de charger vos résidences.',
 
   'lots.title': 'Les appartements',

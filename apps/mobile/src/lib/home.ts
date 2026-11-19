@@ -2,7 +2,7 @@
 // Aucune règle métier ne change : tout vient des routes existantes (caisse, appels de charges,
 // compteurs de signalements, mes charges). L'accueil masque ce que le rôle ne peut pas faire, et
 // l'API refuse de toute façon.
-import { can, type Role } from '@syndic/shared';
+import { can, type Language, type Role } from '@syndic/shared';
 
 import type { ChargeCallSummary, MyDue } from '@/hooks/use-charges';
 import type { IssueCounts } from '@/lib/issues';
@@ -192,6 +192,13 @@ export function residentActionsFor(role: Role): QuickAction[] {
 
 // ---------------------------------------------------------------------------------------------
 // Carte « Charges de <mois> » (accueil du copropriétaire)
+
+/**
+ * Période dans une phrase : « Charges de novembre 2026 ». En français le mois prend une minuscule
+ * (« Novembre 2026 » → « novembre 2026 ») ; en arabe le nom du mois reste tel quel.
+ */
+export const periodInSentence = (language: Language, period: string): string =>
+  language === 'fr' ? period.toLocaleLowerCase('fr') : period;
 
 export type ChargesCard = {
   /** Tout est payé : état positif. */

@@ -45,7 +45,6 @@ export const arIssueTexts: Record<keyof typeof frIssueTexts, string> = {
   'issues.errors.messageRequired': 'اكتب رسالة.',
 
   'home.issues': 'البلاغات',
-  'home.issuesBody': 'الإبلاغ عن مشكل ومتابعة معالجته.',
 
   'issues.title': 'البلاغات',
   'issues.new': 'الإبلاغ عن مشكل',
@@ -121,7 +120,6 @@ export const arIssueTexts: Record<keyof typeof frIssueTexts, string> = {
   'issues.actor.caretaker': 'الحارس',
   'issues.actor.resident': 'أحد السكان',
 
-  'home.issuesManageBody': 'عرض البلاغات ومعالجتها.',
   'issues.manage.context': '{residence} · {role}',
   'issues.manage.filter.all': '{count} · الكل',
   'issues.manage.filter.urgent': '{count} · عاجلة',

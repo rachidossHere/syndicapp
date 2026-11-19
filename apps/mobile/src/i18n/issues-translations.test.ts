@@ -118,7 +118,6 @@ describe('traductions des signalements (plan 07, étape 2)', () => {
       'issues.manage.update',
       'issues.manage.updated',
       'issues.manage.history',
-      'home.issuesManageBody',
     ];
     for (const key of keys) {
       expect(fr[key as keyof typeof fr], `fr : ${key}`).toBeTruthy();
