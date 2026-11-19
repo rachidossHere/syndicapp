@@ -1,15 +1,9 @@
 import type { LucideIcon } from 'lucide-react-native';
-import {
-  ActivityIndicator,
-  Pressable,
-  View,
-  type GestureResponderEvent,
-  type StyleProp,
-  type ViewStyle,
-} from 'react-native';
+import { ActivityIndicator, View, type GestureResponderEvent, type StyleProp, type ViewStyle } from 'react-native';
 
 import { useTheme, type Theme } from '../theme/theme-provider';
 import { Icon } from './icon';
+import { PressableSurface } from './pressable-surface';
 import { Text } from './text';
 
 export type ButtonVariant = 'primary' | 'accent' | 'secondary' | 'ghost';
@@ -44,7 +38,11 @@ type VariantColors = { background: string; pressed: string; foreground: string; 
 function variantColors(variant: ButtonVariant, colors: Theme['colors']): VariantColors {
   switch (variant) {
     case 'primary':
-      return { background: colors.primary, pressed: colors.primaryPressed, foreground: colors.textInverse };
+      return {
+        background: colors.primary,
+        pressed: colors.primaryPressed,
+        foreground: colors.textInverse,
+      };
     case 'accent':
       // Pas de jeton « accent appuyé » : l'appui passe par l'opacité (voir plus bas).
       return { background: colors.accent, pressed: colors.accent, foreground: colors.text };
@@ -74,19 +72,18 @@ export function Button({
   style,
   testID,
 }: ButtonProps) {
-  const { colors, radius, spacing, sizes, borderWidth, opacity } = useTheme();
+  const { colors, radius, spacing, sizes, borderWidth } = useTheme();
   const inactive = disabled || loading;
   const palette = variantColors(variant, colors);
 
   // Désactivé : fond primaryDisabled (variante ghost : texte atténué, sans fond).
-  const foreground = disabled
-    ? variant === 'ghost'
-      ? colors.iconInactive
-      : colors.textInverse
-    : palette.foreground;
+  const foreground = disabled ? (variant === 'ghost' ? colors.iconInactive : colors.textInverse) : palette.foreground;
 
   return (
-    <Pressable
+    // Léger enfoncement au toucher (échelle) ; « Réduire les animations » le remplace par un changement
+    // d'opacité immédiat. Variante `accent` : pas de jeton « accent appuyé », l'échelle suffit.
+    <PressableSurface
+      feedback="scale"
       onPress={onPress}
       disabled={inactive}
       accessibilityRole="button"
@@ -94,7 +91,8 @@ export function Button({
       accessibilityHint={accessibilityHint}
       accessibilityState={{ disabled: inactive, busy: loading }}
       testID={testID}
-      style={({ pressed }) => [
+      pressedStyle={{ backgroundColor: palette.pressed }}
+      style={[
         {
           minHeight: sizes.button[size],
           paddingVertical: spacing.sm,
@@ -107,9 +105,10 @@ export function Button({
           gap: spacing.sm,
           backgroundColor: palette.background,
         },
-        palette.border !== undefined && { borderWidth: borderWidth.thin, borderColor: palette.border },
-        pressed && !inactive && { backgroundColor: palette.pressed },
-        pressed && !inactive && variant === 'accent' && { opacity: opacity.pressed },
+        palette.border !== undefined && {
+          borderWidth: borderWidth.thin,
+          borderColor: palette.border,
+        },
         disabled && variant !== 'ghost' && { backgroundColor: colors.primaryDisabled, borderWidth: 0 },
         style,
       ]}>
@@ -123,6 +122,6 @@ export function Button({
       <Text variant="bodyStrong" style={{ color: foreground, textAlign: 'center' }}>
         {label}
       </Text>
-    </Pressable>
+    </PressableSurface>
   );
 }

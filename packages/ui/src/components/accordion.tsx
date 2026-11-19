@@ -1,11 +1,21 @@
 import ChevronDown from 'lucide-react-native/icons/chevron-down';
-import ChevronRight from 'lucide-react-native/icons/chevron-right';
-import type { ReactNode } from 'react';
-import { Pressable, View, type StyleProp, type ViewStyle } from 'react-native';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { View, type LayoutChangeEvent, type StyleProp, type ViewStyle } from 'react-native';
+import Animated, {
+  interpolate,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+  Extrapolation,
+} from 'react-native-reanimated';
+import { scheduleOnRN } from 'react-native-worklets';
 
+import { cssEaseOut, easeOut } from '../motion/animations';
+import { useReducedMotion } from '../motion/use-reduced-motion';
 import { useTheme } from '../theme/theme-provider';
-import { accordionA11y, accordionChevron } from './accordion-state';
+import { accordionA11y, accordionChevron, chevronRotation } from './accordion-state';
 import { Icon, type IconComponent } from './icon';
+import { PressableSurface } from './pressable-surface';
 import { Text } from './text';
 
 export type AccordionHeaderProps = {
@@ -25,7 +35,11 @@ export type AccordionHeaderProps = {
 /**
  * En-tête d'une section repliable : icône, titre, sous-titre et chevron. Zone tactile de 44 px au
  * moins, rôle « bouton » et état ouvert ou fermé annoncé. Seul, il sert d'en-tête de section d'une
- * `SectionList` ; avec `Accordion`, il est suivi de son contenu.
+ * liste ; avec `Accordion`, il est suivi de son contenu.
+ *
+ * Le chevron tourne (`motion.duration.normal`, courbe `out`) entre « vers le bas » (ouvert) et « vers la
+ * fin de ligne » (fermé : vers la droite en français, vers la gauche en arabe). « Réduire les
+ * animations » activé : il change de sens directement.
  */
 export function AccordionHeader({
   icon,
@@ -37,16 +51,19 @@ export function AccordionHeader({
   style,
   testID,
 }: AccordionHeaderProps) {
-  const { colors, radius, spacing, sizes, borderWidth } = useTheme();
+  const { colors, radius, spacing, sizes, borderWidth, motion, isRtl } = useTheme();
+  const reducedMotion = useReducedMotion();
   const chevron = accordionChevron(expanded);
 
   return (
-    <Pressable
+    <PressableSurface
+      feedback="background"
       onPress={onToggle}
       disabled={disabled}
       testID={testID}
       {...accordionA11y({ title, subtitle, expanded, disabled })}
-      style={({ pressed }) => [
+      pressedStyle={{ backgroundColor: colors.bg, borderColor: colors.borderStrong }}
+      style={[
         {
           minHeight: sizes.touchTarget,
           flexDirection: 'row',
@@ -54,8 +71,8 @@ export function AccordionHeader({
           gap: spacing.md,
           paddingVertical: spacing.md,
           paddingHorizontal: spacing.lg,
-          backgroundColor: pressed ? colors.bg : colors.surface,
-          borderColor: pressed ? colors.borderStrong : colors.border,
+          backgroundColor: colors.surface,
+          borderColor: colors.border,
           borderWidth: borderWidth.thin,
           borderRadius: radius.lg,
           borderCurve: 'continuous',
@@ -82,12 +99,17 @@ export function AccordionHeader({
           </Text>
         )}
       </View>
-      <Icon
-        icon={chevron === 'down' ? ChevronDown : ChevronRight}
-        color={colors.iconInactive}
-        flipInRtl={chevron === 'forward'}
-      />
-    </Pressable>
+      {/* Un seul chevron « vers le bas » qui tourne : pas besoin du miroir de `Icon` en arabe. */}
+      <Animated.View
+        style={{
+          transform: [{ rotate: chevronRotation(chevron, isRtl) }],
+          transitionProperty: 'transform',
+          transitionDuration: reducedMotion ? 0 : motion.duration.normal,
+          transitionTimingFunction: cssEaseOut,
+        }}>
+        <Icon icon={ChevronDown} color={colors.iconInactive} />
+      </Animated.View>
+    </PressableSurface>
   );
 }
 
@@ -124,6 +146,64 @@ export function AccordionContent({ children, gap = false, continued = false, sty
   );
 }
 
+/**
+ * Zone qui s'ouvre et se ferme en animant sa hauteur (mesurée une fois, puis multipliée par
+ * l'avancement de l'animation) avec un fondu du contenu. Le contenu n'est monté que tant que la zone
+ * est ouverte ou en train de se fermer. La hauteur est la seule propriété de mise en page animée de
+ * l'appli : c'est voulu (le contenu qui suit descend en douceur), et le contenu d'une section reste
+ * court. « Réduire les animations » activé : ouverture et fermeture immédiates.
+ */
+function Collapsible({ open, children }: { open: boolean; children: ReactNode }) {
+  const { motion } = useTheme();
+  const reducedMotion = useReducedMotion();
+  const initiallyOpen = useRef(open);
+  const [mounted, setMounted] = useState(open);
+  const [measured, setMeasured] = useState(false);
+  const contentHeight = useSharedValue(0);
+  const progress = useSharedValue(open ? 1 : 0);
+
+  useEffect(() => {
+    if (open) {
+      setMounted(true);
+      progress.set(reducedMotion ? 1 : withTiming(1, { duration: motion.duration.normal, easing: easeOut }));
+      return;
+    }
+    if (reducedMotion) {
+      progress.set(0);
+      setMounted(false);
+      return;
+    }
+    progress.set(
+      withTiming(0, { duration: motion.duration.normal, easing: easeOut }, (finished) => {
+        if (finished) scheduleOnRN(setMounted, false);
+      }),
+    );
+  }, [open, reducedMotion, motion.duration.normal, progress]);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    height: contentHeight.get() * progress.get(),
+    opacity: interpolate(progress.get(), [0, 1], [0, 1], Extrapolation.CLAMP),
+  }));
+
+  if (!mounted) return null;
+
+  // Ouverte dès le premier rendu : le contenu est affiché tel quel jusqu'à sa mesure. Sinon la zone
+  // reste à 0 de haut tant que le contenu n'est pas mesuré, pour ne jamais clignoter ouverte.
+  const inFlow = initiallyOpen.current && !measured;
+  const onLayout = (event: LayoutChangeEvent) => {
+    contentHeight.set(event.nativeEvent.layout.height);
+    setMeasured(true);
+  };
+
+  return (
+    <Animated.View style={[{ overflow: 'hidden' }, measured ? animatedStyle : inFlow ? null : { height: 0 }]}>
+      <View onLayout={onLayout} style={inFlow ? undefined : { position: 'absolute', start: 0, end: 0, top: 0 }}>
+        {children}
+      </View>
+    </Animated.View>
+  );
+}
+
 export type AccordionProps = Omit<AccordionHeaderProps, 'expanded' | 'onToggle'> & {
   expanded: boolean;
   onToggle: () => void;
@@ -132,12 +212,16 @@ export type AccordionProps = Omit<AccordionHeaderProps, 'expanded' | 'onToggle'>
   contentStyle?: StyleProp<ViewStyle>;
 };
 
-/** Section repliable : l'en-tête, puis le contenu tant que la section est ouverte. */
+/** Section repliable : l'en-tête, puis le contenu tant que la section est ouverte (hauteur animée). */
 export function Accordion({ children, contentStyle, ...header }: AccordionProps) {
   return (
     <View>
       <AccordionHeader {...header} />
-      {header.expanded && children !== undefined && <AccordionContent style={contentStyle}>{children}</AccordionContent>}
+      {children !== undefined && (
+        <Collapsible open={header.expanded}>
+          <AccordionContent style={contentStyle}>{children}</AccordionContent>
+        </Collapsible>
+      )}
     </View>
   );
 }

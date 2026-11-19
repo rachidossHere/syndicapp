@@ -1,13 +1,8 @@
 import type { ReactNode } from 'react';
-import {
-  Pressable,
-  View,
-  type GestureResponderEvent,
-  type StyleProp,
-  type ViewStyle,
-} from 'react-native';
+import { View, type GestureResponderEvent, type StyleProp, type ViewStyle } from 'react-native';
 
 import { useTheme } from '../theme/theme-provider';
+import { PressableSurface } from './pressable-surface';
 
 export type CardProps = {
   children: ReactNode;
@@ -55,21 +50,22 @@ export function Card({
     );
   }
 
+  // Carte appuyable : elle s'enfonce légèrement au toucher (échelle) et le fond sable et la bordure plus
+  // marquée confirment l'appui, y compris quand « Réduire les animations » coupe l'échelle.
   return (
-    <Pressable
+    <PressableSurface
+      feedback="scale"
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
       accessibilityHint={accessibilityHint}
       testID={testID}
-      style={({ pressed }) => [
-        base,
-        { minHeight: sizes.touchTarget },
-        // État appuyé visible : fond sable et bordure plus marquée.
-        pressed && { backgroundColor: colors.bg, borderColor: highlighted ? colors.primaryPressed : colors.borderStrong },
-        style,
-      ]}>
+      pressedStyle={{
+        backgroundColor: colors.bg,
+        borderColor: highlighted ? colors.primaryPressed : colors.borderStrong,
+      }}
+      style={[base, { minHeight: sizes.touchTarget }, style]}>
       {children}
-    </Pressable>
+    </PressableSurface>
   );
 }
