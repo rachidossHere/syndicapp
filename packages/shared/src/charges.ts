@@ -50,6 +50,10 @@ export const isoDateSchema = z
     return !Number.isNaN(date.getTime()) && date.toISOString().startsWith(value);
   });
 
+/** Année (« 2026 ») et mois (« 2026-11 ») : filtres de période des listes et clés des résumés. */
+export const yearSchema = z.string().regex(/^\d{4}$/);
+export const monthSchema = z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/);
+
 const QUARTER_LABEL = /^\d{4}-Q[1-4]$/;
 const MONTH_LABEL = /^\d{4}-(0[1-9]|1[0-2])$/;
 

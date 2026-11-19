@@ -1,13 +1,21 @@
 import { db, schema, sql } from '@syndic/db';
 import {
   CHARGE_ERRORS,
+  NO_BUILDING_PARAM,
   can,
+  chargeCallBuildingSummaryQuerySchema,
+  chargeCallDetailQuerySchema,
+  chargeCallListQuerySchema,
+  chargeCallSummaryQuerySchema,
   createChargeCallSchema,
   isPeriodLabelFor,
   nextReminderAt,
+  type ChargeCallYearSummary,
+  type UnpaidBuildingSummary,
 } from '@syndic/shared';
-import { and, desc, eq, inArray, max } from 'drizzle-orm';
+import { and, desc, eq, inArray, max, ne } from 'drizzle-orm';
 import { Hono } from 'hono';
+import { HTTPException } from 'hono/http-exception';
 import { z } from 'zod';
 
 import { ChargeRefusal, chargeRefusal, isUniqueViolation, withRefusals } from '../charge-errors';
@@ -17,7 +25,7 @@ import {
   requirePermission,
   type MembershipEnv,
 } from '../middleware/require-membership';
-import { byReference, paymentsByDue } from '../services/charges';
+import { buildingKey, byReference, paymentsByDue } from '../services/charges';
 import { parseJson } from '../validate';
 
 export const chargeCalls = new Hono<MembershipEnv>();
@@ -90,13 +98,21 @@ chargeCalls.post(
   },
 );
 
-/** Lecture des comptes (accounts.read) : appels avec leurs totaux, sans détail par lot. */
+/** Année d'un appel : les 4 premiers caractères de son libellé de période (« 2026-Q4 », « 2026-11 »). */
+const callYear = sql<string>`substring(${schema.chargeCall.periodLabel} from 1 for 4)`;
+
+/**
+ * Lecture des comptes (accounts.read) : appels avec leurs totaux, sans détail par lot. `?year=2026`
+ * ne garde que les appels de cette année (écran « Charges » en accordéons : une section par année).
+ */
 chargeCalls.get(
   '/',
   requireAuth,
   requireMembership,
   requirePermission('accounts.read'),
   async (c) => {
+    const query = chargeCallListQuerySchema.safeParse(c.req.query());
+    if (!query.success) throw new HTTPException(400);
     const residenceId = c.get('residenceId');
     const due = schema.chargeDue;
     const statusCount = (status: 'paid' | 'partial' | 'unpaid') =>
@@ -120,13 +136,142 @@ chargeCalls.get(
         due,
         and(eq(due.chargeCallId, schema.chargeCall.id), eq(due.residenceId, residenceId)),
       )
-      .where(eq(schema.chargeCall.residenceId, residenceId))
+      .where(
+        and(
+          eq(schema.chargeCall.residenceId, residenceId),
+          query.data.year === undefined ? undefined : sql`${callYear} = ${query.data.year}`,
+        ),
+      )
       .groupBy(schema.chargeCall.id)
       .orderBy(desc(schema.chargeCall.dueDate), desc(schema.chargeCall.createdAt));
 
     return c.json({
       chargeCalls: rows.map((row) => ({ ...row, remaining: row.totalDue - row.totalPaid })),
     });
+  },
+);
+
+/**
+ * Résumé par année (accounts.read) : pour chaque année, le nombre d'appels, le dû, l'encaissé et le nombre
+ * de dus qui ne sont pas soldés. Les mêmes totaux que la liste, sans charger un seul appel : c'est ce
+ * qu'affiche chaque section fermée de l'écran « Charges ». Déclarée avant `/:id`.
+ */
+chargeCalls.get(
+  '/summary',
+  requireAuth,
+  requireMembership,
+  requirePermission('accounts.read'),
+  async (c) => {
+    if (!chargeCallSummaryQuerySchema.safeParse(c.req.query()).success) throw new HTTPException(400);
+    const residenceId = c.get('residenceId');
+    const due = schema.chargeDue;
+    const rows = await db
+      .select({
+        year: callYear,
+        callCount: sql`count(distinct ${schema.chargeCall.id})`.mapWith(Number),
+        totalDue: sql`coalesce(sum(${due.amountDue}), 0)`.mapWith(Number),
+        totalPaid: sql`coalesce(sum(${due.amountPaid}), 0)`.mapWith(Number),
+        unpaidCount: sql`count(${due.id}) filter (where ${due.status} <> 'paid')`.mapWith(Number),
+      })
+      .from(schema.chargeCall)
+      .leftJoin(
+        due,
+        and(eq(due.chargeCallId, schema.chargeCall.id), eq(due.residenceId, residenceId)),
+      )
+      .where(eq(schema.chargeCall.residenceId, residenceId))
+      .groupBy(callYear)
+      .orderBy(desc(callYear));
+    const years: ChargeCallYearSummary[] = rows;
+    return c.json({ years });
+  },
+);
+
+/**
+ * Impayés d'un appel, par bâtiment (payments.write) : pour chaque bâtiment, les lots impayés ou partiels
+ * et le reste à payer ; pour le syndic seulement (charges.write), combien seraient relancés maintenant.
+ * Aucun nom. Appel d'une autre résidence : 404. Les bâtiments sans impayé n'apparaissent pas.
+ */
+chargeCalls.get(
+  '/:id/summary',
+  requireAuth,
+  requireMembership,
+  requirePermission('payments.write'),
+  async (c) => {
+    if (!chargeCallBuildingSummaryQuerySchema.safeParse(c.req.query()).success) throw new HTTPException(400);
+    const id = z.uuid().safeParse(c.req.param('id'));
+    if (!id.success) return chargeRefusal(CHARGE_ERRORS.notFound);
+    const residenceId = c.get('residenceId');
+
+    const [call] = await db
+      .select({ id: schema.chargeCall.id })
+      .from(schema.chargeCall)
+      .where(and(eq(schema.chargeCall.id, id.data), eq(schema.chargeCall.residenceId, residenceId)))
+      .limit(1);
+    if (!call) return chargeRefusal(CHARGE_ERRORS.notFound);
+
+    const unpaid = await db
+      .select({
+        lotId: schema.chargeDue.lotId,
+        building: buildingKey,
+        amountDue: schema.chargeDue.amountDue,
+        amountPaid: schema.chargeDue.amountPaid,
+      })
+      .from(schema.chargeDue)
+      .innerJoin(
+        schema.lot,
+        and(eq(schema.lot.id, schema.chargeDue.lotId), eq(schema.lot.residenceId, residenceId)),
+      )
+      .where(
+        and(
+          eq(schema.chargeDue.chargeCallId, call.id),
+          eq(schema.chargeDue.residenceId, residenceId),
+          ne(schema.chargeDue.status, 'paid'),
+        ),
+      );
+
+    // Lots relancés il y a moins de 3 jours : le syndic seulement, comme dans le détail de l'appel.
+    const canSeeReminders = can(c.get('role'), 'charges.write');
+    const cooling = new Set<string>();
+    if (canSeeReminders && unpaid.length > 0) {
+      const rows = await db
+        .select({ lotId: schema.chargeReminder.lotId, at: max(schema.chargeReminder.createdAt) })
+        .from(schema.chargeReminder)
+        .where(
+          and(
+            eq(schema.chargeReminder.residenceId, residenceId),
+            inArray(
+              schema.chargeReminder.lotId,
+              unpaid.map((d) => d.lotId),
+            ),
+          ),
+        )
+        .groupBy(schema.chargeReminder.lotId);
+      const now = Date.now();
+      for (const row of rows) {
+        if (row.at && nextReminderAt(row.at).getTime() > now) cooling.add(row.lotId);
+      }
+    }
+
+    const byBuilding = new Map<string | null, UnpaidBuildingSummary>();
+    for (const row of unpaid) {
+      const building = row.building ?? null;
+      const entry: UnpaidBuildingSummary = byBuilding.get(building) ?? {
+        building,
+        unpaidCount: 0,
+        remaining: 0,
+        ...(canSeeReminders ? { remindableCount: 0 } : {}),
+      };
+      entry.unpaidCount += 1;
+      entry.remaining += row.amountDue - row.amountPaid;
+      if (canSeeReminders && !cooling.has(row.lotId)) entry.remindableCount = (entry.remindableCount ?? 0) + 1;
+      byBuilding.set(building, entry);
+    }
+    const buildings = [...byBuilding.values()].sort((a, b) => {
+      if (a.building === null) return 1;
+      if (b.building === null) return -1;
+      return byReference(a.building, b.building);
+    });
+    return c.json({ buildings });
   },
 );
 
@@ -144,6 +289,9 @@ chargeCalls.get(
   async (c) => {
     const id = z.uuid().safeParse(c.req.param('id'));
     if (!id.success) return chargeRefusal(CHARGE_ERRORS.notFound);
+    // `?building=A&unpaid=true` : les lots impayés ou partiels d'un bâtiment (`-` : sans bâtiment).
+    const filter = chargeCallDetailQuerySchema.safeParse(c.req.query());
+    if (!filter.success) throw new HTTPException(400);
     const residenceId = c.get('residenceId');
 
     const [call] = await db
@@ -176,6 +324,12 @@ chargeCalls.get(
         and(
           eq(schema.chargeDue.chargeCallId, call.id),
           eq(schema.chargeDue.residenceId, residenceId),
+          filter.data.unpaid === 'true' ? ne(schema.chargeDue.status, 'paid') : undefined,
+          filter.data.building === undefined
+            ? undefined
+            : filter.data.building === NO_BUILDING_PARAM
+              ? sql`${buildingKey} is null`
+              : sql`${buildingKey} = ${filter.data.building}`,
         ),
       );
 

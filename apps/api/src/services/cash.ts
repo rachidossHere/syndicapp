@@ -3,7 +3,7 @@
 // (recorded_by, cancelled_by, nom, e-mail) n'est sélectionnée : le journal ne montre que
 // « Charge reçue · B12 ».
 import { db, sql } from '@syndic/db';
-import { formatPaymentLedgerLabel, TIMEZONE } from '@syndic/shared';
+import { formatPaymentLedgerLabel, TIMEZONE, type LedgerMonthSummary } from '@syndic/shared';
 
 /**
  * Solde de la caisse en centimes :
@@ -63,6 +63,51 @@ type LedgerRow = {
 };
 
 /**
+ * Mouvements de la résidence (paiements et dépenses fusionnés), une ligne chacun, avec leur jour
+ * (AAAA-MM-JJ, Africa/Casablanca). Base du journal et de ses résumés par mois : les deux voient
+ * exactement les mêmes lignes. Aucune colonne de personne.
+ */
+const movements = (residenceId: string) => sql`
+  select 'payment' as kind, p.id::text as id,
+         to_char(p.paid_at at time zone ${TIMEZONE}, 'YYYY-MM-DD') as date,
+         p.created_at, p.amount, l.reference as lot_reference,
+         null::text as label, null::text as category, false as has_invoice,
+         p.cancelled_at, p.cancel_reason
+  from payment p
+  join charge_due d on d.id = p.charge_due_id and d.residence_id = p.residence_id
+  join lot l on l.id = d.lot_id and l.residence_id = d.residence_id
+  where p.residence_id = ${residenceId}
+  union all
+  select 'expense', e.id::text, to_char(e.spent_on, 'YYYY-MM-DD'),
+         e.created_at, e.amount, null, e.label, e.category::text,
+         e.invoice_key is not null, e.cancelled_at, e.cancel_reason
+  from expense e
+  where e.residence_id = ${residenceId}
+`;
+
+/**
+ * Résumé du journal par mois (AAAA-MM), du plus récent au plus ancien : nombre de mouvements (annulés
+ * compris, comme le journal), encaissé et dépensé (mouvements non annulés seulement).
+ */
+export async function getLedgerMonths(residenceId: string): Promise<LedgerMonthSummary[]> {
+  const result = await db.execute<{ month: string; count: string; collected: string; spent: string }>(sql`
+    select left(m.date, 7) as month,
+           count(*) as count,
+           coalesce(sum(m.amount) filter (where m.kind = 'payment' and m.cancelled_at is null), 0) as collected,
+           coalesce(sum(m.amount) filter (where m.kind = 'expense' and m.cancelled_at is null), 0) as spent
+    from (${movements(residenceId)}) m
+    group by left(m.date, 7)
+    order by month desc
+  `);
+  return result.rows.map((row) => ({
+    month: row.month,
+    count: Number(row.count),
+    collected: Number(row.collected),
+    spent: Number(row.spent),
+  }));
+}
+
+/**
  * Journal des mouvements (paiements et dépenses fusionnés), du plus récent au plus ancien.
  * `period` : bornes incluses (AAAA-MM-JJ). Les mouvements annulés restent listés (badge
  * « Annulée ») mais ne comptent pas dans le solde.
@@ -76,23 +121,7 @@ export async function getLedger(
   const to = period.to ?? null;
   const result = await db.execute<LedgerRow>(sql`
     select m.*, count(*) over () as total
-    from (
-      select 'payment' as kind, p.id::text as id,
-             to_char(p.paid_at at time zone ${TIMEZONE}, 'YYYY-MM-DD') as date,
-             p.created_at, p.amount, l.reference as lot_reference,
-             null::text as label, null::text as category, false as has_invoice,
-             p.cancelled_at, p.cancel_reason
-      from payment p
-      join charge_due d on d.id = p.charge_due_id and d.residence_id = p.residence_id
-      join lot l on l.id = d.lot_id and l.residence_id = d.residence_id
-      where p.residence_id = ${residenceId}
-      union all
-      select 'expense', e.id::text, to_char(e.spent_on, 'YYYY-MM-DD'),
-             e.created_at, e.amount, null, e.label, e.category::text,
-             e.invoice_key is not null, e.cancelled_at, e.cancel_reason
-      from expense e
-      where e.residence_id = ${residenceId}
-    ) m
+    from (${movements(residenceId)}) m
     where (${from}::text is null or m.date >= ${from}::text)
       and (${to}::text is null or m.date <= ${to}::text)
     order by m.date desc, m.created_at desc, m.id desc

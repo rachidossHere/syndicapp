@@ -12,11 +12,14 @@
 import { db, schema } from '@syndic/db';
 import {
   ANNOUNCEMENT_ERRORS,
+  TIMEZONE,
   announcementListQuerySchema,
   announcementNotificationType,
+  announcementSummaryQuerySchema,
   createAnnouncementSchema,
   pinAnnouncementSchema,
   type AnnouncementItem,
+  type AnnouncementMonthSummary,
   type Role,
 } from '@syndic/shared';
 import { and, count, desc, eq, inArray, ne, or, sql } from 'drizzle-orm';
@@ -175,13 +178,53 @@ announcements.post('/', requireAuth, requireMembership, requirePermission('annou
   return c.json(item, 201);
 });
 
-/** Liste : épinglées d'abord, puis de la plus récente à la plus ancienne ; pagination par curseur. */
+/**
+ * Mois de publication (AAAA-MM) dans le fuseau Africa/Casablanca : celui des sections de l'écran. Le fuseau
+ * est écrit dans la requête (constante du code, jamais une saisie) : un paramètre lié ferait que Postgres
+ * ne reconnaît plus la même expression dans `select` et dans `group by`.
+ */
+const publishedMonth = sql<string>`to_char(${a.createdAt} at time zone ${sql.raw(`'${TIMEZONE}'`)}, 'YYYY-MM')`;
+
+/**
+ * Résumé par mois (tous les rôles, comme la liste) : le nombre d'annonces non épinglées de chaque mois, du
+ * plus récent au plus ancien. Les épinglées restent hors des sections. `?category=` ne compte que cette
+ * catégorie (les mois sans annonce de cette catégorie disparaissent). Déclarée avant `/:id`.
+ */
+announcements.get('/summary', requireAuth, requireMembership, async (c) => {
+  const parsed = announcementSummaryQuerySchema.safeParse(c.req.query());
+  if (!parsed.success) throw new HTTPException(400);
+  const rows = await db
+    .select({ month: publishedMonth, count: count() })
+    .from(a)
+    .where(
+      and(
+        eq(a.residenceId, c.get('residenceId')),
+        eq(a.pinned, false),
+        parsed.data.category === undefined ? undefined : eq(a.category, parsed.data.category),
+      ),
+    )
+    .groupBy(publishedMonth)
+    .orderBy(desc(publishedMonth));
+  c.header('Cache-Control', 'no-store');
+  const months: AnnouncementMonthSummary[] = rows;
+  return c.json({ months });
+});
+
+/**
+ * Liste : épinglées d'abord, puis de la plus récente à la plus ancienne ; pagination par curseur.
+ * Filtres facultatifs : `pinned=true|false`, `month=AAAA-MM` et `category=` (l'ordre et le curseur ne changent pas).
+ */
 announcements.get('/', requireAuth, requireMembership, async (c) => {
   const parsed = announcementListQuerySchema.safeParse(c.req.query());
   if (!parsed.success) throw new HTTPException(400);
-  const { limit, cursor } = parsed.data;
+  const { limit, cursor, pinned, month, category } = parsed.data;
   const residenceId = c.get('residenceId');
-  const scope = eq(a.residenceId, residenceId);
+  const scope = and(
+    eq(a.residenceId, residenceId),
+    pinned === undefined ? undefined : eq(a.pinned, pinned === 'true'),
+    month === undefined ? undefined : sql`${publishedMonth} = ${month}`,
+    category === undefined ? undefined : eq(a.category, category),
+  );
 
   const rows = await db
     .select(columns)

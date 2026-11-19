@@ -3,6 +3,7 @@
 // contient que des codes et des clés de traduction.
 import { z } from 'zod';
 
+import { monthSchema } from './charges';
 import type { NotificationType } from './notifications';
 import type { Role } from './roles';
 
@@ -49,11 +50,18 @@ export type CreateAnnouncementInput = z.input<typeof createAnnouncementSchema>;
 export const pinAnnouncementSchema = z.object({ pinned: z.boolean() }).strict();
 export type PinAnnouncementInput = z.infer<typeof pinAnnouncementSchema>;
 
-/** Liste : pagination par curseur opaque (celui de `nextCursor` de la page précédente). */
+/**
+ * Liste : pagination par curseur opaque (celui de `nextCursor` de la page précédente). Filtres facultatifs
+ * (écran en accordéons) : `pinned` (épinglées ou non), `month` (AAAA-MM de publication, fuseau
+ * Africa/Casablanca) et `category`.
+ */
 export const announcementListQuerySchema = z
   .object({
     limit: z.coerce.number().int().min(1).max(MAX_ANNOUNCEMENT_PAGE_SIZE).default(DEFAULT_ANNOUNCEMENT_PAGE_SIZE),
     cursor: z.string().min(1).max(300).optional(),
+    pinned: z.enum(['true', 'false']).optional(),
+    month: monthSchema.optional(),
+    category: z.enum(ANNOUNCEMENT_CATEGORIES).optional(),
   })
   .strict();
 export type AnnouncementListQuery = z.infer<typeof announcementListQuerySchema>;
