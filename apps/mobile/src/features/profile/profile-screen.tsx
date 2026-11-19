@@ -83,7 +83,7 @@ export function ProfileScreen() {
       )}
 
       {/* Une carte : résidence, notifications, langue (et galerie en développement). */}
-      <Card style={{ padding: 0, gap: 0, overflow: 'hidden' }}>
+      <Card flush>
         {active !== null ? (
           <ListItem
             plain

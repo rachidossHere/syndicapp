@@ -8,6 +8,11 @@ export type CardProps = {
   children: ReactNode;
   /** Carte mise en avant (annonce épinglée) : bordure `primary` de 2 px, sans changer le padding. */
   highlighted?: boolean;
+  /**
+   * Carte qui groupe des lignes pleine largeur (`ListItem plain`, séparées par des filets) : sans padding
+   * ni espace entre les enfants, contenu rogné aux coins arrondis.
+   */
+  flush?: boolean;
   /** Rend la carte appuyable : Pressable avec état appuyé et rôle « button ». */
   onPress?: (event: GestureResponderEvent) => void;
   /** Libellé lu par les lecteurs d'écran quand la carte est appuyable. */
@@ -23,6 +28,7 @@ export type CardProps = {
 export function Card({
   children,
   highlighted = false,
+  flush = false,
   onPress,
   accessibilityLabel,
   accessibilityHint,
@@ -40,6 +46,7 @@ export function Card({
     // Bordure plus épaisse : le padding diminue d'autant, la carte garde la même taille de contenu.
     padding: highlighted ? spacing.lg - (borderWidth.strong - borderWidth.thin) : spacing.lg,
     gap: spacing.sm,
+    ...(flush ? { padding: 0, gap: 0, overflow: 'hidden' as const } : {}),
   };
 
   if (!onPress) {
