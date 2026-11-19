@@ -132,8 +132,8 @@ Avant de coder, lire le skill correspondant à l'outil concerné et le suivre. E
 syndicapp/
   apps/
     mobile/                       → Expo (React Native), Expo Router
-      src/app/                    → routes uniquement (groupes (auth) et (app), dev/)
-      src/features/               → écrans, par domaine
+      src/app/                    → routes uniquement (groupes (auth) et (app) ; (app)/(tabs) : les onglets ; dev/)
+      src/features/               → écrans, par domaine (dont home/, profile/ et navigation/ : accueils, Profil, barre d'onglets)
       src/i18n/                   → traductions : fr.ts (référence), ar.ts (typé), useT()
       src/lib/auth-client.ts      → client Better Auth (expoClient, SecureStore)
       src/lib/api.ts              → appels à l'API (cookie de session, credentials: "omit")
@@ -225,6 +225,7 @@ syndicapp/
 - **Aucune couleur, taille de police, espacement ou rayon codé en dur** dans `apps/mobile` : utiliser les jetons et composants de `@syndic/ui`. Un besoin non couvert se traite en ajoutant un jeton ou un composant au package.
 - Les statuts métier s'affichent toujours avec `StatusBadge`, les montants toujours avec `Amount`.
 - Zones tactiles d'au moins **44 px**, contraste du texte d'au moins **4,5:1**, espacements en `start`/`end` (jamais `left`/`right`), états jamais signalés par la couleur seule.
+- **Navigation** : la barre d'onglets dépend du rôle (`tabsForRole`, `src/lib/tabs.ts`) et les routes d'onglets sont dans `(app)/(tabs)`. Un onglet s'ouvre toujours avec `router.navigate` (jamais `push` ni `replace`, qui empileraient un second jeu d'onglets) ; un écran de détail s'ouvre avec `router.push` au-dessus des onglets, avec un bouton retour.
 - Les références visuelles sont dans `docs/` : `design-system.png` pour les composants, `auth.png` pour l'authentification, `residences.png` pour les résidences, lots et invitations, `charges.png` pour les appels de charges et les encaissements, `depenses.png` pour les dépenses, les comptes et le solde de départ, `signalements.png` pour les signalements. Les écrans doivent leur correspondre ; les valeurs exactes viennent des jetons de `@syndic/ui`.
 - Icônes lucide importées une par une (`lucide-react-native/icons/<nom>`), jamais depuis l'index du paquet (tout le paquet serait chargé).
 - Les écrans affichés dépendent du rôle dans la résidence active.
@@ -304,8 +305,8 @@ Le projet démarre sur des offres gratuites, dont les conditions changent : les 
 
 - [ ] `pnpm typecheck` et `pnpm lint` passent.
 - [ ] Les entrées sont validées par Zod.
-- [ ] Les règles d'accès (authentification, résidence, rôle) sont vérifiées par l'API et testées.
-- [ ] Tests automatiques obligatoires partout (`apps/api`, `apps/mobile` et les packages `db`, `shared`, `ui`), surtout pour la sécurité, les permissions, l'isolation entre résidences et l'argent.
+- [ ] Les règles d'accès (authentification, résidence, rôle) sont vérifiées par l'API.
+- [ ] `pnpm typecheck` et expo export iOS passent ; pas de tests automatiques pendant le MVP, la suite existante sera relancée avant le pilote (plan 12).
 - [ ] Les textes affichés passent par les traductions (FR et AR) et l'écran fonctionne en RTL.
 - [ ] Aucune valeur de style codée en dur ; seulement `@syndic/ui`.
 - [ ] Aucune donnée sensible n'est envoyée à un service tiers ni écrite dans les logs.

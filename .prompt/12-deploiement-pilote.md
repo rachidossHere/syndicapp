@@ -59,6 +59,8 @@ Terminé quand : le guide est prêt et la première résidence pilote est créé
 
 ## Vérification
 
+- `pnpm typecheck` et expo export iOS passent ; pas de tests automatiques pendant le MVP, la suite existante sera relancée avant le pilote (plan 12).
+- La suite de tests existante (`pnpm test`) est relancée et passe, avant tout envoi aux pilotes.
 - La CI passe sur la branche principale.
 - Aucune donnée de développement en production ; aucun secret dans le dépôt (`git log -p` sur les noms de variables).
 - Une erreur volontaire apparaît dans Sentry sans nom ni e-mail.
