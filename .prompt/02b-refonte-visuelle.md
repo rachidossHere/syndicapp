@@ -1,6 +1,6 @@
 # 02b · Refonte visuelle
 
-Statut : en cours
+Statut : terminé
 
 ## Objectif
 
