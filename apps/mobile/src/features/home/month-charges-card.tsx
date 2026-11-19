@@ -2,7 +2,20 @@
 // montant restant, statut, barre de progression, échéance et « Voir mes charges ». Tout est payé :
 // état positif. Un dû par appartement ; avec plusieurs appartements, le bouton passe sous les cartes.
 // Rendue uniquement pour un copropriétaire : les autres rôles ne font aucune requête de charges.
-import { Amount, Button, Card, EmptyState, Icon, ProgressBar, Skeleton, StatusBadge, Text, formatAmount, useTheme } from '@syndic/ui';
+import {
+  Amount,
+  Button,
+  Card,
+  EmptyState,
+  Icon,
+  PressableScale,
+  ProgressBar,
+  Skeleton,
+  StatusBadge,
+  Text,
+  formatAmount,
+  useTheme,
+} from '@syndic/ui';
 import { useRouter } from 'expo-router';
 import CircleCheck from 'lucide-react-native/icons/circle-check';
 import type { ReactNode } from 'react';
@@ -17,13 +30,15 @@ import { useT } from '@/i18n/use-t';
 import { chargesCardFor, periodInSentence } from '@/lib/home';
 import { useLanguage } from '@/providers/language-provider';
 
-function DueCard({ due, showLot, action }: { due: MyDue; showLot: boolean; action?: ReactNode }) {
+function DueCardBody({ due, showLot, action }: { due: MyDue; showLot: boolean; action?: ReactNode }) {
   const { colors, spacing, sizes } = useTheme();
   const t = useT();
   const format = useChargeFormat();
   const { language } = useLanguage();
   const card = chargesCardFor(due);
-  const title = t('home.charges.title', { period: periodInSentence(language, format.period(due.periodLabel)) });
+  const title = t('home.charges.title', {
+    period: periodInSentence(language, format.period(due.periodLabel)),
+  });
   const lotLine = showLot ? t('mine.lot', { lot: due.lotReference }) : undefined;
 
   if (card.settled) {
@@ -53,7 +68,13 @@ function DueCard({ due, showLot, action }: { due: MyDue; showLot: boolean; actio
   return (
     <Card>
       <View style={{ gap: spacing.md }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md }}>
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: spacing.md,
+          }}>
           <View style={{ flex: 1 }}>
             <Text variant="small" tone="muted">
               {title}
@@ -80,6 +101,28 @@ function DueCard({ due, showLot, action }: { due: MyDue; showLot: boolean; actio
         {action}
       </View>
     </Card>
+  );
+}
+
+/**
+ * Carte d'un dû : elle s'enfonce au toucher et ouvre « Mes charges », comme le bouton qu'elle peut
+ * contenir. Le libellé lu reprend le titre de la carte et le nom de la destination.
+ */
+function DueCard({ due, showLot, action }: { due: MyDue; showLot: boolean; action?: ReactNode }) {
+  const t = useT();
+  const router = useRouter();
+  const format = useChargeFormat();
+  const { language } = useLanguage();
+  const title = t('home.charges.title', {
+    period: periodInSentence(language, format.period(due.periodLabel)),
+  });
+  const lot = showLot ? t('mine.lot', { lot: due.lotReference }) : undefined;
+  return (
+    <PressableScale
+      onPress={() => router.navigate('/my-charges')}
+      accessibilityLabel={[title, lot, t('home.charges.seeMine')].filter(Boolean).join(', ')}>
+      <DueCardBody due={due} showLot={showLot} action={action} />
+    </PressableScale>
   );
 }
 

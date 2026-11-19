@@ -2,7 +2,17 @@
 // encaissé et dépensé de la période en cours, et petite courbe. Données de GET /api/cash (les mêmes
 // que l'écran « Comptes », donc partagées par le cache) : aucune nouvelle API. La courbe se déduit des
 // derniers mouvements du journal ; sans au moins 3 points, elle n'est pas affichée.
-import { Amount, Card, PressableScale, Skeleton, Sparkline, Text, formatAmount, useTheme } from '@syndic/ui';
+import {
+  Amount,
+  AnimatedAmount,
+  Card,
+  PressableScale,
+  Skeleton,
+  Sparkline,
+  Text,
+  formatAmount,
+  useTheme,
+} from '@syndic/ui';
 import { useRouter, type Href } from 'expo-router';
 import { View } from 'react-native';
 
@@ -50,13 +60,26 @@ export function BalanceCard({ role, residenceId }: { role: Role; residenceId: st
         period: periodLabel,
       })}>
       <Card>
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md }}>
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: spacing.md,
+          }}>
           <View style={{ flex: 1, gap: spacing.xs }}>
             <Text variant="small" tone="muted">
               {t('home.cash.title')}
             </Text>
-            <Amount centimes={balance} variant="display" />
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', columnGap: spacing.md, rowGap: spacing.xs }}>
+            {/* Le solde compte jusqu'à sa valeur au premier affichage, puis change directement. */}
+            <AnimatedAmount centimes={balance} variant="display" />
+            <View
+              style={{
+                flexDirection: 'row',
+                flexWrap: 'wrap',
+                columnGap: spacing.md,
+                rowGap: spacing.xs,
+              }}>
               <View style={{ flexDirection: 'row', gap: spacing.xs }}>
                 <Amount centimes={period.collected} direction="in" variant="small" />
                 <Text variant="small" tone="muted">

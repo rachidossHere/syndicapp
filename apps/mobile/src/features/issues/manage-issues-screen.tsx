@@ -3,12 +3,23 @@
 // leurs compteurs (GET /api/issues/counts), appartement et nom de l'auteur (envoyés par l'API à ces
 // rôles seulement), badge de statut et « Urgent ». Bandeau et compteurs se rafraîchissent après
 // chaque traitement (invalidation de issuesQueryKey) et au retour sur l'écran.
-import { Banner, Button, Chip, EmptyState, Screen, Text, useTheme } from '@syndic/ui';
+import {
+  AnimatedList,
+  Banner,
+  Button,
+  Chip,
+  EmptyState,
+  EntranceRow,
+  Screen,
+  Text,
+  useListEntrance,
+  useTheme,
+} from '@syndic/ui';
 import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
 import Flag from 'lucide-react-native/icons/flag';
 import Plus from 'lucide-react-native/icons/plus';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { FlatList, RefreshControl, ScrollView, View } from 'react-native';
+import { RefreshControl, ScrollView, View } from 'react-native';
 
 import { QueryFallback } from '@/features/charges/query-fallback';
 import { useIssueCounts, useIssueList } from '@/hooks/use-issues';
@@ -83,6 +94,8 @@ export function ManageIssuesScreen() {
   const [filter, setFilter] = useState<IssueFilter>(() => parseFilterParam(params.filter, 'manage'));
   const list = useIssueList(residenceId, filter);
   const counts = useIssueCounts(residenceId);
+  // Les premiers signalements apparaissent en cascade au premier affichage seulement.
+  const entrance = useListEntrance(list.loaded);
 
   useEffect(() => {
     if (params.filter === undefined) return;
@@ -136,7 +149,9 @@ export function ManageIssuesScreen() {
           {MANAGE_FILTERS.map((value) => (
             <Chip
               key={value}
-              label={t(`issues.manage.filter.${value}`, { count: filterCount(value, counts.data!) })}
+              label={t(`issues.manage.filter.${value}`, {
+                count: filterCount(value, counts.data!),
+              })}
               selected={filter === value}
               onPress={() => setFilter(value)}
             />
@@ -162,17 +177,19 @@ export function ManageIssuesScreen() {
 
   return (
     <Screen>
-      <FlatList
+      <AnimatedList
         style={{ flex: 1 }}
         contentContainerStyle={{ gap: spacing.md, paddingBottom: spacing.lg }}
         data={list.loaded ? shown : []}
         keyExtractor={(issue) => issue.id}
-        renderItem={({ item }) => (
-          <IssueRow
-            issue={item}
-            subtitle={staffLineParts(item, format.age(item.createdAt)).join(' · ')}
-            onOpen={openIssue}
-          />
+        renderItem={({ item, index }) => (
+          <EntranceRow entrance={entrance} index={index}>
+            <IssueRow
+              issue={item}
+              subtitle={staffLineParts(item, format.age(item.createdAt)).join(' · ')}
+              onOpen={openIssue}
+            />
+          </EntranceRow>
         )}
         ListHeaderComponent={header}
         ListHeaderComponentStyle={{ marginBottom: shown.length > 0 ? 0 : spacing.md }}

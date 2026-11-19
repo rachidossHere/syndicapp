@@ -2,7 +2,7 @@
 // `welcome.webp` si elle existe, sinon une illustration SVG dans le même cadre) qui se fond vers le
 // fond sable, logo texte, titre, sous-titre, puis « Créer un compte » et « J'ai déjà un compte ».
 // Affiché seulement sans session (groupe (auth)) ; une invitation (`invite/[code]`) garde son parcours.
-import { Button, GradientFill, Text, WelcomeScene, useTheme } from '@syndic/ui';
+import { Appear, Button, GradientFill, Text, WelcomeScene, useTheme } from '@syndic/ui';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { Pressable, ScrollView, View, useWindowDimensions } from 'react-native';
@@ -14,7 +14,7 @@ import { welcomeArtFor } from '@/lib/welcome-art';
 import { WELCOME_IMAGE } from '@/lib/welcome-image';
 
 export function WelcomeScreen() {
-  const { colors, spacing, layout, sizes } = useTheme();
+  const { colors, spacing, layout, sizes, motion } = useTheme();
   const t = useT();
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -24,11 +24,10 @@ export function WelcomeScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
-      <ScrollView
-        bounces={false}
-        contentContainerStyle={{ flexGrow: 1 }}
-        showsVerticalScrollIndicator={false}>
-        <View testID="welcome-art" style={{ height: artHeight, overflow: 'hidden' }}>
+      <ScrollView bounces={false} contentContainerStyle={{ flexGrow: 1 }} showsVerticalScrollIndicator={false}>
+        {/* Apparition par fondu et léger glissement : l'image, puis le titre, puis les boutons (370 ms au
+            total, jamais plus de 400). Tout est à sa place et appuyable dès le premier instant. */}
+        <Appear testID="welcome-art" style={{ height: artHeight, overflow: 'hidden' }}>
           {art.kind === 'image' ? (
             <Image
               testID="welcome-image"
@@ -48,7 +47,7 @@ export function WelcomeScreen() {
             toOpacity={1}
             style={{ top: undefined, height: sizes.welcomeFade }}
           />
-        </View>
+        </Appear>
 
         <View
           style={{
@@ -58,25 +57,29 @@ export function WelcomeScreen() {
             paddingHorizontal: layout.screenPadding,
             paddingBottom: insets.bottom + spacing.xl,
           }}>
-          <View style={{ gap: spacing.sm }}>
+          <Appear delay={motion.stagger * 2} style={{ gap: spacing.sm }}>
             {/* En développement, un appui long sur le logo ouvre l'écran du design system. */}
             <Pressable
               accessibilityRole="header"
               accessibilityLabel={t('welcome.logoLabel')}
               onLongPress={__DEV__ ? () => router.push('/dev/design-system') : undefined}
-              style={{ alignSelf: 'flex-start', minHeight: sizes.touchTarget, justifyContent: 'center' }}>
+              style={{
+                alignSelf: 'flex-start',
+                minHeight: sizes.touchTarget,
+                justifyContent: 'center',
+              }}>
               <Text variant="caption" tone="primary">
                 {t('welcome.logoText')}
               </Text>
             </Pressable>
             <Text variant="h1">{t('welcome.title')}</Text>
             <Text tone="muted">{t('welcome.subtitle')}</Text>
-          </View>
+          </Appear>
 
-          <View style={{ gap: spacing.sm }}>
+          <Appear delay={motion.stagger * 3} style={{ gap: spacing.sm }}>
             <Button label={t('welcome.createAccount')} onPress={() => router.push('/sign-up')} />
             <Button variant="ghost" label={t('welcome.haveAccount')} onPress={() => router.push('/sign-in')} />
-          </View>
+          </Appear>
         </View>
       </ScrollView>
 

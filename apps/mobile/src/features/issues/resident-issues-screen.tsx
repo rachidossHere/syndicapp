@@ -4,12 +4,24 @@
 // non résolus en tête (badge « Urgent »), chargement par pages, « tirer pour actualiser » et
 // rafraîchissement au retour sur l'écran. Tous les rôles peuvent signaler ; aucun nom d'auteur n'est
 // affiché ici (l'API ne l'envoie pas à un habitant).
-import { Banner, Button, Chip, EmptyState, Screen, Text, Toast, useTheme } from '@syndic/ui';
+import {
+  AnimatedList,
+  Banner,
+  Button,
+  Chip,
+  EmptyState,
+  EntranceRow,
+  Screen,
+  Text,
+  Toast,
+  useListEntrance,
+  useTheme,
+} from '@syndic/ui';
 import { Redirect, useRouter } from 'expo-router';
 import Flag from 'lucide-react-native/icons/flag';
 import Plus from 'lucide-react-native/icons/plus';
 import { useCallback, useEffect, useState } from 'react';
-import { FlatList, RefreshControl, View } from 'react-native';
+import { RefreshControl, View } from 'react-native';
 
 import { QueryFallback } from '@/features/charges/query-fallback';
 import { useIssueCounts, useIssueList } from '@/hooks/use-issues';
@@ -34,6 +46,8 @@ export function ResidentIssuesScreen() {
   const [filter, setFilter] = useState<IssueFilter>('active');
   const list = useIssueList(residenceId, filter);
   const counts = useIssueCounts(residenceId);
+  // Les premiers signalements apparaissent en cascade au premier affichage seulement.
+  const entrance = useListEntrance(list.loaded);
   const flash = useFlashMessage();
   const format = useIssueFormat();
 
@@ -98,12 +112,16 @@ export function ResidentIssuesScreen() {
 
   return (
     <Screen>
-      <FlatList
+      <AnimatedList
         style={{ flex: 1 }}
         contentContainerStyle={{ gap: spacing.md, paddingBottom: spacing.lg }}
         data={list.loaded ? list.items : []}
         keyExtractor={(issue) => issue.id}
-        renderItem={({ item }) => <IssueRow issue={item} subtitle={format.listLine(item)} onOpen={openIssue} />}
+        renderItem={({ item, index }) => (
+          <EntranceRow entrance={entrance} index={index}>
+            <IssueRow issue={item} subtitle={format.listLine(item)} onOpen={openIssue} />
+          </EntranceRow>
+        )}
         ListHeaderComponent={header}
         ListHeaderComponentStyle={{ marginBottom: list.items.length > 0 ? 0 : spacing.md }}
         ListEmptyComponent={empty}

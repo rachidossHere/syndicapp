@@ -3,23 +3,26 @@
 // `accounts.read` ; locataire et gardien sont renvoyés à l'accueil sans aucune requête.
 // Le journal ne montre jamais le nom d'un copropriétaire : « Charge reçue · A21 ».
 import {
+  AnimatedList,
   Amount,
   Badge,
   Banner,
   Button,
   Card,
   EmptyState,
+  EntranceRow,
   Icon,
   ListItem,
   Screen,
   Text,
+  useListEntrance,
   useTheme,
 } from '@syndic/ui';
 import { Redirect, useRouter } from 'expo-router';
 import Minus from 'lucide-react-native/icons/minus';
 import Plus from 'lucide-react-native/icons/plus';
 import Wallet from 'lucide-react-native/icons/wallet';
-import { FlatList, RefreshControl, View } from 'react-native';
+import { RefreshControl, View } from 'react-native';
 
 import { AuthHeader } from '@/features/auth/auth-header';
 import { QueryFallback } from '@/features/charges/query-fallback';
@@ -95,10 +98,11 @@ export function AccountsScreen({ asTab = false }: { asTab?: boolean }) {
   const { active, query: residencesQuery } = useActiveResidence();
   const residenceId = accountsResidenceId(active);
   const cash = useCash(residenceId);
+  // Les premiers mouvements apparaissent en cascade au premier affichage seulement.
+  const entrance = useListEntrance(cash.data !== undefined);
 
   // Rafraîchissement au retour sur l'écran (après une annulation, un solde de départ…).
   useRefreshOnFocus(cash.refetch);
-
 
   if (residencesQuery.data !== undefined && residenceId === undefined) return <Redirect href="/home" />;
 
@@ -182,7 +186,11 @@ export function AccountsScreen({ asTab = false }: { asTab?: boolean }) {
     cash.data === undefined ? (
       <QueryFallback query={cash} message={t('accounts.loadError')} />
     ) : (
-      <EmptyState domain="expenses" title={t('accounts.ledger.emptyTitle')} description={t('accounts.ledger.emptyBody')} />
+      <EmptyState
+        domain="expenses"
+        title={t('accounts.ledger.emptyTitle')}
+        description={t('accounts.ledger.emptyBody')}
+      />
     );
 
   const footer = cash.isFetchNextPageError ? (
@@ -203,12 +211,16 @@ export function AccountsScreen({ asTab = false }: { asTab?: boolean }) {
 
   return (
     <Screen>
-      <FlatList
+      <AnimatedList
         style={{ flex: 1 }}
         contentContainerStyle={{ gap: spacing.md, paddingBottom: spacing.lg }}
         data={items}
         keyExtractor={(entry) => `${entry.kind}-${entry.id}`}
-        renderItem={({ item }) => <LedgerRow entry={item} onOpen={openExpense} />}
+        renderItem={({ item, index }) => (
+          <EntranceRow entrance={entrance} index={index}>
+            <LedgerRow entry={item} onOpen={openExpense} />
+          </EntranceRow>
+        )}
         ListHeaderComponent={header}
         ListHeaderComponentStyle={{ marginBottom: items.length > 0 ? 0 : spacing.md }}
         ListEmptyComponent={empty}
