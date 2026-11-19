@@ -1,7 +1,7 @@
 // Comptes (plan 06, étape 4) : solde, journal, détail d'une dépense, facture, solde de départ.
 // Tout ce qui dépend de la caisse partage la clé `cashQueryKey` / `expensesQueryKey` : une
 // annulation ou un changement du solde de départ les rafraîchit ensemble.
-import type { ExpenseCategory, Role, SetOpeningBalanceInput } from '@syndic/shared';
+import type { ExpenseCategory, LedgerSummaryResponse, Role, SetOpeningBalanceInput } from '@syndic/shared';
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import * as WebBrowser from 'expo-web-browser';
 import { useCallback } from 'react';
@@ -30,6 +30,58 @@ export function useCash(residenceId: string | undefined) {
     queryKey: [...cashQueryKey(residenceId ?? 'none'), 'ledger'],
     queryFn: ({ pageParam }) =>
       apiFetch<CashPage>(`/api/cash?limit=${LEDGER_PAGE_SIZE}&offset=${pageParam}`, inResidence(residenceId)),
+    initialPageParam: 0,
+    getNextPageParam: (last) => {
+      const next = last.ledger.offset + last.ledger.items.length;
+      return last.ledger.items.length > 0 && next < last.ledger.total ? next : undefined;
+    },
+    enabled: residenceId !== undefined,
+  });
+}
+
+/** Solde de la caisse seul (une page d'un mouvement) : la carte au-dessus des sections de « Comptes ». */
+export function useCashBalance(residenceId: string | undefined) {
+  return useQuery({
+    queryKey: [...cashQueryKey(residenceId ?? 'none'), 'balance'],
+    queryFn: () => apiFetch<CashPage>('/api/cash?limit=1&offset=0', inResidence(residenceId)),
+    enabled: residenceId !== undefined,
+  });
+}
+
+/**
+ * Mois du journal, du plus récent au plus ancien, avec leur résumé exact (mouvements, encaissé, dépensé) :
+ * ce que montre chaque section fermée de « Comptes » (GET /api/cash/movements/summary).
+ */
+export function useLedgerMonths(residenceId: string | undefined) {
+  return useQuery({
+    queryKey: [...cashQueryKey(residenceId ?? 'none'), 'months'],
+    queryFn: async () =>
+      (await apiFetch<LedgerSummaryResponse>('/api/cash/movements/summary?groupBy=month', inResidence(residenceId))).months,
+    enabled: residenceId !== undefined,
+  });
+}
+
+/** Premier et dernier jour d'un mois « AAAA-MM » (bornes incluses, AAAA-MM-JJ). */
+export function monthBounds(month: string): { from: string; to: string } {
+  const year = Number(month.slice(0, 4));
+  const index = Number(month.slice(5, 7));
+  const lastDay = new Date(Date.UTC(year, index, 0)).getUTCDate();
+  return { from: `${month}-01`, to: `${month}-${String(lastDay).padStart(2, '0')}` };
+}
+
+/**
+ * Mouvements d'un mois, par pages : chargés à l'ouverture de la section seulement, la suite avec
+ * « Afficher plus » (GET /api/cash?from=…&to=…).
+ */
+export function useCashOfMonth(residenceId: string | undefined, month: string) {
+  const { from, to } = monthBounds(month);
+  return useInfiniteQuery({
+    queryKey: [...cashQueryKey(residenceId ?? 'none'), 'month', month],
+    queryFn: ({ pageParam }) =>
+      apiFetch<CashPage>(
+        `/api/cash?from=${from}&to=${to}&limit=${LEDGER_PAGE_SIZE}&offset=${pageParam}`,
+        inResidence(residenceId),
+      ),
     initialPageParam: 0,
     getNextPageParam: (last) => {
       const next = last.ledger.offset + last.ledger.items.length;

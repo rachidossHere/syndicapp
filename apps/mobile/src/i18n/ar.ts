@@ -6,6 +6,7 @@ import { arHomeTexts } from './ar-home';
 import { arIssueTexts } from './ar-issues';
 import { arNotificationTexts } from './ar-notifications';
 import { arResidenceTexts } from './ar-residences';
+import { arSectionTexts } from './ar-sections';
 import type { TranslationKey } from './fr';
 
 /** Textes de l'appli en arabe. Le typage refuse une clé manquante ou en trop. */
@@ -18,6 +19,7 @@ export const ar: Record<TranslationKey, string> = {
   ...arNotificationTexts,
   ...arAnnouncementTexts,
   ...arAccountTexts,
+  ...arSectionTexts,
   'auth.errors.nameRequired': 'أدخل اسمك.',
   'auth.errors.nameTooShort': 'حرفان على الأقل.',
   'auth.errors.nameTooLong': '80 حرفًا على الأكثر.',

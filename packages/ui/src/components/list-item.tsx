@@ -14,6 +14,8 @@ export type ListItemProps = {
   leading?: ReactNode;
   /** Élément à la fin de la ligne (ex. `StatusBadge`, `Amount`). */
   trailing?: ReactNode;
+  /** Sous le sous-titre, dans la colonne du texte (ex. `ProgressBar` d'un appel de charges). */
+  footer?: ReactNode;
   /** Rend la ligne appuyable (rôle « button ») et affiche un chevron, inversé en arabe. */
   onPress?: (event: GestureResponderEvent) => void;
   /** Libellé lu par les lecteurs d'écran (par défaut : titre et sous-titre). */
@@ -28,6 +30,7 @@ export function ListItem({
   subtitle,
   leading,
   trailing,
+  footer,
   onPress,
   accessibilityLabel,
   style,
@@ -59,6 +62,7 @@ export function ListItem({
             {subtitle}
           </Text>
         )}
+        {footer}
       </View>
       {trailing}
       {onPress !== undefined && <Icon icon={ChevronRight} color={colors.iconInactive} flipInRtl />}
