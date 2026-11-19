@@ -14,14 +14,16 @@ import { useChargeFormat } from '@/features/charges/use-charge-format';
 import type { MyDue } from '@/hooks/use-charges';
 import { useMyDues } from '@/hooks/use-charges';
 import { useT } from '@/i18n/use-t';
-import { chargesCardFor } from '@/lib/home';
+import { chargesCardFor, periodInSentence } from '@/lib/home';
+import { useLanguage } from '@/providers/language-provider';
 
 function DueCard({ due, showLot, action }: { due: MyDue; showLot: boolean; action?: ReactNode }) {
   const { colors, spacing, sizes } = useTheme();
   const t = useT();
   const format = useChargeFormat();
+  const { language } = useLanguage();
   const card = chargesCardFor(due);
-  const title = t('home.charges.title', { period: format.period(due.periodLabel) });
+  const title = t('home.charges.title', { period: periodInSentence(language, format.period(due.periodLabel)) });
   const lotLine = showLot ? t('mine.lot', { lot: due.lotReference }) : undefined;
 
   if (card.settled) {
