@@ -47,7 +47,6 @@ export const arResidenceTexts: Record<keyof typeof frResidenceTexts, string> = {
 
   'home.residenceLine': '{name} · {role}',
   'home.lots': 'الشقق',
-  'home.lotsBody': 'أضف الشقق وادعُ جيرانك.',
   'home.residenceError': 'تعذّر تحميل إقاماتك.',
 
   'lots.title': 'الشقق',

@@ -48,7 +48,6 @@ export const frIssueTexts = {
   'issues.errors.messageRequired': 'Écrivez un message.',
 
   'home.issues': 'Signalements',
-  'home.issuesBody': 'Signaler un problème, suivre son traitement.',
 
   // Liste.
   'issues.title': 'Signalements',
@@ -131,7 +130,6 @@ export const frIssueTexts = {
   'issues.actor.resident': 'un habitant',
 
   // Vue de traitement (syndic, adjoint, gardien) : écrans 4 et 5 de docs/signalements.png.
-  'home.issuesManageBody': 'Voir et traiter les signalements.',
   'issues.manage.context': '{residence} · {role}',
   'issues.manage.filter.all': 'Tous · {count}',
   'issues.manage.filter.urgent': 'Urgents · {count}',

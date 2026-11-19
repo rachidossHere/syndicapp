@@ -42,7 +42,6 @@ export const frExpenseTexts = {
   'expenses.errors.pickFailed': 'Impossible de lire ce fichier. Essayez-en un autre.',
 
   'home.addExpense': 'Ajouter une dépense',
-  'home.addExpenseBody': 'Photo de la facture, montant, catégorie.',
 
   'expenses.add.title': 'Nouvelle dépense',
 

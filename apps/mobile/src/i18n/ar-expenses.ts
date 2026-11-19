@@ -40,7 +40,6 @@ export const arExpenseTexts: Record<keyof typeof frExpenseTexts, string> = {
   'expenses.errors.pickFailed': 'تعذّرت قراءة هذا الملف. جرّب ملفًا آخر.',
 
   'home.addExpense': 'إضافة مصروف',
-  'home.addExpenseBody': 'صورة الفاتورة والمبلغ والفئة.',
 
   'expenses.add.title': 'مصروف جديد',
 

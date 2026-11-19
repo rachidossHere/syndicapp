@@ -19,7 +19,6 @@ export const frAnnouncementTexts = {
 
   // Accueil : entrée « Annonces » et carte « Dernière annonce ».
   'home.announcements': 'Annonces',
-  'home.announcementsBody': 'Les nouvelles de votre résidence.',
   'announcements.latest.title': 'Dernière annonce',
   'announcements.latest.seeAll': 'Voir toutes les annonces',
 

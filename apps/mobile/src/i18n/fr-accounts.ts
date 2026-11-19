@@ -2,7 +2,6 @@
 export const frAccountTexts = {
   // Accueil
   'home.accounts': 'Comptes',
-  'home.accountsBody': 'Solde de la caisse, mouvements et factures.',
 
   // Écran « Comptes »
   'accounts.title': 'Comptes',

@@ -76,7 +76,6 @@ export const frChargeTexts = {
   ...months,
 
   'home.charges': 'Charges',
-  'home.chargesBody': 'Appels de charges et encaissements.',
 
   'mine.context': '{name} · Apt {lots}',
   'mine.title': 'Mes charges',

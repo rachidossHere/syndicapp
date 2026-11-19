@@ -18,7 +18,6 @@ export const arAnnouncementTexts: Record<keyof typeof frAnnouncementTexts, strin
   ...categories,
 
   'home.announcements': 'الإعلانات',
-  'home.announcementsBody': 'أخبار إقامتك.',
   'announcements.latest.title': 'آخر إعلان',
   'announcements.latest.seeAll': 'عرض كل الإعلانات',
 
