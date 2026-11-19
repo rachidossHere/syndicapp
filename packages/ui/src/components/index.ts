@@ -1,5 +1,9 @@
 export { ActionTile, type ActionTileProps, type ActionTileTone } from './action-tile';
 export { Amount, type AmountProps } from './amount';
+export { AnimatedAmount } from './animated-amount';
+export { AnimatedList } from './animated-list';
+export { Appear, type AppearProps } from './appear';
+export { EntranceRow, useListEntrance, type EntranceRowProps, type ListEntrance } from './entrance';
 export { formatAmount, type AmountDirection } from './amount-format';
 export { Avatar, type AvatarProps } from './avatar';
 export { Badge, StatusBadge, type BadgeProps, type StatusBadgeProps } from './badge';

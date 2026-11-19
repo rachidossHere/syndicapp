@@ -16,7 +16,7 @@ export type TextTone =
   | 'info'
   | 'primary';
 
-const toneColors = {
+export const toneColors = {
   default: 'text',
   muted: 'textMuted',
   inverse: 'textInverse',

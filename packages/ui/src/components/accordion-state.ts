@@ -24,3 +24,10 @@ export function accordionA11y({ title, subtitle, expanded, disabled = false }: A
  * est fermée (inversé en arabe par `Icon`).
  */
 export const accordionChevron = (expanded: boolean): 'down' | 'forward' => (expanded ? 'down' : 'forward');
+
+/**
+ * Rotation d'un chevron « vers le bas » pour qu'il pointe dans le sens voulu : tel quel vers le bas,
+ * vers la fin de ligne sinon (la droite en français, la gauche en arabe).
+ */
+export const chevronRotation = (chevron: 'down' | 'forward', isRtl: boolean): '0deg' | '90deg' | '-90deg' =>
+  chevron === 'down' ? '0deg' : isRtl ? '90deg' : '-90deg';
