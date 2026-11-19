@@ -6,7 +6,7 @@ import { Icon } from './icon';
 import { PressableSurface } from './pressable-surface';
 import { Text } from './text';
 
-export type ButtonVariant = 'primary' | 'accent' | 'secondary' | 'ghost';
+export type ButtonVariant = 'primary' | 'accent' | 'secondary' | 'ghost' | 'danger';
 export type ButtonSize = 'md' | 'lg';
 
 export type ButtonProps = {
@@ -15,7 +15,8 @@ export type ButtonProps = {
   onPress?: (event: GestureResponderEvent) => void;
   /**
    * `primary` : action principale. `accent` : une seule action clé par écran.
-   * `secondary` : action alternative. `ghost` : action discrète. Par défaut : `primary`.
+   * `secondary` : action alternative. `ghost` : action discrète. `danger` : action discrète qui met fin à
+   * quelque chose (« Se déconnecter »), texte rouge sans fond. Par défaut : `primary`.
    */
   variant?: ButtonVariant;
   /** Hauteur 48 (`md`, par défaut) ou 52 (`lg`). */
@@ -55,10 +56,12 @@ function variantColors(variant: ButtonVariant, colors: Theme['colors']): Variant
       };
     case 'ghost':
       return { background: 'transparent', pressed: colors.primarySoft, foreground: colors.primary };
+    case 'danger':
+      return { background: 'transparent', pressed: colors.dangerBg, foreground: colors.dangerFg };
   }
 }
 
-/** Bouton du design system : 4 variantes, états appuyé, désactivé et chargement. */
+/** Bouton du design system : 5 variantes, états appuyé, désactivé et chargement. */
 export function Button({
   label,
   onPress,
@@ -76,8 +79,9 @@ export function Button({
   const inactive = disabled || loading;
   const palette = variantColors(variant, colors);
 
-  // Désactivé : fond primaryDisabled (variante ghost : texte atténué, sans fond).
-  const foreground = disabled ? (variant === 'ghost' ? colors.iconInactive : colors.textInverse) : palette.foreground;
+  // Désactivé : fond primaryDisabled (variantes sans fond, ghost et danger : texte atténué).
+  const withoutFill = variant === 'ghost' || variant === 'danger';
+  const foreground = disabled ? (withoutFill ? colors.iconInactive : colors.textInverse) : palette.foreground;
 
   return (
     // Léger enfoncement au toucher (échelle) ; « Réduire les animations » le remplace par un changement
@@ -109,7 +113,7 @@ export function Button({
           borderWidth: borderWidth.thin,
           borderColor: palette.border,
         },
-        disabled && variant !== 'ghost' && { backgroundColor: colors.primaryDisabled, borderWidth: 0 },
+        disabled && !withoutFill && { backgroundColor: colors.primaryDisabled, borderWidth: 0 },
         style,
       ]}>
       {loading ? (

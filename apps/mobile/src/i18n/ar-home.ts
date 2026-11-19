@@ -56,5 +56,5 @@ export const arHomeTexts: Record<keyof typeof frHomeTexts, string> = {
   'profile.language': 'اللغة',
   'profile.language.fr': 'Français',
   'profile.language.ar': 'العربية',
-  'profile.version': 'الإصدار {version}',
+  'profile.version': 'SyndicApp · الإصدار {version}',
 };

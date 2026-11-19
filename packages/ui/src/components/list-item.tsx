@@ -16,6 +16,11 @@ export type ListItemProps = {
   trailing?: ReactNode;
   /** Sous le sous-titre, dans la colonne du texte (ex. `ProgressBar` d'un appel de charges). */
   footer?: ReactNode;
+  /**
+   * Ligne sans cadre ni fond propres, pour les empiler dans une carte qui les groupe (lignes du
+   * Profil, séparées par des filets). Par défaut : ligne encadrée.
+   */
+  plain?: boolean;
   /** Rend la ligne appuyable (rôle « button ») et affiche un chevron, inversé en arabe. */
   onPress?: (event: GestureResponderEvent) => void;
   /** Libellé lu par les lecteurs d'écran (par défaut : titre et sous-titre). */
@@ -31,6 +36,7 @@ export function ListItem({
   leading,
   trailing,
   footer,
+  plain = false,
   onPress,
   accessibilityLabel,
   style,
@@ -45,11 +51,15 @@ export function ListItem({
     gap: spacing.md,
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.lg,
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderWidth: borderWidth.thin,
-    borderRadius: radius.lg,
-    borderCurve: 'continuous',
+    ...(plain
+      ? { backgroundColor: 'transparent', borderWidth: 0, borderRadius: 0 }
+      : {
+          backgroundColor: colors.surface,
+          borderColor: colors.border,
+          borderWidth: borderWidth.thin,
+          borderRadius: radius.lg,
+          borderCurve: 'continuous' as const,
+        }),
   };
 
   const content = (
