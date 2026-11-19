@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { getInitials } from './initials';
+import { getInitial, getInitials } from './initials';
 
 describe('getInitials', () => {
   it.each([
@@ -25,5 +25,17 @@ describe('getInitials', () => {
 
   it('ne dépasse jamais 2 lettres', () => {
     expect(getInitials('A B C D').length).toBeLessThanOrEqual(2);
+  });
+});
+
+describe('getInitial', () => {
+  it.each([
+    ['Rachid Tazi', 'R'],
+    ['karim', 'K'],
+    ['رشيد تازي', 'ر'],
+    ['  Yassine ', 'Y'],
+    ['', ''],
+  ])('« %s » → « %s »', (name, expected) => {
+    expect(getInitial(name)).toBe(expected);
   });
 });

@@ -83,7 +83,11 @@ function LedgerRow({ entry, onOpen }: { entry: LedgerEntry; onOpen: (id: string)
   );
 }
 
-export function AccountsScreen() {
+/**
+ * Comptes. `asTab` : onglet « Comptes » de l'adjoint (pas de bouton retour, la langue est dans le Profil) ;
+ * sinon écran ouvert au-dessus des onglets (accès rapide du syndic, du trésorier et du copropriétaire).
+ */
+export function AccountsScreen({ asTab = false }: { asTab?: boolean }) {
   const { colors, radius, spacing } = useTheme();
   const t = useT();
   const router = useRouter();
@@ -108,7 +112,7 @@ export function AccountsScreen() {
 
   const header = (
     <View style={{ gap: spacing.lg }}>
-      <AuthHeader onBack={goBack} />
+      {!asTab && <AuthHeader onBack={goBack} />}
       <View style={{ gap: spacing.xs }}>
         {active !== null && (
           <Text variant="small" tone="muted">

@@ -4,6 +4,8 @@ export const sizes = {
   touchTarget: 44,
   /** Diamètre par défaut d'un avatar. */
   avatar: 40,
+  /** Grand avatar de l'accueil et du Profil (initiale du prénom). */
+  avatarLarge: 64,
   /** Hauteur des boutons : 48 par défaut, 52 en taille `lg`. */
   button: { md: 48, lg: 52 },
   /** Hauteur d'un champ de saisie. */

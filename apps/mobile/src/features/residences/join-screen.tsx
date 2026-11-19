@@ -42,7 +42,8 @@ export function JoinScreen({ initialCode }: { initialCode?: string }) {
     if (complete === null || accept.isPending || preview.data === undefined) return;
     try {
       await accept.mutateAsync(complete);
-      router.replace('/home');
+      // Accueil = onglet : `navigate` revient sur les onglets déjà ouverts au lieu d'en empiler un second.
+      router.navigate('/home');
     } catch {
       // L'erreur est affichée sous le champ ; le code reste saisi.
     }

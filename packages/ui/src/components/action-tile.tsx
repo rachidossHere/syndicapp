@@ -8,6 +8,7 @@ import {
 } from 'react-native';
 
 import { useTheme, type Theme } from '../theme/theme-provider';
+import type { Domain } from '../tokens/domains';
 import type { StatusTone } from '../tokens/status';
 import { Icon } from './icon';
 import { Text } from './text';
@@ -21,6 +22,8 @@ export type ActionTileProps = {
   onPress: (event: GestureResponderEvent) => void;
   /** Couleur du carré de l'icône. Par défaut : `primary`. */
   tone?: ActionTileTone;
+  /** Domaine (charges, signalements…) : pastille duotone teintée de la maquette v2. Prioritaire sur `tone`. */
+  domain?: Domain;
   accessibilityHint?: string;
   /** Mise en page (ex. `flex: 1` dans une grille). */
   style?: StyleProp<ViewStyle>;
@@ -39,6 +42,7 @@ export function ActionTile({
   icon,
   onPress,
   tone = 'primary',
+  domain,
   accessibilityHint,
   style,
   testID,
@@ -67,18 +71,22 @@ export function ActionTile({
         },
         style,
       ]}>
-      <View
-        style={{
-          width: sizes.iconBox,
-          height: sizes.iconBox,
-          borderRadius: radius.sm,
-          borderCurve: 'continuous',
-          backgroundColor: box.background,
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}>
-        <Icon icon={icon} color={box.foreground} />
-      </View>
+      {domain !== undefined ? (
+        <Icon icon={icon} variant="tile" domain={domain} tileSize="sm" />
+      ) : (
+        <View
+          style={{
+            width: sizes.iconBox,
+            height: sizes.iconBox,
+            borderRadius: radius.sm,
+            borderCurve: 'continuous',
+            backgroundColor: box.background,
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}>
+          <Icon icon={icon} color={box.foreground} />
+        </View>
+      )}
       <Text variant="bodyStrong">{label}</Text>
     </Pressable>
   );

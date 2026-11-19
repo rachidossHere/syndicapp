@@ -58,6 +58,13 @@ export type NotificationRoute =
   | { pathname: '/receipt/[id]'; params: { id: string } }
   | { pathname: '/my-charges' };
 
+/**
+ * Cet écran est-il un onglet ? « Mes charges » est un onglet du copropriétaire (plan 02b, étape 3) : on
+ * s'y rend avec `navigate`, sans empiler un second exemplaire des onglets. Les annonces, signalements
+ * et reçus sont des écrans de détail : ils s'ouvrent au-dessus des onglets (bouton retour).
+ */
+export const routeIsTab = (route: NotificationRoute): boolean => route.pathname === '/my-charges';
+
 /** Écrans à ouvrir, dans l'ordre : chacun s'empile sur le précédent. */
 export function notificationRoutes(target: NotificationTarget): NotificationRoute[] {
   const { type, itemId } = target;

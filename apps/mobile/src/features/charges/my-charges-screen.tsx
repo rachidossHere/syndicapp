@@ -6,7 +6,6 @@ import { Redirect, useRouter } from 'expo-router';
 import Wallet from 'lucide-react-native/icons/wallet';
 import { View } from 'react-native';
 
-import { AuthHeader } from '@/features/auth/auth-header';
 import { useMyDues, type MyDue, type MyPayment } from '@/hooks/use-charges';
 import { useRefreshOnFocus } from '@/hooks/use-refresh-on-focus';
 import { useActiveResidence } from '@/hooks/use-residences';
@@ -37,7 +36,6 @@ export function MyChargesScreen() {
 
   if (residencesQuery.data !== undefined && !isOwner) return <Redirect href="/home" />;
 
-  const goBack = () => (router.canGoBack() ? router.back() : router.replace('/home'));
   const openReceipt = (receiptId: string) => router.push({ pathname: '/receipt/[id]', params: { id: receiptId } });
   const severalLots = dues.data !== undefined && new Set(dues.data.map((due) => due.lotReference)).size > 1;
 
@@ -122,7 +120,6 @@ export function MyChargesScreen() {
           {t('mine.note')}
         </Text>
       }>
-      <AuthHeader onBack={goBack} />
       <View style={{ gap: spacing.xs }}>
         {active !== null && dues.data !== undefined && dues.data.length > 0 && (
           <Text variant="small" tone="muted">

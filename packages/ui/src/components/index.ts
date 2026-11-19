@@ -22,11 +22,14 @@ export { hitSlopFor, pressFeedback, type PressFeedback } from './press-feedback'
 export { ZelligePattern, type ZelligePatternProps } from './zellige-pattern';
 export { zelligeGeometry, type ZelligeGeometry } from './zellige-geometry';
 export { IconButton, type IconButtonProps } from './icon-button';
-export { getInitials } from './initials';
+export { getInitial, getInitials } from './initials';
 export { ListItem, type ListItemProps } from './list-item';
 export { ProgressBar, type ProgressBarProps } from './progress-bar';
+export { Sparkline, type SparklineProps } from './sparkline';
+export { SPARKLINE_MIN_POINTS, sparklineGeometry, type SparklineGeometry } from './sparkline-geometry';
 export { Screen, type ScreenProps } from './screen';
 export { Sheet, type SheetProps } from './sheet';
+export { Skeleton, type SkeletonProps } from './skeleton';
 export {
   TAB_BAR_MAX_ITEMS,
   TabBar,

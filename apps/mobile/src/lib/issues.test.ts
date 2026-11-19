@@ -96,7 +96,7 @@ describe('filtres', () => {
 
   it('chaque vue a ses filtres et sa valeur par défaut', () => {
     expect(filtersFor('resident')).toEqual(['active', 'resolved']);
-    expect(filtersFor('manage')).toEqual(['all', 'open', 'in_progress', 'resolved']);
+    expect(filtersFor('manage')).toEqual(['all', 'urgent', 'open', 'in_progress', 'resolved']);
     expect(defaultFilterFor('resident')).toBe('active');
     expect(defaultFilterFor('manage')).toBe('all');
   });

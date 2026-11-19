@@ -13,3 +13,9 @@ export function getInitials(name: string): string {
   const letters = [Array.from(first)[0], last === undefined ? undefined : Array.from(last)[0]];
   return letters.filter((letter) => letter !== undefined).join('').toUpperCase();
 }
+
+/** Première lettre du nom, en majuscule : « Rachid Tazi » → « R », « رشيد » → « ر », « » → « ». */
+export function getInitial(name: string): string {
+  const first = name.trim().split(/\s+/)[0] ?? '';
+  return (Array.from(first)[0] ?? '').toUpperCase();
+}

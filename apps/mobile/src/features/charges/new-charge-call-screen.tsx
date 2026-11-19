@@ -74,7 +74,8 @@ export function NewChargeCallScreen() {
     setError(undefined);
     try {
       await create.mutateAsync({ periodLabel, amountPerLot: amount, dueDate });
-      router.replace({ pathname: '/charges', params: { created: '1' } });
+      // « Charges » est un onglet : `navigate` y revient (l'écran de création se ferme) avec le message.
+      router.navigate({ pathname: '/charges', params: { created: '1' } });
     } catch (caught) {
       // Le brouillon reste affiché : 409 « Cet appel de charges existe déjà », réseau, etc.
       setError(t(apiErrorKey(caught)));

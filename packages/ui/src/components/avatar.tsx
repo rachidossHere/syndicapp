@@ -1,7 +1,7 @@
 import { View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { useTheme } from '../theme/theme-provider';
-import { getInitials } from './initials';
+import { getInitial, getInitials } from './initials';
 import { Text } from './text';
 
 export type AvatarProps = {
@@ -9,13 +9,15 @@ export type AvatarProps = {
   name: string;
   /** Diamètre en px. Par défaut : `sizes.avatar` (40). */
   size?: number;
+  /** Une seule lettre (l'initiale du prénom), comme sur l'accueil de docs/design-v2.png. Par défaut : deux lettres. */
+  single?: boolean;
   /** Style de mise en page (fusionné en dernier). */
   style?: StyleProp<ViewStyle>;
   testID?: string;
 };
 
 /** Avatar rond avec les initiales du nom : fond `primarySoft`, texte `primary`. */
-export function Avatar({ name, size, style, testID }: AvatarProps) {
+export function Avatar({ name, size, single = false, style, testID }: AvatarProps) {
   const { colors, radius, sizes } = useTheme();
   const diameter = size ?? sizes.avatar;
 
@@ -38,7 +40,7 @@ export function Avatar({ name, size, style, testID }: AvatarProps) {
       ]}>
       {/* Taille fixe : les initiales ne grossissent pas avec le texte système, sinon elles débordent du cercle. */}
       <Text variant="bodyStrong" tone="primary" allowFontScaling={false} importantForAccessibility="no">
-        {getInitials(name)}
+        {single ? getInitial(name) : getInitials(name)}
       </Text>
     </View>
   );

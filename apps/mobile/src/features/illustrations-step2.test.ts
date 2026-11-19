@@ -17,11 +17,11 @@ import chargeCallSource from './charges/charge-call-screen.tsx?raw';
 import chargesSource from './charges/charges-screen.tsx?raw';
 import collectSource from './charges/collect-screen.tsx?raw';
 import myChargesSource from './charges/my-charges-screen.tsx?raw';
-import mySummarySource from './charges/my-charges-summary.tsx?raw';
 import newCallSource from './charges/new-charge-call-screen.tsx?raw';
 import unpaidSource from './charges/unpaid-screen.tsx?raw';
 import manageIssuesSource from './issues/manage-issues-screen.tsx?raw';
 import residentIssuesSource from './issues/resident-issues-screen.tsx?raw';
+import monthChargesSource from './home/month-charges-card.tsx?raw';
 import lotsSource from './residences/lots-screen.tsx?raw';
 
 /** Le(s) `<EmptyState …>` d'un écran, jusqu'à la fin de la balise. */
@@ -32,7 +32,7 @@ describe('états vides illustrés : le bon domaine sur chaque écran de liste', 
   const expected: [string, string, string[]][] = [
     ['charges', 'charges-screen', ['charges']],
     ['mes charges', 'my-charges-screen', ['charges']],
-    ['résumé de mes charges', 'my-charges-summary', ['charges']],
+    ['carte « Charges de … » de l’accueil', 'month-charges-card', ['charges']],
     ['encaissement', 'collect-screen', ['charges', 'charges']],
     ['impayés', 'unpaid-screen', ['charges']],
     ['détail d’un appel (aucun résultat)', 'charge-call-screen', ['charges']],
@@ -46,7 +46,7 @@ describe('états vides illustrés : le bon domaine sur chaque écran de liste', 
   const sources: Record<string, string> = {
     'charges-screen': chargesSource,
     'my-charges-screen': myChargesSource,
-    'my-charges-summary': mySummarySource,
+    'month-charges-card': monthChargesSource,
     'collect-screen': collectSource,
     'unpaid-screen': unpaidSource,
     'charge-call-screen': chargeCallSource,
