@@ -1,44 +1,28 @@
-// Écran 4 de docs/signalements.png : liste de traitement (syndic, adjoint, gardien : issues.manage).
-// Bandeau « N signalement(s) urgent(s) à traiter », filtres Tous / Ouverts / En cours / Résolus avec
-// leurs compteurs (GET /api/issues/counts), appartement et nom de l'auteur (envoyés par l'API à ces
-// rôles seulement), badge de statut et « Urgent ». Bandeau et compteurs se rafraîchissent après
-// chaque traitement (invalidation de issuesQueryKey) et au retour sur l'écran.
-import {
-  AnimatedList,
-  Banner,
-  Button,
-  Chip,
-  EmptyState,
-  EntranceRow,
-  Screen,
-  Text,
-  useListEntrance,
-  useTheme,
-} from '@syndic/ui';
+// Écran 5 de docs/accordeons.png : liste de traitement (syndic, adjoint, gardien : issues.manage), par statut.
+// Le bandeau « N signalement(s) urgent(s) à traiter » reste au-dessus ; puis trois sections : Ouverts
+// (ouverte), En cours, Résolus, chacune avec son nombre exact (GET /api/issues/counts). Les signalements
+// d'une section ne sont chargés qu'à son ouverture, par pages (« Afficher plus »). Appartement et nom de
+// l'auteur : envoyés par l'API à ces rôles seulement. Les puces de filtre n'existent plus sur cette vue :
+// les sections font le même travail. Bandeau et compteurs se rafraîchissent après chaque traitement
+// (invalidation de issuesQueryKey) et au retour sur l'écran.
+import { Accordion, Badge, Banner, Button, EmptyState, Screen, Text, useTheme } from '@syndic/ui';
+import { useQueryClient } from '@tanstack/react-query';
 import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
 import Flag from 'lucide-react-native/icons/flag';
 import Plus from 'lucide-react-native/icons/plus';
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { RefreshControl, ScrollView, View } from 'react-native';
+import { useCallback, useEffect } from 'react';
+import { View } from 'react-native';
 
+import { LoadMore, SectionError, SectionLoading } from '@/components/section-parts';
 import { QueryFallback } from '@/features/charges/query-fallback';
-import { useIssueCounts, useIssueList } from '@/hooks/use-issues';
+import { issuesQueryKey, useIssueCounts, useIssueList } from '@/hooks/use-issues';
 import { useRefreshOnFocus } from '@/hooks/use-refresh-on-focus';
 import { useActiveResidence } from '@/hooks/use-residences';
 import { useT } from '@/i18n/use-t';
-import {
-  MANAGE_FILTERS,
-  filterCount,
-  issuesResidenceId,
-  needsMoreUrgent,
-  parseFilterParam,
-  staffLineParts,
-  urgentBannerKey,
-  urgentOnly,
-  type IssueFilter,
-} from '@/lib/issues';
+import { issuesResidenceId, staffLineParts, urgentBannerKey, type IssueCounts } from '@/lib/issues';
+import { defaultOpenKey, useSectionOpen } from '@/lib/sections';
 
-import { IssueListFooter, IssueRow } from './issue-row';
+import { IssueRow } from './issue-row';
 import { useIssueFormat } from './use-issue-format';
 
 /** Bandeau rouge : le nombre d'urgents non résolus, dans un carré, puis le texte (singulier ou pluriel). */
@@ -82,51 +66,134 @@ export function UrgentBanner({ count }: { count: number }) {
   );
 }
 
-export function ManageIssuesScreen() {
-  const { colors, spacing } = useTheme();
+/** Les trois sections, de la plus urgente à la moins urgente. */
+const STATUSES = ['open', 'in_progress', 'resolved'] as const;
+type SectionStatus = (typeof STATUSES)[number];
+
+/** Signalements d'une section, chargés à l'ouverture : urgents d'abord (ordre de l'API), puis « Afficher plus ». */
+function StatusIssues({ residenceId, status }: { residenceId: string; status: SectionStatus }) {
+  const { spacing } = useTheme();
   const t = useT();
   const router = useRouter();
   const format = useIssueFormat();
+  const list = useIssueList(residenceId, status);
+
+  if (!list.loaded) {
+    return list.error ? (
+      <SectionError onRetry={() => void list.refetch()} retrying={list.isFetching} />
+    ) : (
+      <SectionLoading />
+    );
+  }
+  if (list.items.length === 0) return <Text tone="muted">{t('sections.issues.empty')}</Text>;
+  return (
+    <View style={{ gap: spacing.md }}>
+      {list.items.map((issue) => (
+        <IssueRow
+          key={issue.id}
+          issue={issue}
+          showStatus={false}
+          subtitle={staffLineParts(issue, format.age(issue.createdAt)).join(' · ')}
+          onOpen={(id) => router.push({ pathname: '/issue/[id]', params: { id } })}
+        />
+      ))}
+      <LoadMore
+        hasNextPage={list.hasNextPage}
+        pending={list.isFetchingNextPage}
+        failed={list.isFetchNextPageError}
+        onPress={() => void list.fetchNextPage()}
+      />
+    </View>
+  );
+}
+
+/** Résumé exact d'une section, à partir des compteurs de la résidence. */
+function summaryOf(status: SectionStatus, count: number, t: ReturnType<typeof useT>): string {
+  switch (status) {
+    case 'open':
+      return t('sections.issues.openSummary', { count });
+    case 'in_progress':
+      return t('sections.issues.inProgressSummary', { count });
+    case 'resolved':
+      return t(count === 1 ? 'sections.issues.resolvedSummaryOne' : 'sections.issues.resolvedSummary', { count });
+  }
+}
+
+const BADGE_TONES = { open: 'danger', in_progress: 'warning', resolved: 'success' } as const;
+
+export function ManageIssuesScreen() {
+  const { spacing } = useTheme();
+  const t = useT();
+  const router = useRouter();
+  const queryClient = useQueryClient();
   const { active, query: residencesQuery } = useActiveResidence();
   const residenceId = issuesResidenceId(active);
-  // L'accueil ouvre cet écran déjà filtré (`/issues?filter=urgent`) ; le paramètre est consommé ensuite.
+  // L'accueil ouvre cet écran avec `/issues?filter=urgent` : les urgents sont les premiers de « Ouverts »,
+  // déjà ouverte. Le paramètre est consommé pour ne pas rester dans l'adresse.
   const params = useLocalSearchParams<{ filter?: string }>();
-  const [filter, setFilter] = useState<IssueFilter>(() => parseFilterParam(params.filter, 'manage'));
-  const list = useIssueList(residenceId, filter);
   const counts = useIssueCounts(residenceId);
-  // Les premiers signalements apparaissent en cascade au premier affichage seulement.
-  const entrance = useListEntrance(list.loaded);
+  const sections = useSectionOpen(residenceId === undefined ? undefined : `issues:${residenceId}`);
 
   useEffect(() => {
-    if (params.filter === undefined) return;
-    setFilter(parseFilterParam(params.filter, 'manage'));
-    router.setParams({ filter: undefined });
+    if (params.filter !== undefined) router.setParams({ filter: undefined });
   }, [params.filter, router]);
 
-  // « Urgents » : seuls les urgents non résolus, et la suite se charge tant que la liste n'est pas complète.
-  const shown = useMemo(() => (filter === 'urgent' ? urgentOnly(list.items) : list.items), [filter, list.items]);
-  const loadMoreUrgent =
-    filter === 'urgent' &&
-    list.loaded &&
-    !list.isFetchingNextPage &&
-    !list.isFetchNextPageError &&
-    needsMoreUrgent(list.items, list.hasNextPage);
-  useEffect(() => {
-    if (loadMoreUrgent) void list.fetchNextPage();
-  }, [loadMoreUrgent, list]);
-
-  // Rafraîchissement au retour sur l'écran (après un traitement : liste, compteurs et bandeau).
-  const refetchAll = useCallback(() => Promise.all([list.refetch(), counts.refetch()]), [list.refetch, counts.refetch]);
-  useRefreshOnFocus(refetchAll);
+  // Rafraîchissement au retour sur l'écran (après un traitement : compteurs, bandeau et listes ouvertes).
+  const refreshAll = useCallback(
+    () => queryClient.invalidateQueries({ queryKey: issuesQueryKey(residenceId ?? 'none') }),
+    [queryClient, residenceId],
+  );
+  useRefreshOnFocus(refreshAll);
 
   if (residencesQuery.data !== undefined && residenceId === undefined) return <Redirect href="/home" />;
 
-  const openIssue = (id: string) => router.push({ pathname: '/issue/[id]', params: { id } });
   const urgent = counts.data?.urgentUnresolved ?? 0;
   const roleLabel = active !== null ? t(`roles.${active.role}`) : undefined;
+  const countOf = (data: IssueCounts, status: SectionStatus): number => data[status];
+  // Ouverte par défaut : « Ouverts », ou la première section qui contient quelque chose.
+  const openKey =
+    counts.data === undefined ? undefined : defaultOpenKey(STATUSES.filter((status) => countOf(counts.data!, status) > 0));
+  const total = counts.data === undefined ? 0 : STATUSES.reduce((sum, status) => sum + countOf(counts.data!, status), 0);
 
-  const header = (
-    <View style={{ gap: spacing.lg }}>
+  let body;
+  if (counts.data === undefined) {
+    body = (
+      <QueryFallback
+        query={{ error: counts.error, isFetching: counts.isFetching, refetch: counts.refetch }}
+        message={t('issues.loadError')}
+      />
+    );
+  } else if (total === 0) {
+    body = (
+      <EmptyState domain="issues" title={t('issues.manage.empty.title')} description={t('issues.manage.empty.body')} />
+    );
+  } else {
+    const data = counts.data;
+    body = (
+      <>
+        {STATUSES.map((status) => {
+          const count = countOf(data, status);
+          return (
+            <Accordion
+              key={status}
+              icon={Flag}
+              title={t(`sections.issues.${status}`)}
+              subtitle={summaryOf(status, count, t)}
+              trailing={<Badge tone={BADGE_TONES[status]} label={String(count)} />}
+              trailingLabel={String(count)}
+              disabled={count === 0}
+              expanded={count > 0 && sections.isOpen(status, status === openKey)}
+              onToggle={() => sections.toggle(status, status === openKey)}>
+              {residenceId !== undefined && <StatusIssues residenceId={residenceId} status={status} />}
+            </Accordion>
+          );
+        })}
+      </>
+    );
+  }
+
+  return (
+    <Screen scroll onRefresh={() => void refreshAll()} refreshing={counts.isRefetching}>
       <View style={{ gap: spacing.xs }}>
         {active !== null && (
           <Text variant="small" tone="muted">
@@ -138,77 +205,9 @@ export function ManageIssuesScreen() {
       {urgent > 0 && <UrgentBanner count={urgent} />}
       {/* Tous les rôles de cette vue peuvent aussi signaler (issues.write) : bouton discret, hors maquette. */}
       <Button variant="secondary" icon={Plus} label={t('issues.new')} onPress={() => router.push('/new-issue')} />
-      {/* Un échec d'actualisation garde la liste affichée, avec un message non bloquant. */}
-      {list.loaded && (list.isRefetchError || counts.isRefetchError) && <Banner message={t('issues.loadError')} />}
-      {counts.data !== undefined && (
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-          contentContainerStyle={{ gap: spacing.sm }}>
-          {MANAGE_FILTERS.map((value) => (
-            <Chip
-              key={value}
-              label={t(`issues.manage.filter.${value}`, {
-                count: filterCount(value, counts.data!),
-              })}
-              selected={filter === value}
-              onPress={() => setFilter(value)}
-            />
-          ))}
-        </ScrollView>
-      )}
-    </View>
-  );
-
-  // Jamais d'état vide pendant le premier chargement : « Chargement… » ou l'erreur avec « Réessayer ».
-  const empty = !list.loaded ? (
-    <QueryFallback
-      query={{ error: list.error, isFetching: list.isFetching, refetch: list.refetch }}
-      message={t('issues.loadError')}
-    />
-  ) : (
-    <EmptyState
-      domain="issues"
-      title={t(filter === 'all' ? 'issues.manage.empty.title' : 'issues.manage.emptyFiltered.title')}
-      description={t(filter === 'all' ? 'issues.manage.empty.body' : 'issues.manage.emptyFiltered.body')}
-    />
-  );
-
-  return (
-    <Screen>
-      <AnimatedList
-        style={{ flex: 1 }}
-        contentContainerStyle={{ gap: spacing.md, paddingBottom: spacing.lg }}
-        data={list.loaded ? shown : []}
-        keyExtractor={(issue) => issue.id}
-        renderItem={({ item, index }) => (
-          <EntranceRow entrance={entrance} index={index}>
-            <IssueRow
-              issue={item}
-              subtitle={staffLineParts(item, format.age(item.createdAt)).join(' · ')}
-              onOpen={openIssue}
-            />
-          </EntranceRow>
-        )}
-        ListHeaderComponent={header}
-        ListHeaderComponentStyle={{ marginBottom: shown.length > 0 ? 0 : spacing.md }}
-        ListEmptyComponent={empty}
-        ListFooterComponent={<IssueListFooter list={list} />}
-        onEndReachedThreshold={0.5}
-        onEndReached={() => {
-          if (list.hasNextPage && !list.isFetchingNextPage && !list.isFetchNextPageError) void list.fetchNextPage();
-        }}
-        refreshControl={
-          <RefreshControl
-            refreshing={list.isRefetching}
-            onRefresh={() => void refetchAll()}
-            tintColor={colors.primary}
-            colors={[colors.primary]}
-          />
-        }
-        keyboardShouldPersistTaps="handled"
-      />
+      {/* Un échec d'actualisation garde les sections affichées, avec un message non bloquant. */}
+      {counts.isRefetchError && <Banner message={t('issues.loadError')} />}
+      {body}
     </Screen>
   );
 }

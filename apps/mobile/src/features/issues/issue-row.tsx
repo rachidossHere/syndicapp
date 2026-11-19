@@ -12,10 +12,13 @@ export function IssueRow({
   issue,
   subtitle,
   onOpen,
+  showStatus = true,
 }: {
   issue: IssueItem;
   subtitle: string;
   onOpen: (id: string) => void;
+  /** Faux dans une section « par statut » : le statut est déjà dans le titre de la section. */
+  showStatus?: boolean;
 }) {
   const t = useT();
   const { colors, radius, sizes, spacing } = useTheme();
@@ -45,7 +48,7 @@ export function IssueRow({
       }
       trailing={
         <View style={{ alignItems: 'flex-end', gap: spacing.xs }}>
-          <StatusBadge status={issue.status} />
+          {showStatus && <StatusBadge status={issue.status} />}
           {issue.urgent && issue.status !== 'resolved' && <Badge tone="danger" label={t('issues.urgent')} />}
         </View>
       }
