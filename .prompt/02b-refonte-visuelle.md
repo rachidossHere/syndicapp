@@ -1,6 +1,6 @@
 # 02b · Refonte visuelle
 
-Statut : brouillon
+Statut : en cours
 
 ## Objectif
 
@@ -43,6 +43,7 @@ Rendre l'appli plus chaleureuse et plus professionnelle, comme sur [docs/design-
 | 2 · Illustrations et écrans illustrés | `expo-design-system`, `expo-native-ui` |
 | 3 · Barre d'onglets, accueils, Profil | `expo-design-system`, `expo-native-ui`, `expo-animation`, `expo-router` |
 | 4 · Animations et transitions | `expo-design-system`, `expo-native-ui`, `expo-animation` |
+| 5 · Écrans regroupés en accordéons | `expo-design-system`, `expo-native-ui`, `expo-animation`, `expo-data-fetching`, `neon-postgres` |
 
 ## Hors périmètre
 
@@ -76,9 +77,29 @@ Branche les animations sur les écrans : transitions d'écrans (pas d'animation 
 
 Terminé quand : chaque animation a une version réduite (opacité immédiate, sans échelle ni transition) quand « Réduire les animations » est activé, aucun toucher n'est retardé ou ignoré pendant un mouvement, et le tout est vérifié sur l'iPhone avec et sans « Réduire les animations ».
 
+### 5. Écrans regroupés en accordéons
+
+Référence : [docs/accordeons.png](../docs/accordeons.png). Regroupe les écrans avec le composant `Accordion` de `@syndic/ui`.
+
+Règle commune : la section la plus récente ou la plus urgente est ouverte, les autres fermées ; chaque section fermée affiche toujours son résumé exact (nombre, total, statut) ; une section ne charge ses éléments qu'à son ouverture (pagination existante, « Afficher plus ») ; l'état ouvert ou fermé est gardé en mémoire pendant la session (jamais stocké) ; animations et « Réduire les animations » comme à l'étape 4 ; chevron inversé en RTL.
+
+Écrans :
+1. **Charges** (syndic, trésorier) : par année, l'année en cours ouverte ; résumé : appels, % encaissé, « N impayés » ou « Soldé » ; chaque appel garde sa barre de progression et son échéance.
+2. **Impayés d'un appel** : par bâtiment, le premier bâtiment avec des impayés ouvert ; résumé : impayés et reste à payer ; « Relancer tous les impayés » reste au-dessus.
+3. **Mes charges** (copropriétaire) : la carte du mois en cours reste au-dessus ; historique par année ; « N payés sur M » et total payé ; reçu sur chaque ligne payée.
+4. **Comptes** : carte du solde au-dessus ; mouvements par mois, le mois en cours ouvert ; « +encaissé · −dépensé » ; jamais de nom.
+5. **Signalements** (`issues.manage`) : bandeau des urgents au-dessus ; sections Ouverts, En cours, Résolus (nombres de `/api/issues/counts`) ; les puces de filtre disparaissent de cette vue ; l'habitant garde la liste actuelle.
+6. **Annonces** : les épinglées restent au-dessus, hors accordéon ; les autres par mois ; les puces de catégorie restent au-dessus et s'appliquent aux sections.
+7. **Appartements** : déjà par bâtiment ; en-têtes alignés sur la maquette.
+8. **Profil** : pas d'accordéon ; une carte (résidence, notifications, langue), « Se déconnecter », la version.
+
+API (résumés exacts sans charger les éléments ; mêmes droits et mêmes champs que les listes qu'ils résument, `residence_id` partout, aucun nom) : `GET /api/charge-calls/summary?groupBy=year`, `GET /api/charge-calls/:id/summary?groupBy=building`, `GET /api/me/dues/summary?groupBy=year`, `GET /api/cash/movements/summary?groupBy=month`, `GET /api/announcements/summary?groupBy=month` ; filtres de période sur les listes existantes (`?year=`, `?building=&unpaid=true`, `?pinned=&month=&category=` ; la caisse avait déjà `?from=&to=`). Aucune migration : seules des lectures.
+
+Terminé quand : les huit écrans correspondent à la maquette (les différences sont listées), les résumés des sections fermées sont exacts, une section ne charge ses éléments qu'à son ouverture, `pnpm typecheck` et `expo export` iOS passent, et le tout est vérifié sur l'iPhone en français et en arabe (syndic et copropriétaire).
+
 ## Vérification
 
-- `pnpm typecheck`, `pnpm test` et `expo export` iOS passent ; `pnpm lint` si le Visual C++ x64 est installé.
+- `pnpm typecheck`, `pnpm test` et `expo export` iOS passent ; `pnpm lint` si le Visual C++ x64 est installé. Pas de tests automatiques depuis l'étape 3 : seuls `pnpm typecheck` et `expo export` iOS sont lancés.
 - Aucune couleur, taille, durée ou courbe codée en dur dans `apps/mobile` ; aucune icône hors du composant `Icon`.
 - Contraste d'au moins 4,5:1 pour chaque paire de texte utilisée.
 - Sur l'iPhone, en français puis en arabe, avec et sans « Réduire les animations » : aucun texte coupé, motifs et illustrations lisibles, chevrons inversés, toucher immédiat.
