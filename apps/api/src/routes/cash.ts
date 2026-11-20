@@ -1,7 +1,13 @@
 // Caisse (plan 06, étape 2) : solde, encaissé et dépensé de la période en cours, journal paginé.
 // Tout est calculé à la lecture ; la résidence vient du contexte. Aucun nom dans le journal.
 import { db, schema } from '@syndic/db';
-import { currentPeriodBounds, ledgerQuerySchema, periodLabelOf, todayInCasablanca } from '@syndic/shared';
+import {
+  currentPeriodBounds,
+  ledgerQuerySchema,
+  ledgerSummaryQuerySchema,
+  periodLabelOf,
+  todayInCasablanca,
+} from '@syndic/shared';
 import { eq } from 'drizzle-orm';
 import { Hono } from 'hono';
 import { HTTPException } from 'hono/http-exception';
@@ -12,9 +18,19 @@ import {
   requirePermission,
   type MembershipEnv,
 } from '../middleware/require-membership';
-import { getCashBalance, getLedger, getPeriodTotals } from '../services/cash';
+import { getCashBalance, getLedger, getLedgerMonths, getPeriodTotals } from '../services/cash';
 
 export const cash = new Hono<MembershipEnv>();
+
+/**
+ * Résumé du journal par mois (accounts.read) : nombre de mouvements, encaissé et dépensé de chaque mois,
+ * sans charger les mouvements. Les mouvements d'un mois se lisent avec `GET /api/cash?from=…&to=…`.
+ * Aucun nom : seulement des nombres et des montants.
+ */
+cash.get('/movements/summary', requireAuth, requireMembership, requirePermission('accounts.read'), async (c) => {
+  if (!ledgerSummaryQuerySchema.safeParse(c.req.query()).success) throw new HTTPException(400);
+  return c.json({ months: await getLedgerMonths(c.get('residenceId')) });
+});
 
 cash.get('/', requireAuth, requireMembership, requirePermission('accounts.read'), async (c) => {
   const parsed = ledgerQuerySchema.safeParse(c.req.query());

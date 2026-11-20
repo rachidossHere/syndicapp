@@ -23,6 +23,13 @@ export type AccordionHeaderProps = {
   icon: IconComponent;
   title: string;
   subtitle?: string;
+  /**
+   * Élément à la fin de la ligne, avant le chevron : badge de statut (« 3 impayés », « Soldé »), nombre, montant.
+   * Il ne porte jamais seul l'information : le sous-titre ou le libellé du badge la dit aussi.
+   */
+  trailing?: ReactNode;
+  /** Texte de `trailing`, lu par les lecteurs d'écran avec le titre et le sous-titre. */
+  trailingLabel?: string;
   /** Section ouverte : le chevron pointe vers le bas et l'état est annoncé. */
   expanded: boolean;
   onToggle: () => void;
@@ -45,6 +52,8 @@ export function AccordionHeader({
   icon,
   title,
   subtitle,
+  trailing,
+  trailingLabel,
   expanded,
   onToggle,
   disabled = false,
@@ -61,7 +70,7 @@ export function AccordionHeader({
       onPress={onToggle}
       disabled={disabled}
       testID={testID}
-      {...accordionA11y({ title, subtitle, expanded, disabled })}
+      {...accordionA11y({ title, subtitle, trailingLabel, expanded, disabled })}
       pressedStyle={{ backgroundColor: colors.bg, borderColor: colors.borderStrong }}
       style={[
         {
@@ -99,6 +108,7 @@ export function AccordionHeader({
           </Text>
         )}
       </View>
+      {trailing}
       {/* Un seul chevron « vers le bas » qui tourne : pas besoin du miroir de `Icon` en arabe. */}
       <Animated.View
         style={{

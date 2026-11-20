@@ -88,11 +88,15 @@ const PROBES: Probe[] = [
   { name: 'DELETE /invitations/:id', method: 'DELETE', path: () => `/api/invitations/${randomUUID()}`, allowed: ['manager'] },
   { name: 'GET /charge-calls', method: 'GET', path: () => '/api/charge-calls', allowed: ACCOUNTS },
   { name: 'GET /charge-calls/:id', method: 'GET', path: (ids) => `/api/charge-calls/${ids.call}`, allowed: COLLECTORS },
+  // Résumés par période ou par bâtiment (plan 02b, étape 5) : mêmes droits que les listes qu'ils résument.
+  { name: 'GET /charge-calls/summary', method: 'GET', path: () => '/api/charge-calls/summary?groupBy=year', allowed: ACCOUNTS },
+  { name: 'GET /charge-calls/:id/summary', method: 'GET', path: (ids) => `/api/charge-calls/${ids.call}/summary?groupBy=building`, allowed: COLLECTORS },
   { name: 'POST /charge-calls', method: 'POST', path: () => '/api/charge-calls', body: {}, allowed: ['manager'] },
   { name: 'POST /payments', method: 'POST', path: () => '/api/payments', body: {}, allowed: COLLECTORS },
   { name: 'POST /payments/:id/cancel', method: 'POST', path: (ids) => `/api/payments/${ids.payment}/cancel`, body: {}, allowed: COLLECTORS },
   { name: 'POST /charges/reminders', method: 'POST', path: () => '/api/charges/reminders', body: {}, allowed: ['manager'] },
   { name: 'GET /me/dues', method: 'GET', path: () => '/api/me/dues', allowed: ACCOUNTS },
+  { name: 'GET /me/dues/summary', method: 'GET', path: () => '/api/me/dues/summary?groupBy=year', allowed: ACCOUNTS },
   { name: 'GET /receipts/:id', method: 'GET', path: (ids) => `/api/receipts/${ids.receipt}`, allowed: [...COLLECTORS, 'owner'] },
   { name: 'GET /receipts/:id/url', method: 'GET', path: (ids) => `/api/receipts/${ids.receipt}/url`, allowed: [...COLLECTORS, 'owner'] },
   { name: 'POST /expenses/upload-url', method: 'POST', path: () => '/api/expenses/upload-url', body: {}, allowed: COLLECTORS },
@@ -102,6 +106,7 @@ const PROBES: Probe[] = [
   { name: 'POST /expenses/:id/cancel', method: 'POST', path: (ids) => `/api/expenses/${ids.expense}/cancel`, body: {}, allowed: COLLECTORS },
   { name: 'GET /expenses/:id/invoice-url', method: 'GET', path: (ids) => `/api/expenses/${ids.expense}/invoice-url`, allowed: ACCOUNTS },
   { name: 'GET /cash', method: 'GET', path: () => '/api/cash', allowed: ACCOUNTS },
+  { name: 'GET /cash/movements/summary', method: 'GET', path: () => '/api/cash/movements/summary?groupBy=month', allowed: ACCOUNTS },
   // Signalements (plan 07) : le signalement sondé a pour auteur le syndic.
   { name: 'POST /issues/upload-url', method: 'POST', path: () => '/api/issues/upload-url', body: {}, allowed: ALL },
   { name: 'POST /issues', method: 'POST', path: () => '/api/issues', body: {}, allowed: ALL },
@@ -116,6 +121,7 @@ const PROBES: Probe[] = [
   { name: 'POST /announcements', method: 'POST', path: () => '/api/announcements', body: {}, allowed: ANNOUNCERS },
   { name: 'GET /announcements', method: 'GET', path: () => '/api/announcements', allowed: ALL },
   { name: 'GET /announcements/latest', method: 'GET', path: () => '/api/announcements/latest', allowed: ALL },
+  { name: 'GET /announcements/summary', method: 'GET', path: () => '/api/announcements/summary?groupBy=month', allowed: ALL },
   { name: 'GET /announcements/audience', method: 'GET', path: () => '/api/announcements/audience', allowed: ANNOUNCERS },
   { name: 'GET /announcements/:id', method: 'GET', path: (ids) => `/api/announcements/${ids.announcement}`, allowed: ALL },
   { name: 'POST /announcements/:id/pin', method: 'POST', path: (ids) => `/api/announcements/${ids.announcement}/pin`, body: {}, allowed: ANNOUNCERS },
@@ -365,6 +371,7 @@ describe.skipIf(!configured)('Vérification des plans 04 à 06', { timeout: 300_
     // Routes à identifiant, et écritures réelles (corps valides) visant les objets de B.
     const attempts: [string, string, unknown?][] = [
       ['GET', `/api/charge-calls/${ids.B.call}`],
+      ['GET', `/api/charge-calls/${ids.B.call}/summary?groupBy=building`],
       ['POST', `/api/payments/${ids.B.payment}/cancel`, { reason: 'test croisé' }],
       ['GET', `/api/receipts/${ids.B.receipt}`],
       ['GET', `/api/receipts/${ids.B.receipt}/url`],

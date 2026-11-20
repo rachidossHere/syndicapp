@@ -1,10 +1,16 @@
 // Lectures communes aux routes des charges. Toujours filtrées sur la résidence active.
 // Aucune colonne de personne (recorded_by, cancelled_by, nom, e-mail) n'est jamais sélectionnée.
-import { db, schema } from '@syndic/db';
+import { db, schema, sql } from '@syndic/db';
 import { and, asc, eq, inArray } from 'drizzle-orm';
 
 const naturalOrder = new Intl.Collator('fr', { numeric: true });
 export const byReference = (a: string, b: string) => naturalOrder.compare(a, b);
+
+/**
+ * Bâtiment d'un lot, comme l'appli le groupe : en majuscules, sans espaces, nul s'il est vide
+ * (« Sans bâtiment »). Les lots sont déjà enregistrés en majuscules ; ceci protège des anciennes saisies.
+ */
+export const buildingKey = sql<string | null>`nullif(upper(trim(${schema.lot.building})), '')`;
 
 export type DuePayment = {
   id: string;

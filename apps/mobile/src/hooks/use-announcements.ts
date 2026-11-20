@@ -4,8 +4,10 @@
 // annonce (accueil) et détail se rafraîchissent ensemble.
 import type {
   AnnouncementAudienceResponse,
+  AnnouncementCategory,
   AnnouncementItem,
   AnnouncementListResponse,
+  AnnouncementSummaryResponse,
   CreateAnnouncementInput,
   LatestAnnouncementResponse,
 } from '@syndic/shared';
@@ -52,6 +54,66 @@ export function useAnnouncementList(residenceId: string | undefined) {
     fetchNextPage: query.fetchNextPage,
     refetch: query.refetch,
   };
+}
+
+/** Pages d'annonces (curseur) mises bout à bout, avec l'état dont une section a besoin. */
+function useAnnouncementPages(residenceId: string | undefined, filters: string, key: readonly unknown[]) {
+  const query = useInfiniteQuery({
+    queryKey: [...announcementsQueryKey(residenceId ?? 'none'), ...key],
+    queryFn: ({ pageParam }) =>
+      apiFetch<AnnouncementListResponse>(
+        `/api/announcements?limit=${PAGE_SIZE}${filters}${pageParam === undefined ? '' : `&cursor=${encodeURIComponent(pageParam)}`}`,
+        inResidence(residenceId),
+      ),
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (last) => last.nextCursor ?? undefined,
+    enabled: residenceId !== undefined,
+  });
+  const items = useMemo(() => mergeAnnouncementPages(query.data?.pages ?? []), [query.data]);
+  return {
+    items,
+    loaded: query.data !== undefined,
+    error: query.error,
+    isFetching: query.isFetching,
+    isFetchingNextPage: query.isFetchingNextPage,
+    isFetchNextPageError: query.isFetchNextPageError,
+    hasNextPage: query.hasNextPage,
+    fetchNextPage: query.fetchNextPage,
+    refetch: query.refetch,
+  };
+}
+
+/** Annonces épinglées (restent au-dessus des sections) : GET /api/announcements?pinned=true. */
+export function usePinnedAnnouncements(residenceId: string | undefined) {
+  return useAnnouncementPages(residenceId, '&pinned=true', ['list', 'pinned']);
+}
+
+/** Mois ayant des annonces non épinglées, avec leur nombre exact (GET /api/announcements/summary), par catégorie si choisie. */
+export function useAnnouncementMonths(residenceId: string | undefined, category: AnnouncementCategory | undefined) {
+  return useQuery({
+    queryKey: [...announcementsQueryKey(residenceId ?? 'none'), 'months', category ?? 'all'],
+    queryFn: async () =>
+      (
+        await apiFetch<AnnouncementSummaryResponse>(
+          `/api/announcements/summary?groupBy=month${category === undefined ? '' : `&category=${category}`}`,
+          inResidence(residenceId),
+        )
+      ).months,
+    enabled: residenceId !== undefined,
+  });
+}
+
+/** Annonces non épinglées d'un mois, chargées à l'ouverture de la section seulement (la suite avec « Afficher plus »). */
+export function useAnnouncementsOfMonth(
+  residenceId: string | undefined,
+  month: string,
+  category: AnnouncementCategory | undefined,
+) {
+  return useAnnouncementPages(
+    residenceId,
+    `&pinned=false&month=${month}${category === undefined ? '' : `&category=${category}`}`,
+    ['list', 'month', month, category ?? 'all'],
+  );
 }
 
 /** La plus récente annonce (carte « Dernière annonce » de l'accueil) : `null` s'il n'y en a aucune. */

@@ -1,23 +1,25 @@
-// Écran 1 de docs/charges.png : appel en cours (encaissé, progression, payés / partiels / impayés,
-// reste, échéance) et appels précédents. Réservé au syndic et au trésorier.
+// Écran 1 de docs/accordeons.png : « Charges » du syndic et du trésorier, regroupé par année. L'année en
+// cours est ouverte, les autres fermées avec leur résumé exact (nombre d'appels, % encaissé, « N impayés »
+// ou « Soldé »). Les appels d'une année ne sont chargés qu'à l'ouverture de sa section.
+// Réservé au syndic et au trésorier.
 import { can, formatMad, type Role } from '@syndic/shared';
 import {
+  Accordion,
   Amount,
+  Badge,
   Banner,
   Button,
-  Card,
   EmptyState,
-  EntranceRow,
   ListItem,
   ProgressBar,
   Screen,
   StatusBadge,
   Text,
   Toast,
-  useListEntrance,
   useTheme,
   type BusinessStatus,
 } from '@syndic/ui';
+import { useQueryClient } from '@tanstack/react-query';
 import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
 import Banknote from 'lucide-react-native/icons/banknote';
 import Plus from 'lucide-react-native/icons/plus';
@@ -25,10 +27,17 @@ import Wallet from 'lucide-react-native/icons/wallet';
 import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 
+import { SectionError, SectionLoading } from '@/components/section-parts';
 import { useRoleLabel } from '@/features/residences/use-role-label';
-import { useChargeCalls, type ChargeCallSummary } from '@/hooks/use-charges';
+import {
+  chargesQueryKey,
+  useChargeCallsOfYear,
+  useChargeYears,
+  type ChargeCallSummary,
+} from '@/hooks/use-charges';
 import { useActiveResidence } from '@/hooks/use-residences';
 import { useT } from '@/i18n/use-t';
+import { currentYearKey, defaultOpenKey, useSectionOpen } from '@/lib/sections';
 
 import { canManageCharges } from './access';
 import { QueryFallback } from './query-fallback';
@@ -44,90 +53,73 @@ export function callStatus(call: ChargeCallSummary, isCurrent: boolean): Busines
   return isCurrent ? 'ongoing' : 'partial';
 }
 
-function CountsLine({ call }: { call: ChargeCallSummary }) {
-  const t = useT();
-  const { spacing } = useTheme();
-  const part = (
-    count: number,
-    one: 'paidOne' | 'partialOne' | 'unpaidOne',
-    many: 'paidMany' | 'partialMany' | 'unpaidMany',
-  ) => t(count === 1 ? `charges.list.${one}` : `charges.list.${many}`, { count });
-  return (
-    <View
-      style={{
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        alignItems: 'center',
-        columnGap: spacing.xs,
-      }}>
-      <Text variant="small" tone="muted">
-        {[
-          part(call.paidCount, 'paidOne', 'paidMany'),
-          part(call.partialCount, 'partialOne', 'partialMany'),
-          part(call.unpaidCount, 'unpaidOne', 'unpaidMany'),
-        ].join(' · ')}
-        {` · ${t('charges.list.outOf')}`}
-      </Text>
-      <Amount centimes={call.totalDue} variant="small" tone="muted" />
-    </View>
-  );
-}
+/** Part encaissée, en pourcentage entier : 0 quand rien n'est dû. */
+const percentCollected = (paid: number, due: number): number => (due === 0 ? 0 : Math.round((paid * 100) / due));
 
-function CurrentCallCard({ call, onPress }: { call: ChargeCallSummary; onPress: () => void }) {
+/** Un appel : période, montant, « 18 / 24 payés · échéance 30 nov. », barre de progression et statut. */
+function CallRow({ call, isLatest, onOpen }: { call: ChargeCallSummary; isLatest: boolean; onOpen: (id: string) => void }) {
   const t = useT();
   const format = useChargeFormat();
   const { spacing } = useTheme();
+  const status = callStatus(call, isLatest);
   const progress = call.totalDue === 0 ? 0 : call.totalPaid / call.totalDue;
   return (
-    <Card onPress={onPress} accessibilityLabel={format.period(call.periodLabel)} style={{ gap: spacing.md }}>
-      <View
-        style={{
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: spacing.md,
-        }}>
-        <Text variant="h3" style={{ flex: 1 }}>
-          {format.period(call.periodLabel)}
-        </Text>
-        <StatusBadge status={callStatus(call, true)} />
-      </View>
-      <View
-        style={{
-          flexDirection: 'row',
-          alignItems: 'baseline',
-          justifyContent: 'space-between',
-          gap: spacing.md,
-        }}>
-        <Text tone="muted">{t('charges.list.collected')}</Text>
-        <Amount centimes={call.totalPaid} variant="h2" tone="success" />
-      </View>
-      <ProgressBar
-        value={progress}
-        accessibilityLabel={t('charges.list.progress', {
-          paid: formatMad(call.totalPaid),
-          total: formatMad(call.totalDue),
-        })}
-      />
-      <CountsLine call={call} />
-      <View
-        style={{
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: spacing.md,
-        }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
-          <Text variant="small" tone="danger">
-            {t('charges.list.remaining')}
-          </Text>
-          <Amount centimes={call.remaining} variant="small" tone="danger" />
+    <ListItem
+      leading={<ReferenceBox label={format.shortPeriod(call.periodLabel)} />}
+      title={format.period(call.periodLabel)}
+      subtitle={t('sections.charges.callLine', {
+        paid: call.paidCount,
+        total: call.lotCount,
+        date: format.date(call.dueDate),
+      })}
+      footer={
+        <ProgressBar
+          value={progress}
+          accessibilityLabel={t('charges.list.progress', {
+            paid: formatMad(call.totalPaid),
+            total: formatMad(call.totalDue),
+          })}
+        />
+      }
+      trailing={
+        <View style={{ alignItems: 'flex-end', gap: spacing.xs }}>
+          <Amount centimes={call.totalDue} variant="small" />
+          {/* L'appel en cours n'a pas de badge : sa barre de progression et ses compteurs le disent. */}
+          {status !== 'ongoing' && <StatusBadge status={status} />}
         </View>
-        <Text variant="small" tone="muted">
-          {t('charges.list.dueOn', { date: format.date(call.dueDate) })}
-        </Text>
-      </View>
-    </Card>
+      }
+      onPress={() => onOpen(call.id)}
+    />
+  );
+}
+
+/** Contenu d'une année : ses appels, chargés à l'ouverture de la section. */
+function YearCalls({
+  residenceId,
+  year,
+  firstYear,
+  onOpen,
+}: {
+  residenceId: string;
+  year: string;
+  firstYear: boolean;
+  onOpen: (id: string) => void;
+}) {
+  const { spacing } = useTheme();
+  const calls = useChargeCallsOfYear(residenceId, year);
+  if (calls.data === undefined) {
+    return calls.error ? (
+      <SectionError onRetry={() => void calls.refetch()} retrying={calls.isFetching} />
+    ) : (
+      <SectionLoading />
+    );
+  }
+  return (
+    <View style={{ gap: spacing.md }}>
+      {calls.data.map((call, index) => (
+        <CallRow key={call.id} call={call} isLatest={firstYear && index === 0} onOpen={onOpen} />
+      ))}
+    </View>
   );
 }
 
@@ -135,15 +127,15 @@ export function ChargesScreen() {
   const { spacing } = useTheme();
   const t = useT();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const roleLabel = useRoleLabel();
-  const format = useChargeFormat();
   const { created } = useLocalSearchParams<{ created?: string }>();
   const { active, query: residencesQuery } = useActiveResidence();
   const role: Role | undefined = active?.role;
   const allowed = role !== undefined && canManageCharges(role);
-  const calls = useChargeCalls(allowed ? active?.id : undefined);
-  // Les appels précédents apparaissent en cascade au premier affichage seulement.
-  const entrance = useListEntrance(calls.data !== undefined);
+  const residenceId = allowed ? active?.id : undefined;
+  const years = useChargeYears(residenceId);
+  const sections = useSectionOpen(residenceId === undefined ? undefined : `charges:${residenceId}`);
   const [toast, setToast] = useState<string | undefined>();
 
   // L'écran de création revient ici avec `created=1` : l'onglet est déjà ouvert, le paramètre est consommé.
@@ -164,13 +156,13 @@ export function ChargesScreen() {
   const canCreate = role !== undefined && can(role, 'charges.write');
   const canCollect = role !== undefined && can(role, 'payments.write');
   const openCall = (id: string) => router.push({ pathname: '/charge-call/[id]', params: { id } });
-  const current = calls.data?.[0];
-  const previous = calls.data?.slice(1) ?? [];
+  const yearKeys = years.data?.map((summary) => summary.year) ?? [];
+  const openKey = defaultOpenKey(yearKeys, currentYearKey());
 
   let body;
-  if (calls.data === undefined) {
-    body = <QueryFallback query={calls} message={t('charges.loadError')} />;
-  } else if (current === undefined) {
+  if (years.data === undefined) {
+    body = <QueryFallback query={years} message={t('charges.loadError')} />;
+  } else if (years.data.length === 0) {
     body = (
       <EmptyState
         domain="charges"
@@ -181,63 +173,52 @@ export function ChargesScreen() {
   } else {
     body = (
       <>
-        {/* Un échec d'actualisation garde la liste affichée, avec un message non bloquant. */}
-        {calls.error && <Banner message={t('charges.loadError')} />}
-        <CurrentCallCard call={current} onPress={() => openCall(current.id)} />
-        {previous.length > 0 && (
-          <View style={{ gap: spacing.md }}>
-            <Text variant="h3">{t('charges.list.previous')}</Text>
-            {previous.map((call, index) => (
-              <EntranceRow key={call.id} entrance={entrance} index={index} reflow>
-                <ListItem
-                  leading={<ReferenceBox label={format.shortPeriod(call.periodLabel)} />}
-                  title={format.period(call.periodLabel)}
-                  subtitle={
-                    call.unpaidCount > 0
-                      ? t(call.unpaidCount === 1 ? 'charges.list.unpaidOne' : 'charges.list.unpaidMany', {
-                          count: call.unpaidCount,
-                        })
-                      : t('charges.list.dueOn', { date: format.date(call.dueDate) })
-                  }
-                  trailing={
-                    <View style={{ alignItems: 'flex-end', gap: spacing.xs }}>
-                      <Amount centimes={call.totalDue} variant="small" />
-                      <StatusBadge status={callStatus(call, false)} />
-                    </View>
-                  }
-                  onPress={() => openCall(call.id)}
+        {/* Un échec d'actualisation garde les années affichées, avec un message non bloquant. */}
+        {years.isRefetchError && <Banner message={t('charges.loadError')} />}
+        {years.data.map((summary) => {
+          const open = sections.isOpen(summary.year, summary.year === openKey);
+          const unpaid = summary.unpaidCount;
+          const badgeLabel =
+            unpaid === 0
+              ? t('sections.charges.settled')
+              : t(unpaid === 1 ? 'charges.list.unpaidOne' : 'charges.list.unpaidMany', { count: unpaid });
+          return (
+            <Accordion
+              key={summary.year}
+              icon={Wallet}
+              title={summary.year}
+              subtitle={[
+                t(summary.callCount === 1 ? 'sections.charges.callsOne' : 'sections.charges.calls', {
+                  count: summary.callCount,
+                }),
+                t('sections.charges.collectedPct', {
+                  percent: percentCollected(summary.totalPaid, summary.totalDue),
+                }),
+              ].join(' · ')}
+              trailing={<Badge tone={unpaid === 0 ? 'success' : 'warning'} label={badgeLabel} />}
+              trailingLabel={badgeLabel}
+              expanded={open}
+              onToggle={() => sections.toggle(summary.year, summary.year === openKey)}>
+              {residenceId !== undefined && (
+                <YearCalls
+                  residenceId={residenceId}
+                  year={summary.year}
+                  firstYear={summary.year === yearKeys[0]}
+                  onOpen={openCall}
                 />
-              </EntranceRow>
-            ))}
-          </View>
-        )}
+              )}
+            </Accordion>
+          );
+        })}
       </>
     );
   }
 
-  const footer =
-    calls.data !== undefined && (canCollect || canCreate) ? (
-      <>
-        {canCollect && current !== undefined && (
-          <Button
-            icon={Banknote}
-            label={t('charges.list.collect')}
-            onPress={() => router.push({ pathname: '/collect', params: { callId: current.id } })}
-          />
-        )}
-        {canCreate && (
-          <Button
-            variant={current !== undefined && canCollect ? 'secondary' : 'primary'}
-            icon={Plus}
-            label={t('charges.list.newCall')}
-            onPress={() => router.push('/new-charge-call')}
-          />
-        )}
-      </>
-    ) : undefined;
-
   return (
-    <Screen scroll footer={footer}>
+    <Screen
+      scroll
+      onRefresh={() => void queryClient.invalidateQueries({ queryKey: chargesQueryKey(residenceId ?? 'none') })}
+      refreshing={years.isRefetching}>
       {toast !== undefined && <Toast message={toast} />}
       <View style={{ gap: spacing.xs }}>
         {active !== null && (
@@ -250,6 +231,19 @@ export function ChargesScreen() {
         )}
         <Text variant="h2">{t('charges.list.title')}</Text>
       </View>
+      {years.data !== undefined && (canCollect || canCreate) && (
+        <View style={{ gap: spacing.md }}>
+          {canCreate && <Button icon={Plus} label={t('charges.list.newCall')} onPress={() => router.push('/new-charge-call')} />}
+          {canCollect && years.data.length > 0 && (
+            <Button
+              variant={canCreate ? 'secondary' : 'primary'}
+              icon={Banknote}
+              label={t('charges.list.collect')}
+              onPress={() => router.push('/collect')}
+            />
+          )}
+        </View>
+      )}
       {body}
     </Screen>
   );

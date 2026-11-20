@@ -1,6 +1,16 @@
 // Appels de charges, encaissements et reçus (plan 05) : requêtes et mutations TanStack Query.
 // Après un encaissement ou une annulation, tout ce qui dépend des dus est rafraîchi.
-import type { ChargePeriod, DueStatus, PaymentMethod, ReminderResult, Role } from '@syndic/shared';
+import {
+  NO_BUILDING_PARAM,
+  type ChargeCallSummaryResponse,
+  type ChargePeriod,
+  type DueStatus,
+  type MyDuesSummaryResponse,
+  type PaymentMethod,
+  type ReminderResult,
+  type Role,
+  type UnpaidSummaryResponse,
+} from '@syndic/shared';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import * as WebBrowser from 'expo-web-browser';
 
@@ -77,6 +87,56 @@ export function useChargeCalls(residenceId: string | undefined) {
   return useQuery({
     queryKey: callsKey(residenceId ?? 'none'),
     queryFn: async () => (await apiFetch<{ chargeCalls: ChargeCallSummary[] }>('/api/charge-calls', inResidence(residenceId))).chargeCalls,
+    enabled: residenceId !== undefined,
+  });
+}
+
+/**
+ * Années d'appels, de la plus récente à la plus ancienne, avec leur résumé exact (GET /api/charge-calls/summary) :
+ * ce que montre chaque section fermée de l'écran « Charges », sans charger un seul appel.
+ */
+export function useChargeYears(residenceId: string | undefined) {
+  return useQuery({
+    queryKey: [...chargesQueryKey(residenceId ?? 'none'), 'years'],
+    queryFn: async () =>
+      (await apiFetch<ChargeCallSummaryResponse>('/api/charge-calls/summary?groupBy=year', inResidence(residenceId))).years,
+    enabled: residenceId !== undefined,
+  });
+}
+
+/** Appels d'une année : chargés à l'ouverture de sa section seulement (GET /api/charge-calls?year=…). */
+export function useChargeCallsOfYear(residenceId: string | undefined, year: string) {
+  return useQuery({
+    queryKey: [...callsKey(residenceId ?? 'none'), 'year', year],
+    queryFn: async () =>
+      (await apiFetch<{ chargeCalls: ChargeCallSummary[] }>(`/api/charge-calls?year=${year}`, inResidence(residenceId))).chargeCalls,
+    enabled: residenceId !== undefined,
+  });
+}
+
+/** Période de l'appel et bâtiments qui ont des impayés, avec le nombre de lots et le reste à payer. */
+export function useUnpaidBuildings(residenceId: string | undefined, callId: string | undefined) {
+  return useQuery({
+    queryKey: [...callKey(residenceId ?? 'none', callId ?? 'none'), 'buildings'],
+    queryFn: () =>
+      apiFetch<UnpaidSummaryResponse>(
+        `/api/charge-calls/${encodeURIComponent(callId ?? '')}/summary?groupBy=building`,
+        inResidence(residenceId),
+      ),
+    enabled: residenceId !== undefined && callId !== undefined,
+  });
+}
+
+/** Lots impayés ou partiels d'un bâtiment (`null` : sans bâtiment), chargés à l'ouverture de sa section. */
+export function useUnpaidDues(residenceId: string | undefined, callId: string, building: string | null) {
+  const param = building === null ? NO_BUILDING_PARAM : building;
+  return useQuery({
+    queryKey: [...callKey(residenceId ?? 'none', callId), 'unpaid', param],
+    queryFn: () =>
+      apiFetch<ChargeCallDetail>(
+        `/api/charge-calls/${encodeURIComponent(callId)}?unpaid=true&building=${encodeURIComponent(param)}`,
+        inResidence(residenceId),
+      ),
     enabled: residenceId !== undefined,
   });
 }
@@ -176,6 +236,29 @@ export type MyDue = {
   status: DueStatus;
   payments: MyPayment[];
 };
+
+/**
+ * Années de mes dus avec leur résumé exact (« N payés sur M », total payé) : ce que montre chaque section
+ * fermée de « Mes charges » (GET /api/me/dues/summary). Copropriétaire seulement.
+ */
+export function useMyDueYears(residenceId: string | undefined) {
+  return useQuery({
+    queryKey: [...chargesQueryKey(residenceId ?? 'none'), 'mine-years'],
+    queryFn: async () =>
+      (await apiFetch<MyDuesSummaryResponse>('/api/me/dues/summary?groupBy=year', inResidence(residenceId))).years,
+    enabled: residenceId !== undefined,
+  });
+}
+
+/** Mes dus d'une année : chargés à l'ouverture de sa section seulement (GET /api/me/dues?year=…). */
+export function useMyDuesOfYear(residenceId: string | undefined, year: string) {
+  return useQuery({
+    queryKey: [...chargesQueryKey(residenceId ?? 'none'), 'mine', 'year', year],
+    queryFn: async () =>
+      (await apiFetch<{ dues: MyDue[] }>(`/api/me/dues?year=${year}`, inResidence(residenceId))).dues,
+    enabled: residenceId !== undefined,
+  });
+}
 
 /**
  * Mes charges : dus des appartements dont je suis copropriétaire, le plus récent en premier.

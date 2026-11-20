@@ -55,5 +55,5 @@ export const frHomeTexts = {
   'profile.language': 'Langue',
   'profile.language.fr': 'Français',
   'profile.language.ar': 'العربية',
-  'profile.version': 'Version {version}',
+  'profile.version': 'SyndicApp · version {version}',
 } as const;

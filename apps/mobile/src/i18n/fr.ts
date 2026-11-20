@@ -8,6 +8,7 @@ import { frHomeTexts } from './fr-home';
 import { frIssueTexts } from './fr-issues';
 import { frNotificationTexts } from './fr-notifications';
 import { frResidenceTexts } from './fr-residences';
+import { frSectionTexts } from './fr-sections';
 
 /** Erreurs d'authentification (clés de @syndic/shared) : le typage exige une traduction pour chacune. */
 const authErrors: Record<AuthErrorKey, string> = {
@@ -40,6 +41,7 @@ export const fr = {
   ...frNotificationTexts,
   ...frAnnouncementTexts,
   ...frAccountTexts,
+  ...frSectionTexts,
 
   'common.back': 'Retour',
   'common.loading': 'Chargement…',

@@ -3,18 +3,20 @@
 export type AccordionA11yInput = {
   title: string;
   subtitle?: string;
+  /** Texte de l'élément de fin (badge, nombre) : lu après le sous-titre. */
+  trailingLabel?: string;
   expanded: boolean;
   disabled?: boolean;
 };
 
 /**
  * Propriétés d'accessibilité de l'en-tête : un bouton dont l'état ouvert ou fermé est annoncé
- * (`expanded`), avec le titre et le sous-titre comme libellé.
+ * (`expanded`), avec le titre, le sous-titre et le texte de l'élément de fin comme libellé.
  */
-export function accordionA11y({ title, subtitle, expanded, disabled = false }: AccordionA11yInput) {
+export function accordionA11y({ title, subtitle, trailingLabel, expanded, disabled = false }: AccordionA11yInput) {
   return {
     accessibilityRole: 'button' as const,
-    accessibilityLabel: [title, subtitle].filter(Boolean).join(', '),
+    accessibilityLabel: [title, subtitle, trailingLabel].filter(Boolean).join(', '),
     accessibilityState: { expanded, disabled },
   };
 }

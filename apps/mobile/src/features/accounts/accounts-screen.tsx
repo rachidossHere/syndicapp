@@ -1,37 +1,39 @@
-// Écrans 1 et 6 de docs/depenses.png : « Comptes » (solde de la caisse, encaissé et dépensé de la
-// période en cours, journal des mouvements chargé par pages). Visible par les rôles qui ont
-// `accounts.read` ; locataire et gardien sont renvoyés à l'accueil sans aucune requête.
-// Le journal ne montre jamais le nom d'un copropriétaire : « Charge reçue · A21 ».
+// Écran 4 de docs/accordeons.png : « Comptes » (solde de la caisse au-dessus, puis les mouvements par
+// mois). Le mois en cours est ouvert ; les autres sont fermés avec leur résumé exact « +encaissé · −dépensé ».
+// Les mouvements d'un mois ne sont chargés qu'à l'ouverture de sa section, par pages (« Afficher plus »).
+// Visible par les rôles qui ont `accounts.read` ; locataire et gardien sont renvoyés à l'accueil sans
+// aucune requête. Le journal ne montre jamais le nom d'un copropriétaire : « Charge reçue · A21 ».
+import { formatMad } from '@syndic/shared';
 import {
-  AnimatedList,
+  Accordion,
   Amount,
   Badge,
   Banner,
   Button,
-  Card,
   EmptyState,
-  EntranceRow,
   Icon,
   ListItem,
   Screen,
   Text,
-  useListEntrance,
+  ZelligePattern,
   useTheme,
 } from '@syndic/ui';
 import { Redirect, useRouter } from 'expo-router';
+import Calendar from 'lucide-react-native/icons/calendar';
 import Minus from 'lucide-react-native/icons/minus';
 import Plus from 'lucide-react-native/icons/plus';
-import Wallet from 'lucide-react-native/icons/wallet';
-import { RefreshControl, View } from 'react-native';
+import { View } from 'react-native';
 
+import { LoadMore, SectionError, SectionLoading } from '@/components/section-parts';
 import { AuthHeader } from '@/features/auth/auth-header';
 import { QueryFallback } from '@/features/charges/query-fallback';
 import { useChargeFormat } from '@/features/charges/use-charge-format';
-import { useCash } from '@/hooks/use-cash';
+import { useCashBalance, useCashOfMonth, useLedgerMonths, useRefreshExpenses } from '@/hooks/use-cash';
 import { useActiveResidence } from '@/hooks/use-residences';
 import { useRefreshOnFocus } from '@/hooks/use-refresh-on-focus';
 import { useT } from '@/i18n/use-t';
 import { accountsResidenceId, canSetOpeningBalance, ledgerView, type LedgerEntry } from '@/lib/cash';
+import { currentMonthKey, defaultOpenKey, useSectionOpen } from '@/lib/sections';
 
 import { useAccountsFormat } from './use-accounts-format';
 
@@ -86,6 +88,42 @@ function LedgerRow({ entry, onOpen }: { entry: LedgerEntry; onOpen: (id: string)
   );
 }
 
+/** Mouvements d'un mois, chargés à l'ouverture de sa section : les premiers, puis « Afficher plus ». */
+function MonthMovements({
+  residenceId,
+  month,
+  onOpen,
+}: {
+  residenceId: string;
+  month: string;
+  onOpen: (id: string) => void;
+}) {
+  const { spacing } = useTheme();
+  const cash = useCashOfMonth(residenceId, month);
+
+  if (cash.data === undefined) {
+    return cash.error ? (
+      <SectionError onRetry={() => void cash.refetch()} retrying={cash.isFetching} />
+    ) : (
+      <SectionLoading />
+    );
+  }
+  const items = cash.data.pages.flatMap((page) => page.ledger.items);
+  return (
+    <View style={{ gap: spacing.md }}>
+      {items.map((entry) => (
+        <LedgerRow key={`${entry.kind}-${entry.id}`} entry={entry} onOpen={onOpen} />
+      ))}
+      <LoadMore
+        hasNextPage={cash.hasNextPage}
+        pending={cash.isFetchingNextPage}
+        failed={cash.isFetchNextPageError}
+        onPress={() => void cash.fetchNextPage()}
+      />
+    </View>
+  );
+}
+
 /**
  * Comptes. `asTab` : onglet « Comptes » de l'adjoint (pas de bouton retour, la langue est dans le Profil) ;
  * sinon écran ouvert au-dessus des onglets (accès rapide du syndic, du trésorier et du copropriétaire).
@@ -97,25 +135,60 @@ export function AccountsScreen({ asTab = false }: { asTab?: boolean }) {
   const format = useChargeFormat();
   const { active, query: residencesQuery } = useActiveResidence();
   const residenceId = accountsResidenceId(active);
-  const cash = useCash(residenceId);
-  // Les premiers mouvements apparaissent en cascade au premier affichage seulement.
-  const entrance = useListEntrance(cash.data !== undefined);
+  const balance = useCashBalance(residenceId);
+  const months = useLedgerMonths(residenceId);
+  const sections = useSectionOpen(residenceId === undefined ? undefined : `accounts:${residenceId}`);
 
-  // Rafraîchissement au retour sur l'écran (après une annulation, un solde de départ…).
-  useRefreshOnFocus(cash.refetch);
+  // Rafraîchissement au retour sur l'écran (après une annulation, un solde de départ…) : solde, mois et mouvements.
+  const refreshAll = useRefreshExpenses(residenceId);
+  useRefreshOnFocus(refreshAll);
 
   if (residencesQuery.data !== undefined && residenceId === undefined) return <Redirect href="/home" />;
 
-  const first = cash.data?.pages[0];
-  const items = cash.data?.pages.flatMap((page) => page.ledger.items) ?? [];
   const isManager = active !== null && canSetOpeningBalance(active.role);
   const goBack = () => (router.canGoBack() ? router.back() : router.replace('/home'));
   const openExpense = (id: string) => router.push({ pathname: '/expense/[id]', params: { id } });
   const openOpening = () => router.push('/opening-balance');
-  const period = first === undefined ? '' : format.shortPeriod(first.period.label);
+  const monthKeys = months.data?.map((month) => month.month) ?? [];
+  const openKey = defaultOpenKey(monthKeys, currentMonthKey());
 
-  const header = (
-    <View style={{ gap: spacing.lg }}>
+  let body;
+  if (months.data === undefined) {
+    body = <QueryFallback query={months} message={t('accounts.loadError')} />;
+  } else if (months.data.length === 0) {
+    body = (
+      <EmptyState
+        domain="expenses"
+        title={t('accounts.ledger.emptyTitle')}
+        description={t('accounts.ledger.emptyBody')}
+      />
+    );
+  } else {
+    body = (
+      <>
+        <Text variant="h3">{t('accounts.ledger.title')}</Text>
+        {months.data.map((month) => (
+          <Accordion
+            key={month.month}
+            icon={Calendar}
+            title={format.period(month.month)}
+            subtitle={t('sections.accounts.summary', {
+              collected: formatMad(month.collected),
+              spent: formatMad(month.spent),
+            })}
+            expanded={sections.isOpen(month.month, month.month === openKey)}
+            onToggle={() => sections.toggle(month.month, month.month === openKey)}>
+            {residenceId !== undefined && (
+              <MonthMovements residenceId={residenceId} month={month.month} onOpen={openExpense} />
+            )}
+          </Accordion>
+        ))}
+      </>
+    );
+  }
+
+  return (
+    <Screen scroll onRefresh={() => void refreshAll()} refreshing={months.isRefetching}>
       {!asTab && <AuthHeader onBack={goBack} />}
       <View style={{ gap: spacing.xs }}>
         {active !== null && (
@@ -126,13 +199,13 @@ export function AccountsScreen({ asTab = false }: { asTab?: boolean }) {
         <Text variant="h2">{t('accounts.title')}</Text>
       </View>
 
-      {first !== undefined && (
-        <>
-          {/* Un échec d'actualisation garde les comptes affichés, avec un message non bloquant. */}
-          {cash.isRefetchError && <Banner message={t('accounts.loadError')} />}
+      {/* Un échec d'actualisation garde les comptes affichés, avec un message non bloquant. */}
+      {(balance.isRefetchError || months.isRefetchError) && <Banner message={t('accounts.loadError')} />}
 
+      {balance.data !== undefined && (
+        <>
           {/* Syndic : invitation discrète tant qu'aucun solde de départ n'a été saisi. */}
-          {isManager && first.openingBalanceDate === null && (
+          {isManager && balance.data.openingBalanceDate === null && (
             <ListItem
               title={t('accounts.openingInvite.title')}
               subtitle={t('accounts.openingInvite.body')}
@@ -146,101 +219,25 @@ export function AccountsScreen({ asTab = false }: { asTab?: boolean }) {
             style={{
               gap: spacing.sm,
               padding: spacing.lg,
+              overflow: 'hidden',
               borderRadius: radius.lg,
               borderCurve: 'continuous',
-              backgroundColor: colors.primary,
+              backgroundColor: colors.tealDeep,
             }}>
+            <ZelligePattern color={colors.textInverse} />
             <Text variant="small" tone="inverse">
               {t('accounts.balance.label')}
             </Text>
-            <Amount centimes={first.balance} variant="display" tone="inverse" />
+            <Amount centimes={balance.data.balance} variant="display" tone="inverse" />
             <Text variant="small" tone="inverse">
               {t('accounts.balance.note')}
             </Text>
           </View>
 
-          <Card style={{ flexDirection: 'row', justifyContent: 'space-between', gap: spacing.md }}>
-            <View style={{ flex: 1, gap: spacing.xs }}>
-              <Text variant="caption" tone="muted">
-                {t('accounts.period.collected', { period })}
-              </Text>
-              <Amount centimes={first.period.collected} variant="h3" />
-            </View>
-            <View style={{ flex: 1, gap: spacing.xs }}>
-              <Text variant="caption" tone="muted">
-                {t('accounts.period.spent', { period })}
-              </Text>
-              <Amount centimes={first.period.spent} variant="h3" style={{ color: colors.moneyOut }} />
-            </View>
-          </Card>
-
           {isManager && <Button variant="secondary" label={t('accounts.openingLink')} onPress={openOpening} />}
-
-          <Text variant="h3">{t('accounts.ledger.title')}</Text>
         </>
       )}
-    </View>
-  );
-
-  const empty =
-    cash.data === undefined ? (
-      <QueryFallback query={cash} message={t('accounts.loadError')} />
-    ) : (
-      <EmptyState
-        domain="expenses"
-        title={t('accounts.ledger.emptyTitle')}
-        description={t('accounts.ledger.emptyBody')}
-      />
-    );
-
-  const footer = cash.isFetchNextPageError ? (
-    <View style={{ gap: spacing.sm }}>
-      <Banner message={t('accounts.loadMoreError')} />
-      <Button
-        variant="secondary"
-        label={t('common.retry')}
-        loading={cash.isFetchingNextPage}
-        onPress={() => void cash.fetchNextPage()}
-      />
-    </View>
-  ) : cash.isFetchingNextPage ? (
-    <Text tone="muted" style={{ textAlign: 'center' }}>
-      {t('common.loading')}
-    </Text>
-  ) : undefined;
-
-  return (
-    <Screen>
-      <AnimatedList
-        style={{ flex: 1 }}
-        contentContainerStyle={{ gap: spacing.md, paddingBottom: spacing.lg }}
-        data={items}
-        keyExtractor={(entry) => `${entry.kind}-${entry.id}`}
-        renderItem={({ item, index }) => (
-          <EntranceRow entrance={entrance} index={index}>
-            <LedgerRow entry={item} onOpen={openExpense} />
-          </EntranceRow>
-        )}
-        ListHeaderComponent={header}
-        ListHeaderComponentStyle={{ marginBottom: items.length > 0 ? 0 : spacing.md }}
-        ListEmptyComponent={empty}
-        ListFooterComponent={footer}
-        onEndReachedThreshold={0.5}
-        onEndReached={() => {
-          if (cash.hasNextPage && !cash.isFetchingNextPage && !cash.isFetchNextPageError) {
-            void cash.fetchNextPage();
-          }
-        }}
-        refreshControl={
-          <RefreshControl
-            refreshing={cash.isRefetching && !cash.isFetchingNextPage}
-            onRefresh={() => void cash.refetch()}
-            tintColor={colors.primary}
-            colors={[colors.primary]}
-          />
-        }
-        keyboardShouldPersistTaps="handled"
-      />
+      {body}
     </Screen>
   );
 }
